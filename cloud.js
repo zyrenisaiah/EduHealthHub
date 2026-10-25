@@ -83,10 +83,10 @@ async function cloudLogin(u,pw){
   TOK=r.token;ss.set('ehh_tok',TOK);ss.set('ehh_role',r.account.role);location.href=ROLE_PAGE[r.account.role]}
  catch(e){TOK=null;L.err=cloudErr(e);render();const i=$('#lu');if(i)i.value=u}}
 async function cloudRestore(){
- const t=ss.get('ehh_tok');if(!t)return;
+ const t=ss.get('ehh_tok');if(!t)return 'none';
  try{TOK=t;const r=await rpc('app_sync',{p_token:t,p_since:0});
   await cloudEnter({token:t,account:r.account})}
- catch(e){TOK=null;ss.del('ehh_tok');ss.del('ehh_role')}}
+ catch(e){console.error('restore failed',e);if(e&&e.code==='SESSION_EXPIRED'){TOK=null;ss.del('ehh_tok');ss.del('ehh_role');return 'expired'}return e}return 'ok'}
 async function cloudLogout(){const t=TOK;TOK=null;clearInterval(_poll);ss.del('ehh_tok');ss.del('ehh_role');REV=0;
  if(t){try{await rpc('app_logout',{p_token:t})}catch(e){}}}
 async function seedCloud(){

@@ -1,0 +1,32 @@
+EduHealthHub accounts (username / password)
+
+Doctor   Dummy Doctor1              doctor1    
+Doctor   Dummy Doctor2              doctor2    
+Nurse    Dummy Nurse1               nurse1     
+Nurse    Dummy Nurse2               nurse2     
+Nurse    Dummy Nurse3               nurse3     
+Dentist  Dummy Dentist1             dentist1   
+Teacher  Dummy Teacher 11A1         acad1      Grade 11 Academic-1
+Teacher  Dummy Teacher 11A2         acad2      Grade 11 Academic-2
+Teacher  Dummy Teacher 11A3         acad3      Grade 11 Academic-3
+Teacher  Dummy Teacher 11A4         acad4      Grade 11 Academic-4
+Teacher  Dummy Teacher 11A5         acad5      Grade 11 Academic-5
+Teacher  Dummy Teacher 11A6         acad6      Grade 11 Academic-6
+Teacher  Dummy Teacher 11TP1        techpro1   Grade 11 TechPro-1
+Teacher  Dummy Teacher 11TP2        techpro2   Grade 11 TechPro-2
+Teacher  Dummy Teacher 11TP3        techpro3   Grade 11 TechPro-3
+Teacher  Dummy Teacher 11TP4        techpro4   Grade 11 TechPro-4
+Teacher  Dummy Teacher 11TP5        techpro5   Grade 11 TechPro-5
+Teacher  Dummy Teacher 11TP6        techpro6   Grade 11 TechPro-6
+Teacher  Dummy Teacher 12STEM1      stem1      Grade 12 STEM-1
+Teacher  Dummy Teacher 12STEM2      stem2      Grade 12 STEM-2
+Teacher  Dummy Teacher 12STEM3      stem3      Grade 12 STEM-3
+Teacher  Dummy Teacher 12ABM1       abm1       Grade 12 ABM-1
+Teacher  Dummy Teacher 12ABM2       abm2       Grade 12 ABM-2
+Teacher  Dummy Teacher 12ABM3       abm3       Grade 12 ABM-3
+Teacher  Dummy Teacher 12HUMMS1     humms1     Grade 12 HUMSS-1
+Teacher  Dummy Teacher 12HUMMS2     humms2     Grade 12 HUMSS-2
+Teacher  Dummy Teacher 12HUMMS3     humms3     Grade 12 HUMSS-3
+Teacher  Dummy Teacher 12TVL1       tvl1       Grade 12 TVL-1
+Teacher  Dummy Teacher 12TVL2       tvl2       Grade 12 TVL-2
+Teacher  Dummy Teacher 12TVL3       tvl3       Grade 12 TVL-3

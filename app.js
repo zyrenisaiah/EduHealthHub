@@ -552,7 +552,9 @@ function boot(){
  if(PAGE==='home'){ if(role&&ROLE_PAGE[role]&&(ss.get('ehh_tok')||ss.get('ehh_uid'))){location.replace(ROLE_PAGE[role]);return} render();return}
  render();
  const bad=()=>{ss.del('ehh_tok');ss.del('ehh_uid');ss.del('ehh_role');location.replace('index.html?role='+PAGE)};
- if(CLOUD_ON){cloudRestore().then(()=>{if(!S.user)bad()})}
+ if(CLOUD_ON){cloudRestore().then(r=>{if(r==='ok'&&S.user)return;if(r==='none'||r==='expired')return bad();
+  const m=cloudErr(r),c=(r&&r.code)||'error';
+  $('#root').innerHTML='<div class="login"><div style="display:grid;gap:12px;max-width:420px"><h2>Could not open this page</h2><div class="pill bad" style="white-space:normal">'+esc(m)+' ('+esc(c)+')</div><div class="small muted">Your login is still active. Check the connection and try again.</div><div><button class="btn primary" onclick="location.reload()">Try again</button> <button class="btn" onclick="sessionStorage.clear();location.href=&quot;index.html&quot;">Back to login</button></div></div></div>'})}
  else{if(localRestore())render();else bad()}
 }
 boot();
