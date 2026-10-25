@@ -1,7 +1,7 @@
 /* ===== SHARED DATABASE SETTINGS =====
    Paste your Supabase "Project URL" and "anon / publishable key" between the quotes.
    Leave both empty to run in single-browser (local) mode. */
-const CLOUD={url:"",key:""};
+const CLOUD={url:"https://myfcltwnunmrtiymkths.supabase.co",key:"sb_publishable_7m37CCvmCEAsIhff10wadA_y6zjaJLO"};
 const CLOUD_ON=!!(CLOUD.url&&CLOUD.key);
 /* which page is this? home (login) or one page per role */
 const PAGE=document.body.dataset.page||'home';
