@@ -106,7 +106,7 @@ function shell(){
  return `<div class="shell"><header class="topbar"><div class="name"><span class="logo-chip"><img src="${LOGO_EMBLEM}" alt="" height="34"></span>EduHealthHub</div><div class="spacer"></div>
   <img class="role-ic" src="${ROLE_ICON[u.role]}" alt="${u.role}">
   <div class="who"><b>${esc(u.name)}</b><span class="small muted">${u.role}${u.role==='Teacher'?' · '+esc(secLabel(secOf(u.adv))):''}</span></div>
-  ${CLOUD_ON?`<span class="small muted" id="syncstat" aria-live="polite">${esc(SYNC_TXT)}</span>`:''}<button class="btn sm" data-act="theme">Theme</button><button class="btn sm" data-act="logout">Log out</button></header>
+  ${CLOUD_ON?`<span class="small muted" id="syncstat" aria-live="polite">${esc(SYNC_TXT)}</span>`:''}<button class="btn sm" data-act="logout">Log out</button></header>
   <div class="layout"><nav class="nav" aria-label="Main">${nav.map(n=>`<button data-act="nav" data-v="${n[0]}" ${navKey===n[0]?'aria-current="page"':''}>${n[1]}</button>`).join('')}<div class="perm">${PERM_NOTE[u.role]}</div></nav>
   <main>${body}</main></div></div>`;
 }
