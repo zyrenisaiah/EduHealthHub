@@ -20,7 +20,7 @@ Deno.serve(async (req) => {
   if (!["login", "link"].includes(kind ?? "") || !token) return json({ error: "BAD_REQUEST" }, 400);
 
   const user = Deno.env.get("GMAIL_USER"), pass = Deno.env.get("GMAIL_APP_PASSWORD");
-  if (!user || !pass) return json({ error: "MAIL_NOT_SET_UP" }, 500);
+  if (!user || !pass) return json({ error: "MAIL_NOT_SET_UP", detail: "Missing secret: " + [!user && "GMAIL_USER", !pass && "GMAIL_APP_PASSWORD"].filter(Boolean).join(" and ") }, 500);
 
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
     auth: { persistSession: false },

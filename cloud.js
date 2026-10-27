@@ -24,7 +24,7 @@ function cloudErr(e){
  if(c==='BAD_EMAIL')return 'Enter a Gmail address, like name@gmail.com.';
  if(c==='EMAIL_TAKEN')return 'That Gmail is already linked to another account.';
  if(c==='BAD_PASSWORD')return 'Password is incorrect.';
- if(c==='MAIL_NOT_SET_UP'||c==='MAIL_FAILED')return 'The email could not be sent. The site owner still needs to finish the email setup.';
+ if(c==='MAIL_NOT_SET_UP'||c==='MAIL_FAILED')return 'The email could not be sent. '+((e&&e.detail)?'('+e.detail+') ':'')+'The site owner still needs to finish the email setup.';
  return 'The online database is not set up correctly ('+c+'). Check the setup steps.'}
 function baseline(){DB.students.forEach(s=>LASTFULL[s.id]=JSON.stringify(s));LASTSTOCK=JSON.stringify(DB.stock);TR_SYNCED=DB.transfers.length}
 function applySync(r){
@@ -126,7 +126,7 @@ async function sendCode(kind,token,email){
  let r;try{r=await fetch(CLOUD.url.replace(/\/+$/,'')+'/functions/v1/send-code',{method:'POST',headers:h,body:JSON.stringify({kind,token,email:email||null})})}
  catch(e){const x=new Error('OFFLINE');x.code='OFFLINE';throw x}
  let j=null;try{j=await r.json()}catch(e){}
- if(!r.ok||!j||j.error){const c=(j&&j.error)||('HTTP '+r.status);const x=new Error(c);x.code=c;throw x}
+ if(!r.ok||!j||j.error){const c=(j&&j.error)||('HTTP '+r.status);const x=new Error(c);x.code=c;x.detail=j&&j.detail;throw x}
  return j}
 async function cloudVerifyLogin(code){
  const L=S.login,btn=$('#codeform button[type=submit]');if(btn){btn.disabled=true;btn.textContent='Checking…'}
