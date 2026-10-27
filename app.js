@@ -264,6 +264,7 @@ function accountView(){
   <div style="display:grid;gap:8px"><h3 style="margin:0">Profile picture</h3><div class="small muted">Shown in the top bar. JPG or PNG.</div>
    <div class="trow"><button class="btn sm primary" type="button" data-act="pickaccphoto">${a.photo?'Change picture':'Upload picture'}</button>${a.photo?'<button class="btn sm" type="button" data-act="rmaccphoto">Remove</button>':''}</div>
    <input type="file" id="acc-photo" accept="image/*" hidden data-bind="accphoto"></div></section>
+ ${gmailPanel(a)}
  <div class="grid2">
  <form class="panel" id="acctform" style="display:grid;gap:12px;align-content:start"><h3>Sign-in details</h3>
   <div class="field"><label>Name</label><input class="inp" value="${esc(a.name)}" disabled></div>
@@ -277,6 +278,16 @@ function accountView(){
   <div id="pw-msg" class="small" role="status"></div><div><button class="btn primary" type="submit">Change password</button></div></form>
  </div>`;
 }
+function gmailPanel(a){
+ if(!CLOUD_ON)return '';
+ const g=S.gm||{};
+ const msg=(g.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(g.err)}</div>`:'')+(g.ok?`<div class="pill good" role="status" style="white-space:normal">${esc(g.ok)}</div>`:'');
+ let body;
+ if(a.gmail_ok&&g.unlink)body=`<form id="gm-unlink" style="display:grid;gap:10px"><div class="small muted">Enter your password to remove the Gmail. Logins will go back to password only.</div><div class="field"><label for="gm-pw">Password</label><input class="inp" id="gm-pw" type="password" autocomplete="current-password" required></div>${msg}<div class="trow"><button class="btn primary" type="submit">Remove Gmail</button><button class="btn" type="button" data-act="gmcancel">Cancel</button></div></form>`;
+ else if(a.gmail_ok)body=`<div class="who-cell"><span class="pill good">Confirmed</span><b>${esc(a.gmail)}</b></div><div class="small muted">A 6-digit code is emailed to this Gmail every time you log in.</div>${msg}<div><button class="btn sm" type="button" data-act="gmunlinkask">Remove Gmail</button></div>`;
+ else if(g.sent)body=`<form id="gm-code" style="display:grid;gap:10px"><div class="small muted">Enter the 6-digit code we emailed to <b>${esc(g.hint||g.email)}</b>.</div><div class="field"><label for="gm-c">Confirmation code</label><input class="inp mono" id="gm-c" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required style="letter-spacing:4px"></div>${msg}<div class="trow"><button class="btn primary" type="submit">Confirm Gmail</button><button class="btn" type="button" data-act="gmcancel">Start over</button></div></form>`;
+ else body=`<form id="gm-send" style="display:grid;gap:10px"><div class="small muted">Link your own Gmail to protect this account. After that, every login needs a 6-digit code sent to it.</div><div class="field"><label for="gm-e">Your Gmail address</label><input class="inp" id="gm-e" type="email" placeholder="name@gmail.com" value="${esc(g.email||'')}" required autocapitalize="off"></div>${msg}<div><button class="btn primary" type="submit">Send confirmation code</button></div></form>`;
+ return `<section class="panel" style="margin-bottom:14px;display:grid;gap:10px"><h3 style="margin:0">Gmail confirmation ${a.gmail_ok?'':'<span class="pill warn">Not set up</span>'}</h3>${body}</section>`}
 function accMsg(id,m,ok){const e=$('#'+id);e.textContent=m;e.style.color=ok?'var(--good)':'var(--bad)'}
 
 /* ---------- photo cropper: move and zoom before saving ---------- */
@@ -318,6 +329,9 @@ function setPhoto(file){
  const sid=S.sid,st=stu(sid);if(!file||!st||S.user.role!=='Teacher')return;
  openCropper(file,p=>{const s=stu(sid);if(!s)return;s.photo=p;save();toast('Photo updated');render()})
 }
+function rpcGmSend(em){
+ sendCode('link',TOK,em).then(r=>{S.gm={email:em,sent:true,hint:r.hint,ok:'Code sent to '+r.hint+'. It works for 10 minutes.'};render();const i=$('#gm-c');if(i)i.focus()})
+  .catch(x=>{S.gm={email:em,err:cloudErr(x)};render()})}
 /* ---------- my profile picture (all staff) ---------- */
 function setAccPhoto(file,remove){
  const a=DB.accounts.find(x=>x.id===S.user.id);if(!a)return;
@@ -494,6 +508,10 @@ const ACT={
   v.date=v.date||today();v.d=String(c[k].d);v.f=String(c[k].f);if(k==='p')v.m=String(c.p.m);save();render();toast('Counts copied from the chart')},
  transfer:()=>doTransfer(),
  pickphoto:()=>{const i=$('#photo-in');if(i)i.click()},
+ resendcode:()=>cloudResend(),
+ codeback:()=>{S.login.pending=null;S.login.err='';S.login.info='';render()},
+ gmcancel:()=>{S.gm=null;render()},
+ gmunlinkask:()=>{S.gm={unlink:true};render()},
  pickaccphoto:()=>{const i=$('#acc-photo');if(i)i.click()},
  rmaccphoto:()=>setAccPhoto(null,true),
  rmphoto:()=>{const st=stu(S.sid);if(!st||!st.photo)return;delete st.photo;save();toast('Photo removed');render()},
@@ -562,6 +580,11 @@ document.addEventListener('submit',e=>{
   if(!acc||acc.pw!==pwHash(acc.id,pw)){S.fails[id]={n:f.n+1,t:Date.now()};L.err='Username or password is incorrect.';render();$('#lu').value=id;return}
   delete S.fails[id];L.err='';
   ss.set('ehh_uid',acc.id);ss.set('ehh_role',acc.role);location.href=ROLE_PAGE[acc.role];return}
+if(e.target.id==='codeform'){cloudVerifyLogin($('#lc').value.trim());return}
+ if(e.target.id==='gm-send'){const em=$('#gm-e').value.trim();S.gm={email:em,busy:true};rpcGmSend(em);return}
+ if(e.target.id==='gm-code'){const cd=$('#gm-c').value.trim();rpc('app_verify_link',{p_token:TOK,p_code:cd}).then(r=>{if(r.error){S.gm.err=cloudErr({code:r.error});S.gm.ok='';render();return}
+   Object.assign(DB.accounts[0],r.account);S.gm=null;toast('Gmail linked. You will get a code at every login.');render()}).catch(x=>{S.gm.err=cloudErr(x);render()});return}
+ if(e.target.id==='gm-unlink'){const pw=$('#gm-pw').value;rpc('app_unlink_gmail',{p_token:TOK,p_password:pw}).then(r=>{Object.assign(DB.accounts[0],r);S.gm=null;toast('Gmail unlinked');render()}).catch(x=>{S.gm=Object.assign(S.gm||{},{err:cloudErr(x)});render()});return}
  if(e.target.id==='acctform'){
   const a=DB.accounts.find(x=>x.id===S.user.id),u=$('#ac-u').value.trim(),m=$('#ac-e').value.trim();
   if(u.length<3)return accMsg('ac-msg','Username needs 3 or more characters.');

@@ -16,6 +16,15 @@ function cloudErr(e){
  if(c==='BAD_LOGIN')return 'Username or password is incorrect.';
  if(c==='SESSION_EXPIRED')return 'Your session expired. Please log in again.';
  if(c==='NOT_ALLOWED')return 'Your account is not allowed to make that change.';
+ if(c==='BAD_CODE')return 'That code is not correct. Check it and try again.';
+ if(c==='CODE_EXPIRED')return 'That code has expired. Ask for a new one.';
+ if(c==='TOO_MANY_TRIES')return 'Too many wrong codes. Log in again to get a new one.';
+ if(c==='WAIT')return 'Please wait 30 seconds before asking for another code.';
+ if(c==='TOO_MANY_CODES')return 'Too many codes were requested. Try again in an hour.';
+ if(c==='BAD_EMAIL')return 'Enter a Gmail address, like name@gmail.com.';
+ if(c==='EMAIL_TAKEN')return 'That Gmail is already linked to another account.';
+ if(c==='BAD_PASSWORD')return 'Password is incorrect.';
+ if(c==='MAIL_NOT_SET_UP'||c==='MAIL_FAILED')return 'The email could not be sent. The site owner still needs to finish the email setup.';
  return 'The online database is not set up correctly ('+c+'). Check the setup steps.'}
 function baseline(){DB.students.forEach(s=>LASTFULL[s.id]=JSON.stringify(s));LASTSTOCK=JSON.stringify(DB.stock);TR_SYNCED=DB.transfers.length}
 function applySync(r){
@@ -78,6 +87,9 @@ async function cloudLogin(u,pw){
  const L=S.login,btn=$('#loginform button[type=submit]');if(btn){btn.disabled=true;btn.textContent='Signing in…'}
  try{const r=await rpc('app_login',{p_user:u,p_pw:pw});
   if(r.error){L.err=cloudErr({code:r.error});render();const i=$('#lu');if(i)i.value=u;return}
+  if(r.pending){L.pending={token:r.pending,hint:r.hint};L.err='';L.info='';
+   try{await sendCode('login',r.pending)}catch(e){L.err=cloudErr(e)}
+   render();const ci=$('#lc');if(ci)ci.focus();return}
   L.err='';
   /* app_sync needs the token; the account comes back from app_login */
   TOK=r.token;ss.set('ehh_tok',TOK);ss.set('ehh_role',r.account.role);location.href=ROLE_PAGE[r.account.role]}
@@ -107,3 +119,22 @@ function cloudPanel(){
   <div class="small muted">Everything you and your colleagues change is saved online and appears in other browsers within about 15 seconds.</div></div>
   <button class="btn ${full?'':'primary'}" data-act="seedcloud">${full?'Re-check starting data':'Upload starting data'}</button></div>
   <div id="seedmsg" class="small" role="status">${full?'All '+CLOUD_COUNT+' student records are stored online.':CLOUD_COUNT+' of '+DB.students.length+' student records are stored online. Press the button once to upload the rest and the supply list.'}</div></section>`}
+
+/* ---------- emailed confirmation codes (Gmail) ---------- */
+async function sendCode(kind,token,email){
+ const h={'Content-Type':'application/json',apikey:CLOUD.key};if(/^eyJ/.test(CLOUD.key))h.Authorization='Bearer '+CLOUD.key;
+ let r;try{r=await fetch(CLOUD.url.replace(/\/+$/,'')+'/functions/v1/send-code',{method:'POST',headers:h,body:JSON.stringify({kind,token,email:email||null})})}
+ catch(e){const x=new Error('OFFLINE');x.code='OFFLINE';throw x}
+ let j=null;try{j=await r.json()}catch(e){}
+ if(!r.ok||!j||j.error){const c=(j&&j.error)||('HTTP '+r.status);const x=new Error(c);x.code=c;throw x}
+ return j}
+async function cloudVerifyLogin(code){
+ const L=S.login,btn=$('#codeform button[type=submit]');if(btn){btn.disabled=true;btn.textContent='Checking…'}
+ try{const r=await rpc('app_verify_login',{p_token:L.pending.token,p_code:code});
+  if(r.error){if(r.error==='TOO_MANY_TRIES')L.pending=null;L.err=cloudErr({code:r.error});L.info='';render();return}
+  L.pending=null;L.err='';ss.set('ehh_tok',r.token);ss.set('ehh_role',r.account.role);location.href=ROLE_PAGE[r.account.role]}
+ catch(e){if(e.code==='SESSION_EXPIRED')L.pending=null;L.err=cloudErr(e);render()}}
+async function cloudResend(){
+ const L=S.login;if(!L.pending)return;
+ try{await sendCode('login',L.pending.token);L.err='';L.info='A new code was sent.'}catch(e){L.info='';L.err=cloudErr(e)}
+ render();const ci=$('#lc');if(ci)ci.focus()}

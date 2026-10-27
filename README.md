@@ -10,3 +10,10 @@ index.html, doctor.html, nurse.html, dentist.html, teacher.html, style.css, conf
 4. Hard refresh the site, log in as Dummy Doctor1 / doctor1, press "Upload starting data" on Overview (once).
 
 Leave `config.js` empty to run each browser on its own (no sharing).
+
+## Gmail confirmation (optional, recommended)
+Each person can link their own Gmail under **My account**. After that, every login needs a 6-digit code emailed to it.
+The emails are sent by the Supabase Edge Function `send-code` (source in `edge/send-code.ts`). It needs two secrets in
+Supabase > Edge Functions > Secrets:
+- `GMAIL_USER`: the Gmail address that sends the codes (a dedicated one, e.g. eduhealthhub.noreply@gmail.com)
+- `GMAIL_APP_PASSWORD`: a Google "App password" for that Gmail (Google Account > Security > 2-Step Verification > App passwords)

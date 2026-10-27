@@ -19,6 +19,7 @@ create table if not exists public.accounts(
   pw text not null,
   photo text
 );
+alter table public.accounts add column if not exists photo text;
 create unique index if not exists accounts_username_u on public.accounts ((regexp_replace(lower(username),'\s+','','g')));
 create unique index if not exists accounts_email_u on public.accounts ((regexp_replace(lower(email),'\s+','','g')));
 
@@ -272,3 +273,165 @@ insert into public.accounts(id,role,name,username,email,adv,pw) values
 on conflict (id) do nothing;
 
 -- Done. Now open the website, log in as Dummy Doctor1 and press 'Upload starting data' on the Overview page.
+
+-- =====================================================================
+--  Gmail confirmation (each person links their own Gmail; every login then
+--  needs a 6-digit code emailed to it). Safe to run again.
+-- =====================================================================
+alter table public.accounts add column if not exists gmail text;
+alter table public.accounts add column if not exists gmail_ok boolean not null default false;
+alter table public.sessions add column if not exists stage text not null default 'ok';
+create unique index if not exists accounts_gmail_u on public.accounts ((lower(gmail))) where gmail_ok;
+
+create table if not exists public.email_codes(
+  id bigserial primary key,
+  account_id text not null references public.accounts(id) on delete cascade,
+  purpose text not null check (purpose in ('login','link')),
+  email text not null,
+  code_hash text not null,
+  expires timestamptz not null,
+  tries int not null default 0,
+  created_at timestamptz not null default now()
+);
+alter table public.email_codes enable row level security;
+revoke all on public.email_codes from anon, authenticated;
+
+create or replace function public.ehh_acct_json(a public.accounts) returns jsonb
+language sql immutable as $$
+  select jsonb_build_object('id',a.id,'role',a.role,'name',a.name,'username',a.username,'email',a.email,'adv',a.adv,
+    'photo',a.photo,'gmail',case when a.gmail_ok then a.gmail end,'gmail_ok',a.gmail_ok) $$;
+
+-- only fully confirmed sessions may use the app
+create or replace function public.ehh_auth(p_token text) returns public.accounts
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  select ac.* into a from public.sessions s join public.accounts ac on ac.id=s.account_id
+   where s.token=p_token and s.expires>now() and s.stage='ok';
+  if not found then raise exception 'SESSION_EXPIRED'; end if;
+  return a;
+end $$;
+
+create or replace function public.ehh_pending(p_token text) returns public.accounts
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  select ac.* into a from public.sessions s join public.accounts ac on ac.id=s.account_id
+   where s.token=p_token and s.expires>now() and s.stage='pending';
+  if not found then raise exception 'SESSION_EXPIRED'; end if;
+  return a;
+end $$;
+
+create or replace function public.ehh_mask(m text) returns text
+language sql immutable as $$ select left(m,1)||'***'||substr(m,position('@' in m)) $$;
+
+-- login: password first; if a Gmail is linked, a code is needed next
+create or replace function public.app_login(p_user text, p_pw text) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; nk text := public.ehh_norm(p_user); f public.login_fails; tok text;
+begin
+  select * into f from public.login_fails where login_fails.k=nk;
+  if found and f.n>=5 and f.t>now()-interval '60 seconds' then return jsonb_build_object('error','TOO_MANY_ATTEMPTS'); end if;
+  select * into a from public.accounts
+   where public.ehh_norm(username)=nk or public.ehh_norm(email)=nk
+      or (gmail_ok and public.ehh_norm(gmail)=nk) limit 1;
+  if not found or a.pw <> crypt(coalesce(p_pw,''), a.pw) then
+    insert into public.login_fails(k,n,t) values (nk,1,now())
+      on conflict (k) do update set n = case when public.login_fails.t>now()-interval '60 seconds' then public.login_fails.n+1 else 1 end, t=now();
+    return jsonb_build_object('error','BAD_LOGIN');
+  end if;
+  delete from public.login_fails where login_fails.k=nk;
+  delete from public.sessions where expires<now();
+  delete from public.email_codes where created_at<now()-interval '1 day';
+  tok := encode(gen_random_bytes(24),'hex');
+  if a.gmail_ok then
+    insert into public.sessions(token,account_id,expires,stage) values (tok,a.id,now()+interval '15 minutes','pending');
+    return jsonb_build_object('pending',tok,'hint',public.ehh_mask(a.gmail));
+  end if;
+  insert into public.sessions(token,account_id,expires) values (tok,a.id,now()+interval '12 hours');
+  return jsonb_build_object('token',tok,'account',public.ehh_acct_json(a));
+end $$;
+
+-- called only by the send-code email function (service role), never by the browser
+create or replace function public.ehh_issue_code(p_token text, p_purpose text, p_email text default null) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; mail text; c text; lastc timestamptz; n int;
+begin
+  if p_purpose='login' then a := public.ehh_pending(p_token); mail := a.gmail;
+  elsif p_purpose='link' then
+    a := public.ehh_auth(p_token); mail := lower(trim(coalesce(p_email,'')));
+    if mail !~ '^[a-z0-9._+-]+@(gmail|googlemail)\.com$' then raise exception 'BAD_EMAIL'; end if;
+    if exists(select 1 from public.accounts x where x.id<>a.id and x.gmail_ok and lower(x.gmail)=mail) then raise exception 'EMAIL_TAKEN'; end if;
+  else raise exception 'BAD_REQUEST'; end if;
+  select max(created_at) filter (where purpose=p_purpose), count(*) filter (where created_at>now()-interval '1 hour') into lastc, n
+    from public.email_codes where account_id=a.id;
+  if lastc is not null and lastc>now()-interval '30 seconds' then raise exception 'WAIT'; end if;
+  if n>=6 then raise exception 'TOO_MANY_CODES'; end if;
+  update public.email_codes set expires=now() where account_id=a.id and purpose=p_purpose and expires>now();
+  c := lpad((('x'||encode(gen_random_bytes(4),'hex'))::bit(32)::bigint % 1000000)::text,6,'0');
+  insert into public.email_codes(account_id,purpose,email,code_hash,expires)
+    values (a.id,p_purpose,mail,crypt(c,gen_salt('bf')),now()+interval '10 minutes');
+  return jsonb_build_object('email',mail,'code',c,'name',a.name);
+end $$;
+
+-- check a code row; wrong guesses are counted (and kept, so no exception here)
+create or replace function public.ehh_check_code(p_acct text, p_purpose text, p_code text, out ok boolean, out err text, out mail text)
+language plpgsql security definer set search_path = public, extensions as $$
+declare r public.email_codes;
+begin
+  ok := false; mail := null;
+  select * into r from public.email_codes where account_id=p_acct and purpose=p_purpose and expires>now() order by id desc limit 1;
+  if not found then err := 'CODE_EXPIRED'; return; end if;
+  if r.tries>=5 then err := 'TOO_MANY_TRIES'; return; end if;
+  update public.email_codes set tries=tries+1 where id=r.id;
+  if r.code_hash <> crypt(coalesce(p_code,''), r.code_hash) then
+    err := case when r.tries+1>=5 then 'TOO_MANY_TRIES' else 'BAD_CODE' end; return; end if;
+  update public.email_codes set expires=now() where id=r.id;
+  ok := true; mail := r.email;
+end $$;
+
+create or replace function public.app_verify_login(p_token text, p_code text) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; v record;
+begin
+  a := public.ehh_pending(p_token);
+  select * into v from public.ehh_check_code(a.id,'login',p_code);
+  if not v.ok then
+    if v.err='TOO_MANY_TRIES' then delete from public.sessions where token=p_token; end if;
+    return jsonb_build_object('error',v.err);
+  end if;
+  update public.sessions set stage='ok', expires=now()+interval '12 hours' where token=p_token;
+  return jsonb_build_object('token',p_token,'account',public.ehh_acct_json(a));
+end $$;
+
+create or replace function public.app_verify_link(p_token text, p_code text) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; v record;
+begin
+  a := public.ehh_auth(p_token);
+  select * into v from public.ehh_check_code(a.id,'link',p_code);
+  if not v.ok then return jsonb_build_object('error',v.err); end if;
+  update public.accounts set gmail=v.mail, gmail_ok=true where id=a.id returning * into a;
+  return jsonb_build_object('account',public.ehh_acct_json(a));
+end $$;
+
+create or replace function public.app_unlink_gmail(p_token text, p_password text) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_auth(p_token);
+  if a.pw <> crypt(coalesce(p_password,''), a.pw) then raise exception 'BAD_PASSWORD'; end if;
+  update public.accounts set gmail=null, gmail_ok=false where id=a.id returning * into a;
+  return public.ehh_acct_json(a);
+end $$;
+
+revoke all on function public.ehh_pending(text), public.ehh_mask(text), public.ehh_check_code(text,text,text),
+  public.ehh_issue_code(text,text,text) from public, anon, authenticated;
+revoke all on function public.app_verify_login(text,text), public.app_verify_link(text,text), public.app_unlink_gmail(text,text) from public;
+grant execute on function public.app_login(text,text), public.app_verify_login(text,text),
+  public.app_verify_link(text,text), public.app_unlink_gmail(text,text) to anon, authenticated;
+do $$ begin
+  if exists(select 1 from pg_roles where rolname='service_role') then
+    grant execute on function public.ehh_issue_code(text,text,text) to service_role;
+  end if;
+end $$;
