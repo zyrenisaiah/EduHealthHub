@@ -279,35 +279,52 @@ function accountView(){
 }
 function accMsg(id,m,ok){const e=$('#'+id);e.textContent=m;e.style.color=ok?'var(--good)':'var(--bad)'}
 
-/* ---------- student photo (teacher) ---------- */
-function setPhoto(file){
- const st=stu(S.sid);if(!file||!st||S.user.role!=='Teacher')return;
- if(!/^image\//.test(file.type))return toast('Choose an image file (JPG or PNG).');
- if(file.size>15*1024*1024)return toast('That image is too large. Choose one under 15 MB.');
- const url=URL.createObjectURL(file),img=new Image();
- img.onload=()=>{
-  const n=Math.min(img.width,img.height),cv=document.createElement('canvas');cv.width=cv.height=240;
-  cv.getContext('2d').drawImage(img,(img.width-n)/2,(img.height-n)/2,n,n,0,0,240,240);
-  URL.revokeObjectURL(url);
-  try{st.photo=cv.toDataURL('image/jpeg',.85)}catch(e){return toast('That image could not be read.')}
-  save();toast('Photo updated');render()};
- img.onerror=()=>{URL.revokeObjectURL(url);toast('That image could not be read.')};
- img.src=url;
-}
-/* ---------- my profile picture (all staff) ---------- */
-function setAccPhoto(file,remove){
- const a=DB.accounts.find(x=>x.id===S.user.id);if(!a)return;
- const done=p=>{a.photo=p||undefined;if(!p)delete a.photo;S.user.photo=p||null;toast(p?'Profile picture updated':'Profile picture removed');render()};
- const store=p=>{if(CLOUD_ON)rpc('app_set_photo',{p_token:TOK,p_photo:p}).then(()=>done(p)).catch(e=>toast(cloudErr(e)));else{done(p);save()}};
- if(remove)return store(null);
+/* ---------- photo cropper: move and zoom before saving ---------- */
+function openCropper(file,done){
  if(!file)return;
  if(!/^image\//.test(file.type))return toast('Choose an image file (JPG or PNG).');
  if(file.size>15*1024*1024)return toast('That image is too large. Choose one under 15 MB.');
  const url=URL.createObjectURL(file),img=new Image();
- img.onload=()=>{const n=Math.min(img.width,img.height),cv=document.createElement('canvas');cv.width=cv.height=240;
-  cv.getContext('2d').drawImage(img,(img.width-n)/2,(img.height-n)/2,n,n,0,0,240,240);URL.revokeObjectURL(url);
-  let p;try{p=cv.toDataURL('image/jpeg',.85)}catch(e){return toast('That image could not be read.')}store(p)};
- img.onerror=()=>{URL.revokeObjectURL(url);toast('That image could not be read.')};img.src=url}
+ img.onerror=()=>{URL.revokeObjectURL(url);toast('That image could not be read.')};
+ img.onload=()=>{
+  const V=260,w=img.naturalWidth,h=img.naturalHeight,b=Math.max(V/w,V/h);let z=1,ox=(V-w*b)/2,oy=(V-h*b)/2;
+  const ov=document.createElement('div');ov.className='crop-ov';ov.setAttribute('role','dialog');ov.setAttribute('aria-label','Adjust your picture');
+  ov.innerHTML='<div class="crop-box"><h3>Adjust your picture</h3><div class="small muted" style="justify-self:start">Drag the picture to move it. Use the slider or mouse wheel to zoom.</div><div class="crop-vp" id="cvp"><img alt=""></div><div class="crop-zoom"><span class="small muted">Zoom</span><input type="range" id="czoom" min="1" max="4" step="0.01" value="1" aria-label="Zoom"></div><div class="crop-act"><button class="btn" type="button" id="ccancel">Cancel</button><button class="btn primary" type="button" id="csave">Save picture</button></div></div>';
+  document.body.appendChild(ov);
+  const vp=ov.querySelector('#cvp'),im=vp.querySelector('img');im.src=url;
+  const clamp=()=>{const k=b*z;ox=Math.min(0,Math.max(V-w*k,ox));oy=Math.min(0,Math.max(V-h*k,oy))};
+  const draw=()=>{clamp();const k=b*z;im.style.width=w*k+'px';im.style.height=h*k+'px';im.style.transform='translate('+ox+'px,'+oy+'px)'};
+  const setZ=nz=>{const k0=b*z,cx=(V/2-ox)/k0,cy=(V/2-oy)/k0;z=Math.min(4,Math.max(1,nz));const k=b*z;ox=V/2-cx*k;oy=V/2-cy*k;ov.querySelector('#czoom').value=z;draw()};
+  draw();
+  let drag=null;
+  vp.addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,ox,oy};vp.setPointerCapture(e.pointerId)});
+  vp.addEventListener('pointermove',e=>{if(!drag)return;ox=drag.ox+(e.clientX-drag.x);oy=drag.oy+(e.clientY-drag.y);draw()});
+  const end=()=>{drag=null};vp.addEventListener('pointerup',end);vp.addEventListener('pointercancel',end);
+  vp.addEventListener('wheel',e=>{e.preventDefault();setZ(z+(e.deltaY<0?.1:-.1))},{passive:false});
+  ov.querySelector('#czoom').addEventListener('input',e=>setZ(+e.target.value));
+  const close=()=>{URL.revokeObjectURL(url);ov.remove();document.removeEventListener('keydown',onKey)};
+  const onKey=e=>{if(e.key==='Escape')close()};document.addEventListener('keydown',onKey);
+  ov.addEventListener('pointerdown',e=>{if(e.target===ov)close()});
+  ov.querySelector('#ccancel').onclick=close;
+  ov.querySelector('#csave').onclick=()=>{
+   const cv=document.createElement('canvas');cv.width=cv.height=240;const f=240/V,k=b*z,c=cv.getContext('2d');
+   c.fillStyle='#fff';c.fillRect(0,0,240,240);c.drawImage(img,0,0,w,h,ox*f,oy*f,w*k*f,h*k*f);
+   let p;try{p=cv.toDataURL('image/jpeg',.88)}catch(e){return toast('That image could not be read.')}
+   close();done(p)};
+  ov.querySelector('#csave').focus()};
+ img.src=url}
+/* ---------- student photo (teacher) ---------- */
+function setPhoto(file){
+ const sid=S.sid,st=stu(sid);if(!file||!st||S.user.role!=='Teacher')return;
+ openCropper(file,p=>{const s=stu(sid);if(!s)return;s.photo=p;save();toast('Photo updated');render()})
+}
+/* ---------- my profile picture (all staff) ---------- */
+function setAccPhoto(file,remove){
+ const a=DB.accounts.find(x=>x.id===S.user.id);if(!a)return;
+ const done=p=>{if(p)a.photo=p;else delete a.photo;S.user.photo=p||null;toast(p?'Profile picture updated':'Profile picture removed');render()};
+ const store=p=>{if(CLOUD_ON)rpc('app_set_photo',{p_token:TOK,p_photo:p}).then(()=>done(p)).catch(e=>toast(cloudErr(e)));else{done(p);save()}};
+ if(remove)return store(null);
+ openCropper(file,store)}
 /* ---------- record of files + export (teacher) ---------- */
 S.sel=new Set();S.lrnText='';S.lrnMsg='';
 function filesFor(st,sy){
@@ -517,8 +534,8 @@ function onBind(e){
  if(b==='loginadv'){S.login.adv=v;return}
  if(b==='sy'){S.sy=v;S.sel=new Set();S.lrnMsg='';render();return}
  if(b==='lrntext'){S.lrnText=v;return}
- if(b==='photo'){if(ch)setPhoto(el.files&&el.files[0]);return}
- if(b==='accphoto'){if(ch)setAccPhoto(el.files&&el.files[0]);return}
+ if(b==='photo'){if(ch){const f=el.files&&el.files[0];el.value='';setPhoto(f)}return}
+ if(b==='accphoto'){if(ch){const f=el.files&&el.files[0];el.value='';setAccPhoto(f)}return}
  if(b==='trlrn'){S.tr=S.tr||{};S.tr.lrn=v.replace(/\D/g,'');const p=$('#trprev');if(p)p.innerHTML=trPreview();return}
  if(b==='trdest'){S.tr=S.tr||{};S.tr.dest=v;return}
  if(b==='stock'){if(!ch)return;const i=DB.stock.find(x=>x.id===el.dataset.id),f=el.dataset.f;i[f]=(f==='qty'||f==='min')?Math.max(0,parseInt(v)||0):v;save();render();return}

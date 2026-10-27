@@ -210,3 +210,13 @@ tr.grp td{background:var(--surface2);font-weight:600;font-size:12px}
   .perm{display:none}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* photo cropper */
+.crop-ov{position:fixed;inset:0;background:rgba(28,40,32,.55);display:grid;place-items:center;z-index:40;padding:16px}
+.crop-box{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:18px;width:min(340px,100%);display:grid;gap:12px;justify-items:center}
+.crop-box h3{margin:0;justify-self:start}
+.crop-vp{position:relative;width:260px;height:260px;border-radius:50%;overflow:hidden;background:var(--surface2);touch-action:none;cursor:grab;outline:3px solid var(--accent);outline-offset:3px;user-select:none}
+.crop-vp:active{cursor:grabbing}
+.crop-vp img{position:absolute;left:0;top:0;max-width:none;pointer-events:none;-webkit-user-drag:none}
+.crop-zoom{display:flex;gap:10px;align-items:center;width:100%}
+.crop-zoom input{flex:1}
+.crop-act{display:flex;gap:8px;justify-content:flex-end;width:100%}
