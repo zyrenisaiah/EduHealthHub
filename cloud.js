@@ -16,6 +16,9 @@ function cloudErr(e){
  if(c==='BAD_LOGIN')return 'Username or password is incorrect.';
  if(c==='SESSION_EXPIRED')return 'Your session expired. Please log in again.';
  if(c==='NOT_ALLOWED')return 'Your account is not allowed to make that change.';
+ if(c==='WRONG_GOOGLE')return 'That Google account is not the one linked to this login.';
+ if(c==='GOOGLE_INVALID')return 'Google could not confirm that account. Please try again.';
+ if(c==='GOOGLE_NOT_SET_UP')return 'Google sign-in is not finished being set up yet.';
  if(c==='BAD_CODE')return 'That code is not correct. Check it and try again.';
  if(c==='CODE_EXPIRED')return 'That code has expired. Ask for a new one.';
  if(c==='TOO_MANY_TRIES')return 'Too many wrong codes. Log in again to get a new one.';
@@ -88,7 +91,7 @@ async function cloudLogin(u,pw){
  try{const r=await rpc('app_login',{p_user:u,p_pw:pw});
   if(r.error){L.err=cloudErr({code:r.error});render();const i=$('#lu');if(i)i.value=u;return}
   if(r.pending){L.pending={token:r.pending,hint:r.hint};L.err='';L.info='';
-   try{await sendCode('login',r.pending)}catch(e){L.err=cloudErr(e)}
+   if(!GOOGLE_CLIENT_ID){try{await sendCode('login',r.pending)}catch(e){L.err=cloudErr(e)}}
    render();const ci=$('#lc');if(ci)ci.focus();return}
   L.err='';
   /* app_sync needs the token; the account comes back from app_login */
@@ -138,3 +141,33 @@ async function cloudResend(){
  const L=S.login;if(!L.pending)return;
  try{await sendCode('login',L.pending.token);L.err='';L.info='A new code was sent.'}catch(e){L.info='';L.err=cloudErr(e)}
  render();const ci=$('#lc');if(ci)ci.focus()}
+
+/* ---------- Continue with Google (confirms the person owns the Google account) ---------- */
+function loadGIS(cb){
+ if(window.google&&google.accounts&&google.accounts.id)return cb();
+ if(document.getElementById('gis')){setTimeout(()=>loadGIS(cb),200);return}
+ const s=document.createElement('script');s.id='gis';s.src='https://accounts.google.com/gsi/client';s.async=true;s.onload=()=>cb();document.head.appendChild(s)}
+function mountGoogle(elId,handler,text){
+ if(!GOOGLE_CLIENT_ID)return;
+ loadGIS(()=>{const el=document.getElementById(elId);if(!el)return;
+  google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:r=>handler(r.credential),auto_select:false});
+  google.accounts.id.renderButton(el,{theme:'outline',size:'large',text:text||'continue_with',shape:'pill',width:260})})}
+async function googleCall(kind,token,credential){
+ const h={'Content-Type':'application/json',apikey:CLOUD.key};if(/^eyJ/.test(CLOUD.key))h.Authorization='Bearer '+CLOUD.key;
+ let r;try{r=await fetch(CLOUD.url.replace(/\/+$/,'')+'/functions/v1/google-auth',{method:'POST',headers:h,body:JSON.stringify({kind,token,credential})})}
+ catch(e){const x=new Error('OFFLINE');x.code='OFFLINE';throw x}
+ let j=null;try{j=await r.json()}catch(e){}
+ if(!r.ok||!j||j.error){const c=(j&&j.error)||('HTTP '+r.status);const x=new Error(c);x.code=c;throw x}
+ return j}
+async function googleLogin(cred){
+ const L=S.login;if(!L.pending)return;
+ try{const r=await googleCall('login',L.pending.token,cred);
+  L.pending=null;L.err='';ss.set('ehh_tok',r.token);ss.set('ehh_role',r.account.role);location.href=ROLE_PAGE[r.account.role]}
+ catch(e){if(e.code==='SESSION_EXPIRED')L.pending=null;L.err=cloudErr(e);L.info='';render()}}
+async function googleLink(cred){
+ try{const r=await googleCall('link',TOK,cred);Object.assign(DB.accounts[0],r.account);S.gm=null;toast('Google account linked. Logins now ask you to confirm with Google.');render()}
+ catch(e){S.gm=Object.assign(S.gm||{},{err:cloudErr(e)});render()}}
+function afterRender(){
+ if(!GOOGLE_CLIENT_ID||!CLOUD_ON)return;
+ if(document.getElementById('g-login'))mountGoogle('g-login',googleLogin,'continue_with');
+ if(document.getElementById('g-link'))mountGoogle('g-link',googleLink,'continue_with')}

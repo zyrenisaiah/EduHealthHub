@@ -457,3 +457,40 @@ begin
     values (a.id,p_purpose,mail,crypt(c,gen_salt('bf')),now()+interval '10 minutes') returning id into cid;
   return jsonb_build_object('email',mail,'code',c,'name',a.name,'id',cid);
 end $$;
+
+-- =====================================================================
+--  Sign in with Google confirmation (no email sending needed)
+-- =====================================================================
+alter table public.accounts add column if not exists google_sub text;
+
+-- called only by the google-auth edge function (service role), after Google's token was verified
+create or replace function public.ehh_link_google(p_token text, p_email text, p_sub text) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; mail text := lower(trim(coalesce(p_email,'')));
+begin
+  a := public.ehh_auth(p_token);
+  if mail !~ '^\S+@\S+\.\S+$' then raise exception 'BAD_EMAIL'; end if;
+  if exists(select 1 from public.accounts x where x.id<>a.id and x.gmail_ok and lower(x.gmail)=mail) then raise exception 'EMAIL_TAKEN'; end if;
+  update public.accounts set gmail=mail, gmail_ok=true, google_sub=p_sub where id=a.id returning * into a;
+  return jsonb_build_object('account',public.ehh_acct_json(a));
+end $$;
+
+create or replace function public.ehh_google_login(p_pending text, p_email text, p_sub text) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_pending(p_pending);
+  if not a.gmail_ok or lower(a.gmail)<>lower(coalesce(p_email,'')) or (a.google_sub is not null and a.google_sub<>p_sub) then
+    raise exception 'WRONG_GOOGLE'; end if;
+  if a.google_sub is null then update public.accounts set google_sub=p_sub where id=a.id; end if;
+  delete from public.email_codes where account_id=a.id and purpose='login';
+  update public.sessions set stage='ok', expires=now()+interval '12 hours' where token=p_pending;
+  return jsonb_build_object('token',p_pending,'account',public.ehh_acct_json(a));
+end $$;
+
+revoke all on function public.ehh_link_google(text,text,text), public.ehh_google_login(text,text,text) from public, anon, authenticated;
+do $$ begin
+  if exists(select 1 from pg_roles where rolname='service_role') then
+    grant execute on function public.ehh_link_google(text,text,text), public.ehh_google_login(text,text,text) to service_role;
+  end if;
+end $$;

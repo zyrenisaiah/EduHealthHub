@@ -89,11 +89,12 @@ function loginView(){
  </div>
  <div style="display:grid;gap:14px;min-width:0">
 ${L.pending?` <form class="login-card" id="codeform" autocomplete="off">
-  <div><h2>Check your Gmail</h2><div class="small muted">We sent a 6-digit code to <b>${esc(L.pending.hint)}</b>. It works for 10 minutes.</div></div>
+  <div><h2>Confirm it is you</h2><div class="small muted">Your account is linked to <b>${esc(L.pending.hint)}</b>. ${GOOGLE_CLIENT_ID?'Confirm with Google, or enter':'Enter'} the 6-digit code emailed to it (valid 10 minutes).</div></div>
+  ${GOOGLE_CLIENT_ID?`<div style="display:grid;gap:6px;justify-items:start"><div class="small muted">Confirm it is you with Google:</div><div id="g-login" style="min-height:44px"></div><div class="small muted">Or use the emailed code:</div></div>`:''}
   <div class="field"><label for="lc">Confirmation code</label><input class="inp mono" id="lc" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="123456" required style="font-size:20px;letter-spacing:6px;text-align:center"></div>
   ${L.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.err)}</div>`:''}${L.info?`<div class="pill good" role="status" style="white-space:normal">${esc(L.info)}</div>`:''}
   <button class="btn primary" type="submit">Confirm and log in</button>
-  <div class="trow"><button type="button" class="btn sm" data-act="resendcode">Send a new code</button><button type="button" class="btn sm" data-act="codeback">Back</button></div>
+  <div class="trow"><button type="button" class="btn sm" data-act="resendcode">${GOOGLE_CLIENT_ID?'Email me a code':'Send a new code'}</button><button type="button" class="btn sm" data-act="codeback">Back</button></div>
  </form>`:` <form class="login-card" id="loginform" autocomplete="on">
   <div><h2>Log in</h2><div class="small muted">${WANT?`Log in with a ${WANT} account to open the ${WANT} page.`:'Use your own username or email. Learners do not have accounts.'}</div></div>
   <div class="field"><label for="lu">Username or email</label><input class="inp" id="lu" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" required></div>

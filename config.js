@@ -2,6 +2,8 @@
    Paste your Supabase "Project URL" and "anon / publishable key" between the quotes.
    Leave both empty to run in single-browser (local) mode. */
 const CLOUD={url:"https://myfcltwnunmrtiymkths.supabase.co",key:"sb_publishable_7m37CCvmCEAsIhff10wadA_y6zjaJLO"};
+/* Optional: your Google OAuth "Web client ID" turns on the 'Continue with Google' buttons (see README). */
+const GOOGLE_CLIENT_ID="";
 const CLOUD_ON=!!(CLOUD.url&&CLOUD.key);
 /* which page is this? home (login) or one page per role */
 const PAGE=document.body.dataset.page||'home';
