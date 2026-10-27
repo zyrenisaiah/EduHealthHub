@@ -367,7 +367,7 @@ function filesView(){
    <div class="field" style="flex:0 0 auto;align-self:flex-end"><button class="btn" data-act="addlrn">Add</button></div></div>
   ${S.lrnMsg?`<div class="small" style="margin-top:8px;color:var(--muted)" role="status">${esc(S.lrnMsg)}</div>`:''}
   <div class="ro" style="margin:12px 0">${S.sel.size?`${ex.length} selected learner(s) will be exported.`:`All ${list.length} learner(s) in this advisory will be exported.`}${S.sel.size?' <button class="btn sm" data-act="selclear" style="margin-left:8px">Clear selection</button>':''}</div>
-  <div class="trow"><button class="btn primary" data-act="exportpdf" ${ex.length?'':'disabled'}>Download record of files (PDF)</button><button class="btn" data-act="exporthtml" ${ex.length?'':'disabled'}>Download full health records (HTML)</button></div></section>
+  <div class="trow"><button class="btn primary" data-act="exportpdf" ${ex.length?'':'disabled'}>Download record of files (PDF)</button><button class="btn" data-act="exportfull" ${ex.length?'':'disabled'}>Download full health records (PDF)</button></div></section>
  <section class="panel" style="padding:0"><div class="tw"><table class="wrapth"><thead><tr><th><input type="checkbox" data-act="selall" ${list.length&&S.sel.size===list.length?'checked':''} aria-label="Select all"></th><th>Learner</th><th>LRN</th>${FILE_KINDS.map(k=>`<th>${esc(k)}</th>`).join('')}<th>On file</th><th></th></tr></thead><tbody>
  ${rows||`<tr><td colspan="9" class="muted">No learners were in this advisory for ${sy}.</td></tr>`}</tbody></table></div></section>`;
 }
@@ -386,7 +386,8 @@ async function saveFile(filename,data){
   toast('Could not save the file ('+(c||'error')+').')}
 }
 /* ---------- minimal PDF writer (no libraries) ---------- */
-function pdfBuild(pages,W,H){
+function pdfBuild(pages,W,H,images,pageImg){
+ images=images||[];pageImg=pageImg||[];
  const enc=s=>{let o='';for(const ch of String(s)){const c=ch.charCodeAt(0);o+=c<256?ch:'?'}return o};
  const objs=[],add=s=>{objs.push(s);return objs.length};
  add('<< /Type /Catalog /Pages 2 0 R >>');
@@ -394,9 +395,11 @@ function pdfBuild(pages,W,H){
  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>');
  add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>');
  pages.forEach((c,i)=>{
-  add(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${6+2*i} 0 R >>`);
+  const xo=pageImg[i]!=null?` /XObject << /Im${pageImg[i]} ${5+2*pages.length+pageImg[i]} 0 R >>`:'';
+  add(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>${xo} >> /Contents ${6+2*i} 0 R >>`);
   const s=enc(c);add(`<< /Length ${s.length} >>\nstream\n${s}\nendstream`);
  });
+ images.forEach(im=>add(`<< /Type /XObject /Subtype /Image /Width ${im.w} /Height ${im.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${im.data.length} >>\nstream\n${im.data}\nendstream`));
  let out='%PDF-1.4\n',off=[];
  objs.forEach((o,i)=>{off.push(out.length);out+=`${i+1} 0 obj\n${o}\nendobj\n`});
  const x=out.length;
@@ -439,36 +442,79 @@ function exportPDF(){
  const blob=pdfBuild(pagesOps.map(o=>o.join('\n')),W,H);
  saveFile(`Record-of-Files_${safeName(secLabel(adv))}_${sy}.pdf`,blob);
 }
-function recordHTML(list,sy){
- const e=esc,gen=new Date().toISOString().slice(0,10);
- const one=s=>{
-  const en=enrOf(s,sy),sec=secOf(en.section),fl=filesFor(s,sy);
-  const exRows=EXAM_FIELDS.map(f=>`<tr><th>${e(f[1])}</th>${[11,12].map(G=>{const v=(s.exam[G]||{})[f[0]]||'';const dc=f[2]==='code'&&v?decode(f,v).txt:'';return `<td>${e(v)}${dc?`<div class="s">${e(dc)}</div>`:''}</td>`}).join('')}</tr>`).join('');
-  const d=s.dental,c=countChart(d);
-  const teeth=ALLT.filter(n=>d.teeth[n]&&(d.teeth[n].s||d.teeth[n].a||d.teeth[n].n)).map(n=>{const t=d.teeth[n];return `<tr><td>${n}</td><td>${e(toothName(n))}</td><td>${e(statusLabel(t.s))}</td><td>${e(t.a||'')}</td><td>${e(t.n||'')}</td></tr>`}).join('');
-  return `<section class="stu">${s.photo?`<img src="${s.photo}" alt="" style="float:right;width:84px;height:84px;object-fit:cover;border-radius:10px">`:''}<h2>${e(fullName(s))}</h2>
-  <p class="meta">LRN ${s.lrn} · ${e(secLabel(sec))} (${e(trackLabel(sec))}) · School year ${sy}</p>
-  <table class="kv"><tr><th>Sex</th><td>${e(s.sex)}</td><th>Birthdate</th><td>${e(s.birth)}</td></tr><tr><th>Parent / guardian</th><td>${e(s.guardian)}</td><th>Contact</th><td>${e(s.contact)}</td></tr><tr><th>Blood type</th><td>${e(s.blood)}</td><th>Allergies</th><td>${e(s.allergies)}</td></tr><tr><th>Known conditions</th><td colspan="3">${e(s.conditions)}</td></tr></table>
-  <h3>Record of files</h3><table><tr><th>File</th><th>Status</th><th>Filed on</th></tr>${fl.map(f=>`<tr><td>${e(f.name)}</td><td>${f.status}</td><td>${f.date||''}</td></tr>`).join('')}</table>
-  <h3>School health examination</h3><table><tr><th>Examination</th><th>Grade 11</th><th>Grade 12</th></tr>${exRows}</table>
-  <h3>Other examinations</h3>${s.otherExams.length?`<table><tr><th>Date</th><th>Result</th></tr>${s.otherExams.map(o=>`<tr><td>${e(o.date)}</td><td>${e(o.text)}</td></tr>`).join('')}</table>`:'<p class="s">None recorded.</p>'}
-  <h3>Dental service</h3><p>Date examined: ${e(d.date||'not yet examined')} · Permanent teeth: D ${c.p.d}, M ${c.p.m}, F ${c.p.f}, DMFT ${c.p.d+c.p.m+c.p.f} · Temporary teeth: d ${c.t.d}, f ${c.t.f}</p>
-  ${teeth?`<table><tr><th>Tooth</th><th>Name</th><th>Status</th><th>Accomplished</th><th>Treatment need</th></tr>${teeth}</table>`:'<p class="s">No tooth findings recorded.</p>'}
-  ${d.treat.length?`<h3>Treatment record</h3><table><tr><th>Date</th><th>Tooth</th><th>Operation</th><th>Dentist</th></tr>${d.treat.map(t=>`<tr><td>${e(t.date)}</td><td>${e(t.tooth)}</td><td>${e(t.op)}</td><td>${e(t.dentist)}</td></tr>`).join('')}</table>`:''}</section>`;
- };
- return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EduHealthHub student health records</title><style>
- body{font:14px/1.5 system-ui,Segoe UI,sans-serif;color:#10282e;margin:0;padding:24px;max-width:860px;margin-inline:auto}
- h1{font-size:20px;margin:0 0 4px}h2{font-size:22px;margin:0}h3{font-size:14px;margin:18px 0 6px;text-transform:uppercase;letter-spacing:.06em;color:#0b6f72}
- table{border-collapse:collapse;width:100%;margin:4px 0}th,td{border:1px solid #c9d8d8;padding:5px 8px;text-align:left;vertical-align:top}th{background:#eef5f5;font-weight:600}
- .meta,.s{color:#51676c;font-size:12px;margin:2px 0}.kv th{width:18%}.stu{page-break-before:always;padding-top:8px}.stu:first-of-type{page-break-before:auto}
- header{border-bottom:2px solid #0b7f82;padding-bottom:10px;margin-bottom:12px}</style></head><body>
- <header><h1>EduHealthHub · Student health records</h1><div class="meta">${e(secLabel(secOf(S.user.adv)))} · School year ${sy} · Generated ${gen} by ${e(S.user.name)} · ${list.length} learner(s). Confidential health information.</div></header>
- ${list.map(one).join('')}</body></html>`;
-}
-function exportHTML(list){
- const sy=S.sy,adv=secOf(S.user.adv);
- const name=list.length===1?`Health-Record_${list[0].lrn}_${sy}.html`:`Health-Records_${safeName(secLabel(adv))}_${sy}.html`;
- saveFile(name,recordHTML(list,sy));
+/* ---------- full health record (PDF) ---------- */
+const HW=[278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+function pdfText(s,sz,bold){let w=0;for(const ch of String(s)){const c=ch.charCodeAt(0);w+=(c>=32&&c<=126?HW[c-32]:556)}return w*sz/1000*(bold?1.07:1)}
+async function exportRecords(list){
+ const sy=S.sy,adv=secOf(S.user.adv),W=595,H=842,M=40,CW=W-2*M;
+ const GRAY=[.35,.42,.45],INK=[.06,.16,.18],TEAL=[.043,.498,.51],GREEN=[.114,.455,.267],AMBER=[.6,.34,0];
+ const clean=s=>String(s==null?'':s).replace(/[–—]/g,'-').replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/…/g,'...').replace(/[\r\t]+/g,' ');
+ const pe=s=>clean(s).replace(/[\\()]/g,'\\$&');
+ const images=[];
+ for(const s of list){
+  const m=s.photo&&/^data:image\/jpe?g;base64,(.+)$/.exec(s.photo);
+  if(!m)continue;
+  try{const dim=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res([i.naturalWidth,i.naturalHeight]);i.onerror=rej;i.src=s.photo});
+   images.push({id:s.id,data:atob(m[1]),w:dim[0],h:dim[1]})}catch(e){}
+ }
+ const pagesOps=[];let ops,y,cur;
+ const T=(x,yy,s,sz,bold,c)=>ops.push(`BT /${bold?'F2':'F1'} ${sz} Tf ${(c||INK).join(' ')} rg ${x.toFixed(1)} ${(H-yy).toFixed(1)} Td (${pe(s)}) Tj ET`);
+ const R=(x,yy,w,h,c)=>ops.push(`${c.join(' ')} rg ${x.toFixed(1)} ${(H-yy-h).toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)} re f`);
+ const BOX=(x,yy,w,h)=>ops.push(`0.78 0.85 0.86 RG 0.5 w ${x.toFixed(1)} ${(H-yy-h).toFixed(1)} ${w.toFixed(1)} ${h.toFixed(1)} re S`);
+ const wrap=(s,w,sz,bold)=>{const out=[];clean(s).split('\n').forEach(par=>{
+   let line='';par.split(' ').forEach(word=>{
+    while(pdfText(word,sz,bold)>w&&word.length>1){let k=word.length-1;while(k>1&&pdfText(word.slice(0,k),sz,bold)>w)k--;if(line){out.push(line);line=''}out.push(word.slice(0,k));word=word.slice(k)}
+    const t=line?line+' '+word:word;if(pdfText(t,sz,bold)<=w||!line)line=t;else{out.push(line);line=word}});
+   out.push(line)});return out};
+ const newPage=cont=>{ops=[];pagesOps.push(ops);y=M;
+  if(cont){T(M,y+8,`${fullName(cur)}  |  LRN ${cur.lrn}  |  School year ${sy}  (continued)`,8.5,false,GRAY);y+=24}};
+ const need=h=>{if(y+h>H-50)newPage(true)};
+ const heading=t=>{need(60);y+=12;T(M,y+10,t.toUpperCase(),10,true,TEAL);y+=16;ops.push(`0.043 0.498 0.51 RG 0.8 w ${M} ${(H-y).toFixed(1)} m ${W-M} ${(H-y).toFixed(1)} l S`);y+=6};
+ const note=t=>{need(16);T(M,y+10,t,9,false,GRAY);y+=18};
+ /* a cell is a string or {t,b,c,sub,fill}; head may be null */
+ const table=(widths,head,rows)=>{
+  const sc=CW/widths.reduce((a,b)=>a+b,0),ws=widths.map(w=>w*sc),LH=11.5,PAD=4;
+  const X=[];ws.reduce((a,w,i)=>(X[i]=a,a+w),M);
+  const hdr=()=>{if(!head)return;R(M,y,CW,20,[.93,.96,.96]);head.forEach((h,i)=>T(X[i]+5,y+13.5,h,8.5,true,INK));BOX(M,y,CW,20);y+=20};
+  need(head?50:30);hdr();
+  rows.forEach(row=>{
+   const cells=row.map((c,i)=>{c=typeof c==='object'?c:{t:c};return {c,L:wrap(c.t,ws[i]-10,9,c.b),S2:c.sub?wrap(c.sub,ws[i]-10,8,false):[]}});
+   const h=Math.max(...cells.map(c=>c.L.length*LH+c.S2.length*10.5))+PAD*2;
+   if(y+h>H-50){newPage(true);hdr()}
+   cells.forEach((c,i)=>{if(c.c.fill)R(X[i],y,ws[i],h,[.93,.96,.96]);let ty=y+PAD+9;
+    c.L.forEach(l=>{T(X[i]+5,ty,l,9,!!c.c.b,c.c.c||INK);ty+=LH});c.S2.forEach(l=>{T(X[i]+5,ty,l,8,false,GRAY);ty+=10.5});BOX(X[i],y,ws[i],h)});
+   y+=h});
+  y+=4};
+ const lab=t=>({t,b:1,fill:1}),dash=v=>(v===0||v)&&String(v).trim()?String(v):'-';
+ for(const s of list){
+  cur=s;const en=enrOf(s,sy),sec=secOf(en.section),fl=filesFor(s,sy),d=s.dental,c=countChart(d);
+  newPage(false);
+  R(0,0,W,8,TEAL);y=34;
+  T(M,y,'EDUHEALTHHUB',9,true,TEAL);y+=13;T(M,y,'Student Health Record',9,false,GRAY);y+=26;
+  const img=images.find(x=>x.id===s.id),top=y;
+  if(img){const sz=72,ix=W-M-sz;ops.push(`q ${sz} 0 0 ${sz} ${ix} ${(H-y+10-sz).toFixed(1)} cm /Im${images.indexOf(img)} Do Q`);BOX(ix,y-10,sz,sz);ops.imgIdx=images.indexOf(img)}
+  wrap(fullName(s),CW-(img?90:0),20,true).forEach(l=>{T(M,y+6,l,20,true,INK);y+=24});
+  T(M,y+6,`LRN ${s.lrn}`,10,false,GRAY);y+=14;
+  T(M,y+6,`${secLabel(sec)} (${trackLabel(sec)})  |  School year ${sy}`,10,false,GRAY);y+=14;
+  if(img)y=Math.max(y,top+72);
+  heading('Profile');
+  table([20,30,20,30],null,[[lab('Sex'),dash(s.sex),lab('Birthdate'),dash(s.birth)],[lab('Parent / guardian'),dash(s.guardian),lab('Contact'),dash(s.contact)],[lab('Blood type'),dash(s.blood),lab('Allergies'),dash(s.allergies)]]);
+  table([20,80],null,[[lab('Known conditions'),dash(s.conditions)]]);
+  heading('Record of files');
+  table([50,25,25],['File','Status','Filed on'],fl.map(f=>[f.name,{t:f.status,b:f.status!=='Not filed',c:f.status==='On file'?GREEN:f.status==='Missing'?AMBER:GRAY},f.date||'-']));
+  heading('School health examination');
+  table([34,33,33],['Examination','Grade 11','Grade 12'],EXAM_FIELDS.map(f=>[{t:f[1],b:1},...[11,12].map(G=>{const v=(s.exam[G]||{})[f[0]]||'';const dc=f[2]==='code'&&v?decode(f,v).txt:'';return {t:v||'-',sub:dc}})]));
+  heading('Other examinations');
+  if(s.otherExams.length)table([20,80],['Date','Result'],s.otherExams.map(o=>[dash(o.date),dash(o.text)]));else note('None recorded.');
+  heading('Dental service');
+  table([30,70],null,[[lab('Date examined'),d.date||'Not yet examined'],[lab('Permanent teeth'),`Decayed ${c.p.d}   Missing ${c.p.m}   Filled ${c.p.f}   DMFT ${c.p.d+c.p.m+c.p.f}`],[lab('Temporary teeth'),`Decayed ${c.t.d}   Filled ${c.t.f}`]]);
+  const teeth=ALLT.filter(n=>d.teeth[n]&&(d.teeth[n].s||d.teeth[n].a||d.teeth[n].n));
+  if(teeth.length)table([9,24,22,22,23],['Tooth','Name','Status','Accomplished','Treatment need'],teeth.map(n=>{const t=d.teeth[n];return [String(n),toothName(n),statusLabel(t.s),t.a||'-',t.n||'-']}));else note('No tooth findings recorded.');
+  if(d.treat.length){heading('Treatment record');table([18,12,45,25],['Date','Tooth','Operation','Dentist'],d.treat.map(t=>[dash(t.date),dash(t.tooth),dash(t.op),dash(t.dentist)]))}
+ }
+ pagesOps.forEach((o,i)=>{ops=o;T(M,H-26,'EduHealthHub  |  Confidential student health information',8,false,GRAY);T(W-M-60,H-26,`Page ${i+1} of ${pagesOps.length}`,8,false,GRAY)});
+ const adv2=list.length===1?`Health-Record_${list[0].lrn}_${sy}.pdf`:`Health-Records_${safeName(secLabel(adv))}_${sy}.pdf`;
+ saveFile(adv2,pdfBuild(pagesOps.map(o=>o.join('\n')),W,H,images,pagesOps.map(o=>o.imgIdx)));
 }
 
 /* ---------- render, events ---------- */
@@ -525,8 +571,8 @@ const ACT={
   toks.forEach(t=>{const st=l.find(x=>x.lrn===t);if(st){S.sel.add(st.id);n++}else bad.push(t)});
   S.lrnMsg=!toks.length?'Type at least one LRN.':`${n} added.${bad.length?' Not found in your advisory for '+S.sy+': '+bad.join(', ')+'.':''}`;if(!bad.length)S.lrnText='';render()},
  exportpdf:()=>exportPDF(),
- exporthtml:()=>exportHTML(exportList()),
- exportone:a=>exportHTML([stu(a.dataset.id)])
+ exportfull:()=>exportRecords(exportList()),
+ exportone:a=>exportRecords([stu(a.dataset.id)])
 };
 document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');if(a&&ACT[a.dataset.act])ACT[a.dataset.act](a)});
 const KEYS={s:'✓',x:'X',f:'F',o:'O',r:'RF',h:'HS'};
