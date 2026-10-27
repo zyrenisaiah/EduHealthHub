@@ -16,7 +16,8 @@ create table if not exists public.accounts(
   username text not null,
   email text not null,
   adv text,
-  pw text not null
+  pw text not null,
+  photo text
 );
 create unique index if not exists accounts_username_u on public.accounts ((regexp_replace(lower(username),'\s+','','g')));
 create unique index if not exists accounts_email_u on public.accounts ((regexp_replace(lower(email),'\s+','','g')));
@@ -80,7 +81,7 @@ end $$;
 
 create or replace function public.ehh_acct_json(a public.accounts) returns jsonb
 language sql immutable as $$
-  select jsonb_build_object('id',a.id,'role',a.role,'name',a.name,'username',a.username,'email',a.email,'adv',a.adv) $$;
+  select jsonb_build_object('id',a.id,'role',a.role,'name',a.name,'username',a.username,'email',a.email,'adv',a.adv,'photo',a.photo) $$;
 
 -- ---------- login / logout ----------
 create or replace function public.app_login(p_user text, p_pw text) returns jsonb
@@ -217,11 +218,23 @@ begin
   update public.accounts set pw=crypt(p_new, gen_salt('bf')) where id=a.id;
 end $$;
 
+create or replace function public.app_set_photo(p_token text, p_photo text) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_auth(p_token);
+  if p_photo is not null and (p_photo !~ '^data:image/(jpeg|png|webp);base64,' or length(p_photo)>200000) then
+    raise exception 'BAD_REQUEST'; end if;
+  update public.accounts set photo=p_photo where id=a.id returning * into a;
+  return public.ehh_acct_json(a);
+end $$;
+alter table public.accounts add column if not exists photo text;
+
 -- the public key may call ONLY these functions
 revoke all on function public.ehh_auth(text), public.ehh_acct_json(public.accounts), public.ehh_norm(text) from public, anon, authenticated;
 grant execute on function public.app_login(text,text), public.app_logout(text), public.app_sync(text,bigint),
   public.app_save_students(text,jsonb), public.app_seed(text,jsonb,jsonb), public.app_save_stock(text,jsonb),
-  public.app_add_transfer(text,jsonb), public.app_update_account(text,text,text), public.app_change_password(text,text,text)
+  public.app_add_transfer(text,jsonb), public.app_update_account(text,text,text), public.app_change_password(text,text,text), public.app_set_photo(text,text)
   to anon, authenticated;
 
 -- ---------- the 30 starting accounts (only added if missing) ----------

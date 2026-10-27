@@ -259,6 +259,11 @@ function doTransfer(){
 function accountView(){
  const a=DB.accounts.find(x=>x.id===S.user.id);
  return `<div class="head"><div class="who-cell"><img class="role-ic lg" src="${ROLE_ICON[a.role]}" alt=""><div><div class="eyebrow">${a.role}</div><h2>My account</h2></div></div></div>
+ <section class="panel" style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;margin-bottom:14px">
+  <img class="role-ic lg" style="width:88px;height:88px;object-fit:cover" src="${a.photo||ROLE_ICON[a.role]}" alt="Your profile picture">
+  <div style="display:grid;gap:8px"><h3 style="margin:0">Profile picture</h3><div class="small muted">Shown in the top bar. JPG or PNG.</div>
+   <div class="trow"><button class="btn sm primary" type="button" data-act="pickaccphoto">${a.photo?'Change picture':'Upload picture'}</button>${a.photo?'<button class="btn sm" type="button" data-act="rmaccphoto">Remove</button>':''}</div>
+   <input type="file" id="acc-photo" accept="image/*" hidden data-bind="accphoto"></div></section>
  <div class="grid2">
  <form class="panel" id="acctform" style="display:grid;gap:12px;align-content:start"><h3>Sign-in details</h3>
   <div class="field"><label>Name</label><input class="inp" value="${esc(a.name)}" disabled></div>
@@ -289,6 +294,20 @@ function setPhoto(file){
  img.onerror=()=>{URL.revokeObjectURL(url);toast('That image could not be read.')};
  img.src=url;
 }
+/* ---------- my profile picture (all staff) ---------- */
+function setAccPhoto(file,remove){
+ const a=DB.accounts.find(x=>x.id===S.user.id);if(!a)return;
+ const done=p=>{a.photo=p||undefined;if(!p)delete a.photo;S.user.photo=p||null;toast(p?'Profile picture updated':'Profile picture removed');render()};
+ const store=p=>{if(CLOUD_ON)rpc('app_set_photo',{p_token:TOK,p_photo:p}).then(()=>done(p)).catch(e=>toast(cloudErr(e)));else{done(p);save()}};
+ if(remove)return store(null);
+ if(!file)return;
+ if(!/^image\//.test(file.type))return toast('Choose an image file (JPG or PNG).');
+ if(file.size>15*1024*1024)return toast('That image is too large. Choose one under 15 MB.');
+ const url=URL.createObjectURL(file),img=new Image();
+ img.onload=()=>{const n=Math.min(img.width,img.height),cv=document.createElement('canvas');cv.width=cv.height=240;
+  cv.getContext('2d').drawImage(img,(img.width-n)/2,(img.height-n)/2,n,n,0,0,240,240);URL.revokeObjectURL(url);
+  let p;try{p=cv.toDataURL('image/jpeg',.85)}catch(e){return toast('That image could not be read.')}store(p)};
+ img.onerror=()=>{URL.revokeObjectURL(url);toast('That image could not be read.')};img.src=url}
 /* ---------- record of files + export (teacher) ---------- */
 S.sel=new Set();S.lrnText='';S.lrnMsg='';
 function filesFor(st,sy){
@@ -458,6 +477,8 @@ const ACT={
   v.date=v.date||today();v.d=String(c[k].d);v.f=String(c[k].f);if(k==='p')v.m=String(c.p.m);save();render();toast('Counts copied from the chart')},
  transfer:()=>doTransfer(),
  pickphoto:()=>{const i=$('#photo-in');if(i)i.click()},
+ pickaccphoto:()=>{const i=$('#acc-photo');if(i)i.click()},
+ rmaccphoto:()=>setAccPhoto(null,true),
  rmphoto:()=>{const st=stu(S.sid);if(!st||!st.photo)return;delete st.photo;save();toast('Photo removed');render()},
  grp:a=>{const id=a.dataset.id;S.open.has(id)?S.open.delete(id):S.open.add(id);render()},
  grpall:()=>{S.open=S.open.size?new Set():new Set(SECT_UI.map(x=>x.id));render()},
@@ -497,6 +518,7 @@ function onBind(e){
  if(b==='sy'){S.sy=v;S.sel=new Set();S.lrnMsg='';render();return}
  if(b==='lrntext'){S.lrnText=v;return}
  if(b==='photo'){if(ch)setPhoto(el.files&&el.files[0]);return}
+ if(b==='accphoto'){if(ch)setAccPhoto(el.files&&el.files[0]);return}
  if(b==='trlrn'){S.tr=S.tr||{};S.tr.lrn=v.replace(/\D/g,'');const p=$('#trprev');if(p)p.innerHTML=trPreview();return}
  if(b==='trdest'){S.tr=S.tr||{};S.tr.dest=v;return}
  if(b==='stock'){if(!ch)return;const i=DB.stock.find(x=>x.id===el.dataset.id),f=el.dataset.f;i[f]=(f==='qty'||f==='min')?Math.max(0,parseInt(v)||0):v;save();render();return}
@@ -545,7 +567,7 @@ document.addEventListener('submit',e=>{
 function localRestore(){
  const acc=DB.accounts.find(x=>x.id===ss.get('ehh_uid'));
  if(!acc)return false;
- S.user={id:acc.id,role:acc.role,name:acc.name,adv:acc.adv||null};
+ S.user={id:acc.id,role:acc.role,name:acc.name,adv:acc.adv||null,photo:acc.photo||null};
  S.view=NAV[acc.role][0][0];S.back=S.view;return true}
 function boot(){
  const role=ss.get('ehh_role');
