@@ -2,7 +2,7 @@
 // The browser sends the Google ID token; we ask Google to verify it, then link / confirm the login.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const CLIENT_ID = "__GOOGLE_CLIENT_ID__"; // your Google OAuth Web client ID (public)
+const CLIENT_ID = "239588073376-u1pet0b32a3qfbo4824c2tk5n13se5li.apps.googleusercontent.com"; // your Google OAuth Web client ID (public)
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",

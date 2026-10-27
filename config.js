@@ -3,7 +3,7 @@
    Leave both empty to run in single-browser (local) mode. */
 const CLOUD={url:"https://myfcltwnunmrtiymkths.supabase.co",key:"sb_publishable_7m37CCvmCEAsIhff10wadA_y6zjaJLO"};
 /* Optional: your Google OAuth "Web client ID" turns on the 'Continue with Google' buttons (see README). */
-const GOOGLE_CLIENT_ID="";
+const GOOGLE_CLIENT_ID="239588073376-u1pet0b32a3qfbo4824c2tk5n13se5li.apps.googleusercontent.com";
 const CLOUD_ON=!!(CLOUD.url&&CLOUD.key);
 /* which page is this? home (login) or one page per role */
 const PAGE=document.body.dataset.page||'home';
