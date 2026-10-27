@@ -19,14 +19,15 @@ Deno.serve(async (req) => {
   const { kind, token, email } = body;
   if (!["login", "link"].includes(kind ?? "") || !token) return json({ error: "BAD_REQUEST" }, 400);
 
+  const user = Deno.env.get("GMAIL_USER"), pass = Deno.env.get("GMAIL_APP_PASSWORD");
+  if (!user || !pass) return json({ error: "MAIL_NOT_SET_UP" }, 500);
+
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
     auth: { persistSession: false },
   });
   const { data, error } = await db.rpc("ehh_issue_code", { p_token: token, p_purpose: kind, p_email: email ?? null });
   if (error) return json({ error: (error.message || "ERROR").trim() }, 400);
 
-  const user = Deno.env.get("GMAIL_USER"), pass = Deno.env.get("GMAIL_APP_PASSWORD");
-  if (!user || !pass) return json({ error: "MAIL_NOT_SET_UP" }, 500);
   try {
     const t = nodemailer.createTransport({ host: "smtp.gmail.com", port: 465, secure: true, auth: { user, pass } });
     const why = kind === "login" ? "log in to" : "link this Gmail to your";
@@ -37,8 +38,10 @@ Deno.serve(async (req) => {
       text: `Hello ${data.name},\n\nYour confirmation code to ${why} EduHealthHub is:\n\n    ${data.code}\n\nIt works for 10 minutes. If you did not ask for it, ignore this email and do not share the code.\n\nEduHealthHub`,
       html: `<div style="font-family:Arial,sans-serif;max-width:420px"><h2 style="color:#2d4a3a">EduHealthHub</h2><p>Hello ${String(data.name).replace(/[<>&]/g, "")},</p><p>Your confirmation code to ${why} EduHealthHub is:</p><p style="font-size:32px;letter-spacing:6px;font-weight:bold;color:#2d4a3a">${data.code}</p><p style="color:#555">It works for 10 minutes. If you did not ask for it, ignore this email and do not share the code.</p></div>`,
     });
-  } catch (_e) {
-    return json({ error: "MAIL_FAILED" }, 502);
+  } catch (e) {
+    console.error("mail failed:", (e as Error).message);
+    await db.from("email_codes").delete().eq("id", data.id); // so the person can retry right away
+    return json({ error: "MAIL_FAILED", detail: String((e as Error).message).slice(0, 120) }, 502);
   }
   const m = String(data.email);
   return json({ ok: true, hint: m[0] + "***" + m.slice(m.indexOf("@")) });

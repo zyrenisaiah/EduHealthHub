@@ -435,3 +435,25 @@ do $$ begin
     grant execute on function public.ehh_issue_code(text,text,text) to service_role;
   end if;
 end $$;
+
+-- latest version of the code issuer (returns the row id so a failed email can be undone)
+create or replace function public.ehh_issue_code(p_token text, p_purpose text, p_email text default null) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; mail text; c text; lastc timestamptz; n int; cid bigint;
+begin
+  if p_purpose='login' then a := public.ehh_pending(p_token); mail := a.gmail;
+  elsif p_purpose='link' then
+    a := public.ehh_auth(p_token); mail := lower(trim(coalesce(p_email,'')));
+    if mail !~ '^[a-z0-9._+-]+@(gmail|googlemail)\.com$' then raise exception 'BAD_EMAIL'; end if;
+    if exists(select 1 from public.accounts x where x.id<>a.id and x.gmail_ok and lower(x.gmail)=mail) then raise exception 'EMAIL_TAKEN'; end if;
+  else raise exception 'BAD_REQUEST'; end if;
+  select max(created_at) filter (where purpose=p_purpose), count(*) filter (where created_at>now()-interval '1 hour') into lastc, n
+    from public.email_codes where account_id=a.id;
+  if lastc is not null and lastc>now()-interval '30 seconds' then raise exception 'WAIT'; end if;
+  if n>=6 then raise exception 'TOO_MANY_CODES'; end if;
+  update public.email_codes set expires=now() where account_id=a.id and purpose=p_purpose and expires>now();
+  c := lpad((('x'||encode(gen_random_bytes(4),'hex'))::bit(32)::bigint % 1000000)::text,6,'0');
+  insert into public.email_codes(account_id,purpose,email,code_hash,expires)
+    values (a.id,p_purpose,mail,crypt(c,gen_salt('bf')),now()+interval '10 minutes') returning id into cid;
+  return jsonb_build_object('email',mail,'code',c,'name',a.name,'id',cid);
+end $$;

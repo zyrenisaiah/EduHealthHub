@@ -581,7 +581,7 @@ document.addEventListener('submit',e=>{
   delete S.fails[id];L.err='';
   ss.set('ehh_uid',acc.id);ss.set('ehh_role',acc.role);location.href=ROLE_PAGE[acc.role];return}
 if(e.target.id==='codeform'){cloudVerifyLogin($('#lc').value.trim());return}
- if(e.target.id==='gm-send'){const em=$('#gm-e').value.trim();S.gm={email:em,busy:true};rpcGmSend(em);return}
+ if(e.target.id==='gm-send'){if(S.gm&&S.gm.busy)return;const em=$('#gm-e').value.trim();S.gm={email:em,busy:true};const sb=e.target.querySelector('button');if(sb){sb.disabled=true;sb.textContent='Sending…'}rpcGmSend(em);return}
  if(e.target.id==='gm-code'){const cd=$('#gm-c').value.trim();rpc('app_verify_link',{p_token:TOK,p_code:cd}).then(r=>{if(r.error){S.gm.err=cloudErr({code:r.error});S.gm.ok='';render();return}
    Object.assign(DB.accounts[0],r.account);S.gm=null;toast('Gmail linked. You will get a code at every login.');render()}).catch(x=>{S.gm.err=cloudErr(x);render()});return}
  if(e.target.id==='gm-unlink'){const pw=$('#gm-pw').value;rpc('app_unlink_gmail',{p_token:TOK,p_password:pw}).then(r=>{Object.assign(DB.accounts[0],r);S.gm=null;toast('Gmail unlinked');render()}).catch(x=>{S.gm=Object.assign(S.gm||{},{err:cloudErr(x)});render()});return}
