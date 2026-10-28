@@ -95,7 +95,7 @@ function seedDB(){
    guardian:(pick(['Rosario','Eduardo','Lourdes','Armando','Teresita']),'Dummy Guardian '+(k+1)+' '+secTag(sec)),contact:'0917 '+ri(100,999)+' '+ri(1000,9999),
    blood:pick(['O+','A+','B+','AB+','O-']),allergies:pick(['None','None','Peanuts','Dust','Penicillin','Seafood']),
    conditions:pick(['None','None','None','Asthma','Mild myopia','Hay fever']),
-   enr,exam:{},otherExams:[],files:[],dental:null,visits:[],refs:[],clear:[],plans:[]};
+   enr,exam:{},otherExams:[],files:[],dental:null,visits:[],refs:[],clear:[],plans:[],passes:[]};
   enr.forEach(e=>{const g=secOf(e.section).grade; const done=e.sy!==CUR_SY||R()>.3; if(done)st.exam[g]=mkExam(st,e.sy,g);
     st.files.push({sy:e.sy,name:FILE_KINDS[0],date:done?'2026-08-10':''});
     st.files.push({sy:e.sy,name:FILE_KINDS[2],date:'2026-06-05'});

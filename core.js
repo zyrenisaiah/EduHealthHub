@@ -40,22 +40,22 @@ if(!CLOUD_ON)save();
 const WANT=(new URLSearchParams(location.search).get('role')||'').replace(/[^A-Za-z]/g,'');
 const S={user:null,view:'',back:'',sid:null,tab:'profile',tooth:null,sy:CUR_SY,open:new Set(),f:{q:'',grade:'',strand:'',section:''},login:{err:''},fails:{}};
 const P={
- Doctor:{exam:'edit',dental:'edit',prof:'edit',stock:'edit'},
- Nurse:{exam:'edit',dental:null,prof:'edit',stock:'edit'},
- Dentist:{exam:null,dental:'edit',prof:'view',stock:null},
+ Doctor:{exam:'edit',dental:'view',prof:'edit',stock:'edit'},
+ Nurse:{exam:'edit',dental:'view',prof:'edit',stock:'edit'},
+ Dentist:{exam:'view',dental:'edit',prof:'view',stock:null},
  Teacher:{exam:'view',dental:'view',prof:'view',stock:null}
 };
 const NAV={
  Doctor:[['home','Home'],['overview','Overview'],['students','Students'],['stock','Supply stock'],['account','My account']],
  Nurse:[['home','Home'],['students','Students'],['stock','Supply stock'],['account','My account']],
  Dentist:[['home','Home'],['students','Students'],['account','My account']],
- Teacher:[['dash','My advisory'],['files','Record of files'],['account','My account']]
+ Teacher:[['home','Home'],['dash','My advisory'],['files','Record of files'],['account','My account']]
 };
 const PERM_NOTE={
- Doctor:'Can view and edit every record, including supply stock.',
- Nurse:'Can edit exam cards, student records and supply stock.',
- Dentist:'Can edit dental charts and treatment records.',
- Teacher:'Can view advisory health files and transfer records by LRN.'
+ Doctor:'Full access to records, referrals and clearances. Odontogram is read only.',
+ Nurse:'Full access to exam cards, walk-ins and supplies. Can flag cases for the doctor. Odontogram is read only.',
+ Dentist:'Full access to the odontogram and dental records. Medical history is read only.',
+ Teacher:'Can see pass and status only. Medical details stay hidden.'
 };
 const stu=id=>DB.students.find(s=>s.id===id);
 const enrOf=(st,sy)=>st.enr.find(e=>e.sy===sy);
@@ -108,7 +108,7 @@ ${L.pending?` <form class="login-card" id="codeform" autocomplete="off">
 /* ---------- shell ---------- */
 function shell(){
  const u=S.user, nav=NAV[u.role];
- const body={home:homeView,overview:overviewView,students:studentsView,stock:stockView,dash:teacherView,student:studentView,account:accountView,files:filesView}[S.view]();
+ const body={home:()=>S.user.role==='Teacher'?teacherHome():homeView(),overview:overviewView,students:studentsView,stock:stockView,dash:teacherView,student:studentView,account:accountView,files:filesView}[S.view]();
  const navKey=S.view==='student'?S.back:S.view;
  return `<div class="shell"><header class="topbar"><button class="name homebtn" data-act="nav" data-v="${nav[0][0]}" title="Go to Home" aria-label="EduHealthHub, go to Home"><span class="logo-chip"><img src="${LOGO_EMBLEM}" alt="" height="34"></span>EduHealthHub</button><div class="spacer"></div>
   <img class="role-ic" style="object-fit:cover" src="${u.photo||ROLE_ICON[u.role]}" alt="${u.role}">

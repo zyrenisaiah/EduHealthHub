@@ -567,3 +567,31 @@ begin
       on conflict (id) do update set data=excluded.data, rev=nextval('public.ehh_rev'), updated_at=now(), updated_by=a.id;
   end loop;
 end $$;
+
+-- ---------- permissions matrix update ----------
+-- Doctor: everything except the odontogram (read only). Nurse: no dental, clearances or care plans.
+-- Dentist: dental chart + clinic time-outs (visits) + passes. Teacher: photo, enrolment and "send to clinic" passes.
+create or replace function public.app_save_students(p_token text, p_rows jsonb) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; r jsonb; kv record; cur jsonb; sid text;
+begin
+  a := public.ehh_auth(p_token);
+  if jsonb_typeof(p_rows)<>'array' then raise exception 'BAD_REQUEST'; end if;
+  for r in select * from jsonb_array_elements(p_rows) loop
+    sid := r->>'id';
+    if sid is null or jsonb_typeof(r->'patch')<>'object' then raise exception 'BAD_REQUEST'; end if;
+    select data into cur from public.students where id=sid for update;
+    if cur is null then cur := '{}'::jsonb; end if;
+    for kv in select key, value from jsonb_each(r->'patch') loop
+      if a.role='Doctor' and kv.key<>'dental' then null;
+      elsif a.role='Nurse' and kv.key not in ('dental','clear','plans') then null;
+      elsif a.role='Dentist' and kv.key in ('dental','visits','passes') then null;
+      elsif a.role='Teacher' and kv.key in ('photo','enr','passes') then null;
+      else raise exception 'NOT_ALLOWED'; end if;
+      if kv.value='null'::jsonb then cur := cur - kv.key;
+      else cur := cur || jsonb_build_object(kv.key, kv.value); end if;
+    end loop;
+    insert into public.students(id,data,updated_by) values (sid,cur,a.id)
+      on conflict (id) do update set data=excluded.data, rev=nextval('public.ehh_rev'), updated_at=now(), updated_by=a.id;
+  end loop;
+end $$;
