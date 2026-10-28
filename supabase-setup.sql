@@ -494,3 +494,76 @@ do $$ begin
     grant execute on function public.ehh_link_google(text,text,text), public.ehh_google_login(text,text,text) to service_role;
   end if;
 end $$;
+
+-- =====================================================================
+--  HOME TAB: clinic walk-ins, referrals, clearances, care plans, handover notes
+--  (visits / refs / clear / plans are stored inside each student's data)
+-- =====================================================================
+create table if not exists public.clinic_notes(
+  id int primary key default 1 check (id=1),
+  data jsonb not null,
+  rev bigint not null default nextval('public.ehh_rev'),
+  updated_at timestamptz not null default now(),
+  updated_by text
+);
+alter table public.clinic_notes enable row level security;
+revoke all on public.clinic_notes from anon, authenticated;
+
+create or replace function public.app_sync(p_token text, p_since bigint) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; st jsonb; sk jsonb := 'null'::jsonb; nt jsonb := 'null'::jsonb; tr jsonb := 'null'::jsonb; mx bigint; cnt bigint;
+begin
+  a := public.ehh_auth(p_token);
+  select coalesce(jsonb_agg(jsonb_build_object('id',id,'data',data) order by id),'[]'::jsonb) into st
+    from public.students where rev>p_since;
+  select count(*) into cnt from public.students;
+  select jsonb_build_object('data',data) into sk from public.stock where rev>p_since;
+  select jsonb_build_object('data',data) into nt from public.clinic_notes where rev>p_since;
+  if p_since<=0 or exists(select 1 from public.transfers where rev>p_since) then
+    select coalesce(jsonb_agg(data order by id),'[]'::jsonb) into tr from public.transfers;
+  end if;
+  select greatest(
+    coalesce((select max(rev) from public.students),0),
+    coalesce((select max(rev) from public.stock),0),
+    coalesce((select max(rev) from public.clinic_notes),0),
+    coalesce((select max(rev) from public.transfers),0)) into mx;
+  return jsonb_build_object('rev',mx,'count',cnt,'account',public.ehh_acct_json(a),
+                            'students',st,'stock',sk,'notes',nt,'transfers',tr);
+end $$;
+
+create or replace function public.app_save_notes(p_token text, p_data jsonb) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_auth(p_token);
+  if a.role not in ('Doctor','Nurse') then raise exception 'NOT_ALLOWED'; end if;
+  if jsonb_typeof(p_data)<>'array' then raise exception 'BAD_REQUEST'; end if;
+  insert into public.clinic_notes(id,data,updated_by) values (1,p_data,a.id)
+    on conflict (id) do update set data=excluded.data, rev=nextval('public.ehh_rev'), updated_at=now(), updated_by=a.id;
+end $$;
+
+-- Nurses may now also write visits / refs; clearances and care plans stay Doctor-only
+create or replace function public.app_save_students(p_token text, p_rows jsonb) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; r jsonb; kv record; cur jsonb; sid text;
+begin
+  a := public.ehh_auth(p_token);
+  if jsonb_typeof(p_rows)<>'array' then raise exception 'BAD_REQUEST'; end if;
+  for r in select * from jsonb_array_elements(p_rows) loop
+    sid := r->>'id';
+    if sid is null or jsonb_typeof(r->'patch')<>'object' then raise exception 'BAD_REQUEST'; end if;
+    select data into cur from public.students where id=sid for update;
+    if cur is null then cur := '{}'::jsonb; end if;
+    for kv in select key, value from jsonb_each(r->'patch') loop
+      if a.role='Doctor' then null;
+      elsif a.role='Nurse' and kv.key not in ('dental','clear','plans') then null;
+      elsif a.role='Dentist' and kv.key='dental' then null;
+      elsif a.role='Teacher' and kv.key in ('photo','enr') then null;
+      else raise exception 'NOT_ALLOWED'; end if;
+      if kv.value='null'::jsonb then cur := cur - kv.key;
+      else cur := cur || jsonb_build_object(kv.key, kv.value); end if;
+    end loop;
+    insert into public.students(id,data,updated_by) values (sid,cur,a.id)
+      on conflict (id) do update set data=excluded.data, rev=nextval('public.ehh_rev'), updated_at=now(), updated_by=a.id;
+  end loop;
+end $$;

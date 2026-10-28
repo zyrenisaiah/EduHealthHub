@@ -1,5 +1,5 @@
 /* ---------- shared online database (Supabase) ---------- */
-let TOK=null,REV=0,LASTFULL={},LASTSTOCK='',TR_SYNCED=0,CLOUD_COUNT=0,SYNC_TXT='',_pushing=false,_again=false,_poll=null,_retry=null;
+let TOK=null,REV=0,LASTFULL={},LASTSTOCK='',LASTNOTES='[]',TR_SYNCED=0,CLOUD_COUNT=0,SYNC_TXT='',_pushing=false,_again=false,_poll=null,_retry=null;
 const canon=o=>JSON.stringify(o,(k,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.keys(v).sort().reduce((r,x)=>(r[x]=v[x],r),{}):v);
 function syncStat(t,bad){SYNC_TXT=t;const e=document.getElementById('syncstat');if(e){e.textContent=t;e.style.color=bad?'var(--bad)':''}}
 async function rpc(fn,args,keep){
@@ -29,7 +29,7 @@ function cloudErr(e){
  if(c==='BAD_PASSWORD')return 'Password is incorrect.';
  if(c==='MAIL_NOT_SET_UP'||c==='MAIL_FAILED')return 'The email could not be sent. '+((e&&e.detail)?'('+e.detail+') ':'')+'The site owner still needs to finish the email setup.';
  return 'The online database is not set up correctly ('+c+'). Check the setup steps.'}
-function baseline(){DB.students.forEach(s=>LASTFULL[s.id]=JSON.stringify(s));LASTSTOCK=JSON.stringify(DB.stock);TR_SYNCED=DB.transfers.length}
+function baseline(){DB.students.forEach(s=>LASTFULL[s.id]=JSON.stringify(s));LASTSTOCK=JSON.stringify(DB.stock);LASTNOTES=JSON.stringify(DB.notes);TR_SYNCED=DB.transfers.length}
 function applySync(r){
  let changed=false;
  if(r.students&&r.students.length){
@@ -40,6 +40,8 @@ function applySync(r){
    if(canon(m)!==canon(cur)){DB.students[i]=m;changed=true;LASTFULL[row.id]=JSON.stringify(m)}else LASTFULL[row.id]=JSON.stringify(cur)})}
  if(r.stock&&r.stock.data&&LASTSTOCK===JSON.stringify(DB.stock)){
   if(canon(r.stock.data)!==canon(DB.stock)){DB.stock=r.stock.data;changed=true}LASTSTOCK=JSON.stringify(DB.stock)}
+ if(r.notes&&r.notes.data&&LASTNOTES===JSON.stringify(DB.notes)){
+  if(canon(r.notes.data)!==canon(DB.notes)){DB.notes=r.notes.data;changed=true}LASTNOTES=JSON.stringify(DB.notes)}
  if(r.transfers&&DB.transfers.length===TR_SYNCED){if(r.transfers.length!==DB.transfers.length)changed=true;DB.transfers=r.transfers;TR_SYNCED=r.transfers.length}
  REV=Math.max(REV,r.rev||0);CLOUD_COUNT=r.count||0;
  return changed}
@@ -64,6 +66,8 @@ async function cloudPush(){
   else sent.forEach(([id,j])=>LASTFULL[id]=j);
   const sj=JSON.stringify(DB.stock);
   if(sj!==LASTSTOCK&&(S.user.role==='Doctor'||S.user.role==='Nurse')){await rpc('app_save_stock',{p_token:TOK,p_data:DB.stock});LASTSTOCK=sj}
+  const nj=JSON.stringify(DB.notes);
+  if(nj!==LASTNOTES&&(S.user.role==='Doctor'||S.user.role==='Nurse')){await rpc('app_save_notes',{p_token:TOK,p_data:DB.notes});LASTNOTES=nj}
   while(TR_SYNCED<DB.transfers.length){await rpc('app_add_transfer',{p_token:TOK,p_data:DB.transfers[TR_SYNCED]});TR_SYNCED++}
   syncStat('Saved online ✓')}
  catch(e){

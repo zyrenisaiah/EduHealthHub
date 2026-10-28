@@ -574,6 +574,7 @@ const ACT={
  exportfull:()=>exportRecords(exportList()),
  exportone:a=>exportRecords([stu(a.dataset.id)])
 };
+Object.assign(ACT,HOME_ACT);
 document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');if(a&&ACT[a.dataset.act])ACT[a.dataset.act](a)});
 const KEYS={s:'✓',x:'X',f:'F',o:'O',r:'RF',h:'HS'};
 document.addEventListener('keydown',e=>{
@@ -595,6 +596,7 @@ document.addEventListener('mouseout',e=>{if(!e.relatedTarget||!e.relatedTarget.c
 function onBind(e){
  const el=e.target.closest('[data-bind]'); if(!el)return; const b=el.dataset.bind, ch=e.type==='change', v=el.value;
  const st=S.sid?stu(S.sid):null;
+ if(b==='hq'){if(!ch)homeSearch(el);return}
  if(b==='filter'){S.f[el.dataset.f]=v; if(ch||el.dataset.f==='q'){const pos=el.selectionStart;render();if(el.dataset.f==='q'){const q=$('#q');q.focus();q.setSelectionRange(pos,pos)}}return}
  if(b==='loginadv'){S.login.adv=v;return}
  if(b==='sy'){S.sy=v;S.sel=new Set();S.lrnMsg='';render();return}
@@ -619,6 +621,7 @@ function onBind(e){
 document.addEventListener('input',onBind);document.addEventListener('change',onBind);
 document.addEventListener('submit',e=>{
  e.preventDefault();
+ if(S.user&&homeSubmit(e))return;
  if(e.target.id==='loginform'){
   if(CLOUD_ON){cloudLogin($('#lu').value.trim(),$('#pw').value);return}
   const id=normU($('#lu').value),pw=$('#pw').value,L=S.login,f=S.fails[id]||{n:0,t:0};
