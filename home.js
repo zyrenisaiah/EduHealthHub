@@ -189,6 +189,8 @@ function certificate(s,c){
 
 /* ---- actions ---- */
 const HOME_ACT={
+ nav:a=>{S.view=a.dataset.v;render();scrollTo(0,0);if(S.view==='activity')loadAudit()},
+ auditrefresh:()=>loadAudit(),
  hpanel:a=>{S.hm.panel=a.dataset.k;render();const f=$('.hform');if(f)f.scrollIntoView({block:'nearest'})},
  hpick:a=>{S.hm.sid=a.dataset.id;S.hm.q=stu(a.dataset.id).lrn;S.hm.msg='';S.hm.panel=a.dataset.k||'';render();const r=$('#hres');if(r)r.scrollIntoView({block:'start'})},
  hclear:()=>{S.hm={q:'',sid:null,panel:'',msg:''};render()},
@@ -264,3 +266,27 @@ function teacherHome(){
   <section class="panel"><div class="head"><h3>Today's excused / early departures</h3><span class="small muted">${home.length}</span></div>${tbl(home,'No early departures today.')}</section>
  </div>
  <section class="panel"><div class="head"><h3>Returned to class today</h3><span class="small muted">time-outs to verify</span></div>${tbl(back,'No time-outs recorded today.')}</section>`}
+
+/* ---- Activity log (Doctor): who changed what and when ---- */
+S.audit={rows:null,err:'',busy:false};
+const FIELD_LABEL={exam:'health exam',dental:'dental chart',visits:'clinic visits',refs:'referrals',clear:'clearances',plans:'care plans',passes:'clinic passes',otherExams:'other examinations',files:'record of files',photo:'photo',enr:'enrolment',allergies:'allergies',conditions:'conditions',guardian:'guardian',contact:'contact',blood:'blood type',first:'name',last:'name',birth:'birthdate',sex:'sex'};
+async function loadAudit(){
+ if(!CLOUD_ON){S.audit={rows:[],err:'The activity log is kept in the online database. It is empty in offline mode.',busy:false};render();return}
+ S.audit.busy=true;S.audit.err='';render();
+ try{S.audit.rows=await rpc('app_audit',{p_token:TOK,p_limit:200})}catch(e){S.audit.err=cloudErr(e)}
+ S.audit.busy=false;if(S.view==='activity')render()}
+function auditText(r){
+ const d=r.detail||{};
+ if(r.action==='student.update')return 'Updated '+(d.fields||[]).map(k=>FIELD_LABEL[k]||k).filter((v,i,a)=>a.indexOf(v)===i).join(', ');
+ if(r.action==='stock.update')return 'Updated supply stock ('+(d.items||0)+' items)';
+ if(r.action==='notes.update')return 'Updated shift handover notes';
+ if(r.action==='transfer')return 'Transferred a record'+(d.from?': '+d.from+' to '+d.to:'');
+ return r.action}
+function activityView(){
+ const a=S.audit,sk=Array.from({length:8},()=>'<tr><td colspan="4"><div class="sk sk-row" style="margin:0"></div></td></tr>').join('');
+ const rows=(a.rows||[]).map(r=>{const t=new Date(r.at);return `<tr><td class="mono small" style="white-space:nowrap">${t.toLocaleDateString()} ${t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td><td><b>${esc(r.actor||'')}</b> ${pill(esc(r.role||''),'mute')}</td><td>${esc(auditText(r))}</td><td>${r.who?`<b>${esc(r.who)}</b><div class="small muted mono">${esc(r.lrn||'')}</div>`:esc(r.target&&r.action==='transfer'?'LRN '+r.target:'')}</td></tr>`}).join('');
+ return `<div class="head"><div><div class="eyebrow">Tracking</div><h2>Activity log</h2></div><button class="btn" data-act="auditrefresh" ${a.busy?'disabled':''}>Refresh</button></div>
+ <p class="small muted">Every change to a record, supply stock, note or transfer is recorded with who made it and when. Showing the latest 200.</p>
+ ${a.err?`<div class="pill bad" style="white-space:normal">${esc(a.err)}</div>`:''}
+ <section class="panel" style="padding:0"><div class="tw"><table class="wrapth"><thead><tr><th>When</th><th>Who</th><th>What changed</th><th>Learner</th></tr></thead><tbody>
+ ${a.busy||a.rows===null?sk:(rows||'<tr><td colspan="4" class="muted">Nothing recorded yet.</td></tr>')}</tbody></table></div></section>`}

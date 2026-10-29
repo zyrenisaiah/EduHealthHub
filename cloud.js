@@ -95,7 +95,6 @@ async function cloudLogin(u,pw){
  try{const r=await rpc('app_login',{p_user:u,p_pw:pw});
   if(r.error){L.err=cloudErr({code:r.error});render();const i=$('#lu');if(i)i.value=u;return}
   if(r.pending){L.pending={token:r.pending,hint:r.hint};L.err='';L.info='';
-   if(!GOOGLE_CLIENT_ID){try{await sendCode('login',r.pending)}catch(e){L.err=cloudErr(e)}}
    render();const ci=$('#lc');if(ci)ci.focus();return}
   L.err='';
   /* app_sync needs the token; the account comes back from app_login */
@@ -126,25 +125,6 @@ function cloudPanel(){
   <div class="small muted">Everything you and your colleagues change is saved online and appears in other browsers within about 15 seconds.</div></div>
   <button class="btn ${full?'':'primary'}" data-act="seedcloud">${full?'Re-check starting data':'Upload starting data'}</button></div>
   <div id="seedmsg" class="small" role="status">${full?'All '+CLOUD_COUNT+' student records are stored online.':CLOUD_COUNT+' of '+DB.students.length+' student records are stored online. Press the button once to upload the rest and the supply list.'}</div></section>`}
-
-/* ---------- emailed confirmation codes (Gmail) ---------- */
-async function sendCode(kind,token,email){
- const h={'Content-Type':'application/json',apikey:CLOUD.key};if(/^eyJ/.test(CLOUD.key))h.Authorization='Bearer '+CLOUD.key;
- let r;try{r=await fetch(CLOUD.url.replace(/\/+$/,'')+'/functions/v1/send-code',{method:'POST',headers:h,body:JSON.stringify({kind,token,email:email||null})})}
- catch(e){const x=new Error('OFFLINE');x.code='OFFLINE';throw x}
- let j=null;try{j=await r.json()}catch(e){}
- if(!r.ok||!j||j.error){const c=(j&&j.error)||('HTTP '+r.status);const x=new Error(c);x.code=c;x.detail=j&&j.detail;throw x}
- return j}
-async function cloudVerifyLogin(code){
- const L=S.login,btn=$('#codeform button[type=submit]');if(btn){btn.disabled=true;btn.textContent='Checking…'}
- try{const r=await rpc('app_verify_login',{p_token:L.pending.token,p_code:code});
-  if(r.error){if(r.error==='TOO_MANY_TRIES')L.pending=null;L.err=cloudErr({code:r.error});L.info='';render();return}
-  L.pending=null;L.err='';ss.set('ehh_tok',r.token);ss.set('ehh_role',r.account.role);location.href=ROLE_PAGE[r.account.role]}
- catch(e){if(e.code==='SESSION_EXPIRED')L.pending=null;L.err=cloudErr(e);render()}}
-async function cloudResend(){
- const L=S.login;if(!L.pending)return;
- try{await sendCode('login',L.pending.token);L.err='';L.info='A new code was sent.'}catch(e){L.info='';L.err=cloudErr(e)}
- render();const ci=$('#lc');if(ci)ci.focus()}
 
 /* ---------- Continue with Google (confirms the person owns the Google account) ---------- */
 function loadGIS(cb){

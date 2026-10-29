@@ -5,7 +5,6 @@ const CLOUD={url:"https://myfcltwnunmrtiymkths.supabase.co",key:"sb_publishable_
 /* Optional: your Google OAuth "Web client ID" turns on the 'Continue with Google' buttons (see README). */
 const GOOGLE_CLIENT_ID="239588073376-u1pet0b32a3qfbo4824c2tk5n13se5li.apps.googleusercontent.com";
 /* Emailed 6-digit codes need a sender Gmail (see README). Leave false to use Google confirmation only. */
-const EMAIL_CODES_ON=false;
 const CLOUD_ON=!!(CLOUD.url&&CLOUD.key);
 /* which page is this? home (login) or one page per role */
 const PAGE=document.body.dataset.page||'home';

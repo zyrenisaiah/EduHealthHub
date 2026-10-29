@@ -9,18 +9,6 @@
   --font-body:"Public Sans","Segoe UI",system-ui,sans-serif;
   --font-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
 }
-@media not all{:root:not([data-theme="light"]){
-  --bg:#243329; --surface:#2d4034; --surface2:#385140; --ink:#f0f5ee; --muted:#c0d0c0; --line:#4a6453; --line-strong:#628069;
-  --accent:#a3c9a3; --accent2:#7fa57c; --accent-ink:#14231a; --accent-soft:#3e5c47; --dmft:#1b2e22; --dmft-ink:#e8f1e8;
-  --wash:#2f4636; --shadow:0 1px 2px rgba(0,0,0,.25),0 8px 22px rgba(0,0,0,.18);
-  --blue:#8ad6f2; --blue-soft:#17506a; --gum:#5a3d40;
-  --good:#a6f0c0; --good-soft:#1a472d; --warn:#ffc766; --warn-soft:#53380f; --bad:#ffaaa2; --bad-soft:#5c2321; color-scheme:dark}}
-:root[data-theme="dark"]{
-  --bg:#243329; --surface:#2d4034; --surface2:#385140; --ink:#f0f5ee; --muted:#c0d0c0; --line:#4a6453; --line-strong:#628069;
-  --accent:#a3c9a3; --accent2:#7fa57c; --accent-ink:#14231a; --accent-soft:#3e5c47; --dmft:#1b2e22; --dmft-ink:#e8f1e8;
-  --wash:#2f4636; --shadow:0 1px 2px rgba(0,0,0,.25),0 8px 22px rgba(0,0,0,.18);
-  --blue:#8ad6f2; --blue-soft:#17506a; --gum:#5a3d40;
-  --good:#a6f0c0; --good-soft:#1a472d; --warn:#ffc766; --warn-soft:#53380f; --bad:#ffaaa2; --bad-soft:#5c2321; color-scheme:dark}
 *{box-sizing:border-box}
 html,body{height:auto}
 body{background:var(--bg) linear-gradient(180deg,var(--wash),transparent 340px) no-repeat;color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.5;
@@ -299,3 +287,10 @@ tr.grp td{background:var(--surface2);font-weight:600;font-size:12px}
 .appbg .b1{background:var(--c1)}.appbg .b2{background:var(--c2)}.appbg .b3{background:var(--c3)}
 .appbg .fx{opacity:.16;background:linear-gradient(var(--cx),var(--cx)) center/100% 7px no-repeat,linear-gradient(var(--cx),var(--cx)) center/7px 100% no-repeat}
 .shell{position:relative;z-index:1}
+
+/* ===== Skeleton loading ===== */
+.sk{position:relative;overflow:hidden;background:var(--surface2);border-radius:8px}
+.sk::after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(255,255,255,.65),transparent);animation:shimmer 1.3s infinite}
+@keyframes shimmer{to{transform:translateX(100%)}}
+.sk-t{height:12px;margin:6px 0}.sk-n{height:30px;width:45%;margin:10px 0}.sk-h{height:34px;width:220px;margin-bottom:14px}.sk-in{height:44px;margin-top:12px}
+.sk-row{height:38px;margin-top:10px}.sk-nav{height:34px;margin-bottom:8px}.sk-logo{width:170px;height:34px}.sk-av{width:34px;height:34px;border-radius:50%}

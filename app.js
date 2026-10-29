@@ -284,9 +284,8 @@ function gmailPanel(a){
  const msg=(g.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(g.err)}</div>`:'')+(g.ok?`<div class="pill good" role="status" style="white-space:normal">${esc(g.ok)}</div>`:'');
  let body;
  if(a.gmail_ok&&g.unlink)body=`<form id="gm-unlink" style="display:grid;gap:10px"><div class="small muted">Enter your password to remove the Gmail. Logins will go back to password only.</div><div class="field"><label for="gm-pw">Password</label><input class="inp" id="gm-pw" type="password" autocomplete="current-password" required></div>${msg}<div class="trow"><button class="btn primary" type="submit">Remove Gmail</button><button class="btn" type="button" data-act="gmcancel">Cancel</button></div></form>`;
- else if(a.gmail_ok)body=`<div class="who-cell"><span class="pill good">Confirmed</span><b>${esc(a.gmail)}</b></div><div class="small muted">${(GOOGLE_CLIENT_ID&&!EMAIL_CODES_ON)?'Every time you log in, you confirm with this Google account.':'A 6-digit code is emailed to this Gmail every time you log in.'}</div>${msg}<div><button class="btn sm" type="button" data-act="gmunlinkask">Remove Gmail</button></div>`;
- else if(g.sent)body=`<form id="gm-code" style="display:grid;gap:10px"><div class="small muted">Enter the 6-digit code we emailed to <b>${esc(g.hint||g.email)}</b>.</div><div class="field"><label for="gm-c">Confirmation code</label><input class="inp mono" id="gm-c" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required style="letter-spacing:4px"></div>${msg}<div class="trow"><button class="btn primary" type="submit">Confirm Gmail</button><button class="btn" type="button" data-act="gmcancel">Start over</button></div></form>`;
- else body=`${GOOGLE_CLIENT_ID?`<div style="display:grid;gap:8px"><div class="small muted">Link your Google account to protect this login. Every login will then ask you to confirm with Google.</div><div id="g-link" style="min-height:44px"></div>${msg}${EMAIL_CODES_ON?'<div class="small muted">Or confirm with an emailed code instead:</div>':''}</div>`:''}${(!GOOGLE_CLIENT_ID||EMAIL_CODES_ON)?`<form id="gm-send" style="display:grid;gap:10px"><div class="small muted">Link your own Gmail to protect this account. After that, every login needs a 6-digit code sent to it.</div><div class="field"><label for="gm-e">Your Gmail address</label><input class="inp" id="gm-e" type="email" placeholder="name@gmail.com" value="${esc(g.email||'')}" required autocapitalize="off"></div>${msg}<div><button class="btn primary" type="submit">Send confirmation code</button></div></form>`:''}`;
+ else if(a.gmail_ok)body=`<div class="who-cell"><span class="pill good">Confirmed</span><b>${esc(a.gmail)}</b></div><div class="small muted">Every time you log in, you confirm with this Google account.</div>${msg}<div><button class="btn sm" type="button" data-act="gmunlinkask">Remove Gmail</button></div>`;
+ else body=`<div style="display:grid;gap:8px"><div class="small muted">Link your Google account to protect this login. Every login will then ask you to confirm with Google.</div><div id="g-link" style="min-height:44px"></div>${msg}</div>`;
  return `<section class="panel" style="margin-bottom:14px;display:grid;gap:10px"><h3 style="margin:0">Gmail confirmation ${a.gmail_ok?'':'<span class="pill warn">Not set up</span>'}</h3>${body}</section>`}
 function accMsg(id,m,ok){const e=$('#'+id);e.textContent=m;e.style.color=ok?'var(--good)':'var(--bad)'}
 
@@ -329,9 +328,6 @@ function setPhoto(file){
  const sid=S.sid,st=stu(sid);if(!file||!st||S.user.role!=='Teacher')return;
  openCropper(file,p=>{const s=stu(sid);if(!s)return;s.photo=p;save();toast('Photo updated');render()})
 }
-function rpcGmSend(em){
- sendCode('link',TOK,em).then(r=>{S.gm={email:em,sent:true,hint:r.hint,ok:'Code sent to '+r.hint+'. It works for 10 minutes.'};render();const i=$('#gm-c');if(i)i.focus()})
-  .catch(x=>{S.gm={email:em,err:cloudErr(x)};render()})}
 /* ---------- my profile picture (all staff) ---------- */
 function setAccPhoto(file,remove){
  const a=DB.accounts.find(x=>x.id===S.user.id);if(!a)return;
@@ -518,9 +514,17 @@ async function exportRecords(list){
 }
 
 /* ---------- render, events ---------- */
+function skelShell(){
+ const nav=PAGE==='Teacher'?4:PAGE==='Doctor'?5:4;
+ const tiles=Array.from({length:4},()=>'<div class="tile"><div class="sk sk-t" style="width:60%"></div><div class="sk sk-n"></div><div class="sk sk-t" style="width:80%"></div></div>').join('');
+ return `<div class="shell" aria-busy="true"><span class="sr" role="status">Loading your ${PAGE} page</span>
+ <header class="topbar"><div class="sk sk-logo"></div><div class="spacer"></div><div class="sk sk-av"></div><div class="sk sk-t" style="width:110px"></div></header>
+ <div class="layout"><nav class="nav" aria-hidden="true">${Array.from({length:nav},()=>'<div class="sk sk-nav"></div>').join('')}</nav>
+ <main aria-hidden="true"><div class="sk sk-h"></div><section class="panel"><div class="sk sk-t" style="width:40%"></div><div class="sk sk-in"></div></section><div class="tiles">${tiles}</div>
+ <div class="grid2"><section class="panel"><div class="sk sk-t" style="width:50%"></div>${'<div class="sk sk-row"></div>'.repeat(4)}</section><section class="panel"><div class="sk sk-t" style="width:50%"></div>${'<div class="sk sk-row"></div>'.repeat(4)}</section></div></main></div></div>`}
 function render(){
  if(S.user&&(PAGE==='home'||PAGE!==S.user.role)){location.replace(ROLE_PAGE[S.user.role]);return}
- if(!S.user&&PAGE!=='home'){$('#root').innerHTML='<div class="login"><div class="small muted" role="status">Opening the '+PAGE+' page…</div></div>';return}
+ if(!S.user&&PAGE!=='home'){$('#root').innerHTML=skelShell();return}
  $('#root').innerHTML=S.user?shell():loginView();
  appBackdrop();
  if(!S.user)loginFX();
@@ -534,7 +538,6 @@ const ACT={
  open:a=>goOpen(a.dataset.id,a.dataset.tab),
  back:()=>{S.view=S.back;render()},
  tab:a=>{S.tab=a.dataset.t;render()},
- theme:()=>{const r=document.documentElement,dark=r.dataset.theme?r.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;r.dataset.theme=dark?'light':'dark'},
  logout:()=>{if(CLOUD_ON)cloudLogout();ss.del('ehh_uid');ss.del('ehh_role');S.user=null;location.href='index.html'},
  seedcloud:()=>{seedCloud()},
  qty:a=>{const i=DB.stock.find(x=>x.id===a.dataset.id);i.qty=Math.max(0,i.qty+ +a.dataset.d);save();render()},
@@ -557,7 +560,6 @@ const ACT={
   v.date=v.date||today();v.d=String(c[k].d);v.f=String(c[k].f);if(k==='p')v.m=String(c.p.m);save();render();toast('Counts copied from the chart')},
  transfer:()=>doTransfer(),
  pickphoto:()=>{const i=$('#photo-in');if(i)i.click()},
- resendcode:()=>cloudResend(),
  codeback:()=>{S.login.pending=null;S.login.err='';S.login.info='';render()},
  gmcancel:()=>{S.gm=null;render()},
  gmunlinkask:()=>{S.gm={unlink:true};render()},
@@ -632,10 +634,6 @@ document.addEventListener('submit',e=>{
   if(!acc||acc.pw!==pwHash(acc.id,pw)){S.fails[id]={n:f.n+1,t:Date.now()};L.err='Username or password is incorrect.';render();$('#lu').value=id;return}
   delete S.fails[id];L.err='';
   ss.set('ehh_uid',acc.id);ss.set('ehh_role',acc.role);location.href=ROLE_PAGE[acc.role];return}
-if(e.target.id==='codeform'){cloudVerifyLogin($('#lc').value.trim());return}
- if(e.target.id==='gm-send'){if(S.gm&&S.gm.busy)return;const em=$('#gm-e').value.trim();S.gm={email:em,busy:true};const sb=e.target.querySelector('button');if(sb){sb.disabled=true;sb.textContent='Sending…'}rpcGmSend(em);return}
- if(e.target.id==='gm-code'){const cd=$('#gm-c').value.trim();rpc('app_verify_link',{p_token:TOK,p_code:cd}).then(r=>{if(r.error){S.gm.err=cloudErr({code:r.error});S.gm.ok='';render();return}
-   Object.assign(DB.accounts[0],r.account);S.gm=null;toast('Gmail linked. You will get a code at every login.');render()}).catch(x=>{S.gm.err=cloudErr(x);render()});return}
  if(e.target.id==='gm-unlink'){const pw=$('#gm-pw').value;rpc('app_unlink_gmail',{p_token:TOK,p_password:pw}).then(r=>{Object.assign(DB.accounts[0],r);S.gm=null;toast('Gmail unlinked');render()}).catch(x=>{S.gm=Object.assign(S.gm||{},{err:cloudErr(x)});render()});return}
  if(e.target.id==='acctform'){
   const a=DB.accounts.find(x=>x.id===S.user.id),u=$('#ac-u').value.trim(),m=$('#ac-e').value.trim();

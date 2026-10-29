@@ -595,3 +595,132 @@ begin
       on conflict (id) do update set data=excluded.data, rev=nextval('public.ehh_rev'), updated_at=now(), updated_by=a.id;
   end loop;
 end $$;
+-- ---------- speed, tracking and safety ----------
+create index if not exists students_rev_idx on public.students(rev);
+create index if not exists transfers_rev_idx on public.transfers(rev);
+do $$ begin
+  if not exists (select 1 from pg_constraint where conname='students_data_is_object') then
+    alter table public.students add constraint students_data_is_object check (jsonb_typeof(data)='object');
+  end if;
+end $$;
+
+-- activity log: who changed what, and when (Doctor can read it)
+create table if not exists public.audit_log(
+  id bigserial primary key,
+  at timestamptz not null default now(),
+  account_id text,
+  actor text,
+  role text,
+  action text not null,
+  target text,
+  detail jsonb
+);
+create index if not exists audit_log_at_idx on public.audit_log(at desc);
+alter table public.audit_log enable row level security;
+revoke all on public.audit_log from anon, authenticated;
+revoke all on sequence public.audit_log_id_seq from anon, authenticated;
+
+create or replace function public.ehh_log(a public.accounts, p_action text, p_target text, p_detail jsonb default null) returns void
+language sql security definer set search_path = public, extensions as $$
+  insert into public.audit_log(account_id,actor,role,action,target,detail) values (a.id,a.name,a.role,p_action,p_target,p_detail);
+$$;
+revoke all on function public.ehh_log(public.accounts,text,text,jsonb) from anon, authenticated, public;
+
+create or replace function public.app_audit(p_token text, p_limit int default 200) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_auth(p_token);
+  if a.role<>'Doctor' then raise exception 'NOT_ALLOWED'; end if;
+  return coalesce((select jsonb_agg(x order by x.id desc) from (
+    select l.id, l.at, l.actor, l.role, l.action, l.target, l.detail,
+           (select s.data->>'first' || ' ' || (s.data->>'last') from public.students s where s.id=l.target) as who,
+           (select s.data->>'lrn' from public.students s where s.id=l.target) as lrn
+      from public.audit_log l order by l.id desc limit least(greatest(p_limit,1),500)) x),'[]'::jsonb);
+end $$;
+
+create or replace function public.app_sync(p_token text, p_since bigint) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; st jsonb; sk jsonb := 'null'::jsonb; nt jsonb := 'null'::jsonb; tr jsonb := 'null'::jsonb; mx bigint; cnt bigint;
+begin
+  a := public.ehh_auth(p_token);
+  -- teachers only receive learners enrolled in their own advisory
+  select coalesce(jsonb_agg(jsonb_build_object('id',id,'data',data) order by id),'[]'::jsonb) into st
+    from public.students
+   where rev>p_since
+     and (a.role<>'Teacher' or exists (select 1 from jsonb_array_elements(data->'enr') e where e->>'section'=a.adv));
+  select count(*) into cnt from public.students;
+  select jsonb_build_object('data',data) into sk from public.stock where rev>p_since;
+  select jsonb_build_object('data',data) into nt from public.clinic_notes where rev>p_since;
+  if p_since<=0 or exists(select 1 from public.transfers where rev>p_since) then
+    select coalesce(jsonb_agg(data order by id),'[]'::jsonb) into tr from public.transfers;
+  end if;
+  select greatest(
+    coalesce((select max(rev) from public.students),0),
+    coalesce((select max(rev) from public.stock),0),
+    coalesce((select max(rev) from public.clinic_notes),0),
+    coalesce((select max(rev) from public.transfers),0)) into mx;
+  return jsonb_build_object('rev',mx,'count',cnt,'account',public.ehh_acct_json(a),
+                            'students',st,'stock',sk,'notes',nt,'transfers',tr);
+end $$;
+
+create or replace function public.app_save_students(p_token text, p_rows jsonb) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; r jsonb; kv record; cur jsonb; sid text; keys text[];
+begin
+  a := public.ehh_auth(p_token);
+  if jsonb_typeof(p_rows)<>'array' then raise exception 'BAD_REQUEST'; end if;
+  for r in select * from jsonb_array_elements(p_rows) loop
+    sid := r->>'id';
+    if sid is null or jsonb_typeof(r->'patch')<>'object' then raise exception 'BAD_REQUEST'; end if;
+    select data into cur from public.students where id=sid for update;
+    if cur is null then cur := '{}'::jsonb; end if;
+    keys := '{}';
+    for kv in select key, value from jsonb_each(r->'patch') loop
+      if a.role='Doctor' and kv.key<>'dental' then null;
+      elsif a.role='Nurse' and kv.key not in ('dental','clear','plans') then null;
+      elsif a.role='Dentist' and kv.key in ('dental','visits','passes') then null;
+      elsif a.role='Teacher' and kv.key in ('photo','enr','passes') then null;
+      else raise exception 'NOT_ALLOWED'; end if;
+      if kv.value='null'::jsonb then cur := cur - kv.key;
+      else cur := cur || jsonb_build_object(kv.key, kv.value); end if;
+      keys := keys || kv.key;
+    end loop;
+    insert into public.students(id,data,updated_by) values (sid,cur,a.id)
+      on conflict (id) do update set data=excluded.data, rev=nextval('public.ehh_rev'), updated_at=now(), updated_by=a.id;
+    perform public.ehh_log(a,'student.update',sid,jsonb_build_object('fields',to_jsonb(keys)));
+  end loop;
+end $$;
+
+create or replace function public.app_save_stock(p_token text, p_data jsonb) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_auth(p_token);
+  if a.role not in ('Doctor','Nurse') then raise exception 'NOT_ALLOWED'; end if;
+  insert into public.stock(id,data,updated_by) values (1,p_data,a.id)
+    on conflict (id) do update set data=excluded.data, rev=nextval('public.ehh_rev'), updated_at=now(), updated_by=a.id;
+  perform public.ehh_log(a,'stock.update','stock',jsonb_build_object('items',jsonb_array_length(p_data)));
+end $$;
+
+create or replace function public.app_save_notes(p_token text, p_data jsonb) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_auth(p_token);
+  if a.role not in ('Doctor','Nurse') then raise exception 'NOT_ALLOWED'; end if;
+  if jsonb_typeof(p_data)<>'array' then raise exception 'BAD_REQUEST'; end if;
+  insert into public.clinic_notes(id,data,updated_by) values (1,p_data,a.id)
+    on conflict (id) do update set data=excluded.data, rev=nextval('public.ehh_rev'), updated_at=now(), updated_by=a.id;
+  perform public.ehh_log(a,'notes.update','notes',jsonb_build_object('notes',jsonb_array_length(p_data)));
+end $$;
+
+create or replace function public.app_add_transfer(p_token text, p_data jsonb) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_auth(p_token);
+  if a.role not in ('Doctor','Teacher') then raise exception 'NOT_ALLOWED'; end if;
+  insert into public.transfers(data) values (p_data);
+  perform public.ehh_log(a,'transfer',p_data->>'lrn',jsonb_build_object('from',p_data->>'from','to',p_data->>'to'));
+end $$;

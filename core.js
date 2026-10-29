@@ -46,13 +46,13 @@ const P={
  Teacher:{exam:'view',dental:'view',prof:'view',stock:null}
 };
 const NAV={
- Doctor:[['home','Home'],['overview','Overview'],['students','Students'],['stock','Supply stock'],['account','My account']],
+ Doctor:[['home','Home'],['overview','Overview'],['students','Students'],['stock','Supply stock'],['activity','Activity log'],['account','My account']],
  Nurse:[['home','Home'],['students','Students'],['stock','Supply stock'],['account','My account']],
  Dentist:[['home','Home'],['students','Students'],['account','My account']],
  Teacher:[['home','Home'],['dash','My advisory'],['files','Record of files'],['account','My account']]
 };
 const PERM_NOTE={
- Doctor:'Full access to records, referrals and clearances. Odontogram is read only.',
+ Doctor:'Full access to records, referrals, clearances and the activity log. Odontogram is read only.',
  Nurse:'Full access to exam cards, walk-ins and supplies. Can flag cases for the doctor. Odontogram is read only.',
  Dentist:'Full access to the odontogram and dental records. Medical history is read only.',
  Teacher:'Can see pass and status only. Medical details stay hidden.'
@@ -92,12 +92,10 @@ function loginView(){
  </div>
  <div style="display:grid;gap:14px;min-width:0">
 ${L.pending?` <form class="login-card" id="codeform" autocomplete="off">
-  <div><h2>Confirm it is you</h2><div class="small muted">Your account is linked to <b>${esc(L.pending.hint)}</b>. ${(GOOGLE_CLIENT_ID&&!EMAIL_CODES_ON)?'Confirm with the same Google account.':(GOOGLE_CLIENT_ID?'Confirm with Google, or enter the 6-digit code emailed to it (valid 10 minutes).':'Enter the 6-digit code emailed to it (valid 10 minutes).')}</div></div>
-  ${GOOGLE_CLIENT_ID?`<div style="display:grid;gap:6px;justify-items:start"><div class="small muted">Confirm it is you with Google:</div><div id="g-login" style="min-height:44px"></div>${EMAIL_CODES_ON?'<div class="small muted">Or use the emailed code:</div>':''}</div>`:''}
-  ${(GOOGLE_CLIENT_ID&&!EMAIL_CODES_ON)?'':`<div class="field"><label for="lc">Confirmation code</label><input class="inp mono" id="lc" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" placeholder="123456" required style="font-size:20px;letter-spacing:6px;text-align:center"></div>`}
-  ${L.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.err)}</div>`:''}${L.info?`<div class="pill good" role="status" style="white-space:normal">${esc(L.info)}</div>`:''}
-  ${(GOOGLE_CLIENT_ID&&!EMAIL_CODES_ON)?'':'<button class="btn primary" type="submit">Confirm and log in</button>'}
-  <div class="trow">${(GOOGLE_CLIENT_ID&&!EMAIL_CODES_ON)?'':`<button type="button" class="btn sm" data-act="resendcode">${GOOGLE_CLIENT_ID?'Email me a code':'Send a new code'}</button>`}<button type="button" class="btn sm" data-act="codeback">Back</button></div>
+  <div><h2>Confirm it is you</h2><div class="small muted">Your account is linked to <b>${esc(L.pending.hint)}</b>. Confirm with the same Google account.</div></div>
+  <div style="display:grid;gap:6px;justify-items:start"><div id="g-login" style="min-height:44px"></div></div>
+  ${L.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.err)}</div>`:''}
+  <div class="trow"><button type="button" class="btn sm" data-act="codeback">Back</button></div>
  </form>`:` <form class="login-card ${L.err?'err':''}" id="loginform" autocomplete="on">
   <div class="lhead">${WANT&&ROLE_ICON[WANT]?`<img class="role-ic lg" src="${ROLE_ICON[WANT]}" alt="">`:'<span class="lock" aria-hidden="true">&#128274;</span>'}<div><h2>${WANT?esc(WANT)+' log in':'Welcome back'}</h2><div class="small muted">${WANT?`Log in with a ${WANT} account to open the ${WANT} page.`:'Use your own username or email. Learners do not have accounts.'}</div></div></div>
   <div class="field"><label for="lu">Username or email</label><input class="inp" id="lu" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" required></div>
@@ -111,7 +109,7 @@ ${L.pending?` <form class="login-card" id="codeform" autocomplete="off">
 /* ---------- shell ---------- */
 function shell(){
  const u=S.user, nav=NAV[u.role];
- const body={home:()=>S.user.role==='Teacher'?teacherHome():homeView(),overview:overviewView,students:studentsView,stock:stockView,dash:teacherView,student:studentView,account:accountView,files:filesView}[S.view]();
+ const body={activity:activityView,home:()=>S.user.role==='Teacher'?teacherHome():homeView(),overview:overviewView,students:studentsView,stock:stockView,dash:teacherView,student:studentView,account:accountView,files:filesView}[S.view]();
  const navKey=S.view==='student'?S.back:S.view;
  return `<div class="shell"><header class="topbar"><button class="name homebtn" data-act="nav" data-v="${nav[0][0]}" title="Go to Home" aria-label="EduHealthHub, go to Home"><span class="logo-chip"><img src="${LOGO_EMBLEM}" alt="" height="34"></span>EduHealthHub</button><div class="spacer"></div>
   <img class="role-ic" style="object-fit:cover" src="${u.photo||ROLE_ICON[u.role]}" alt="${u.role}">
