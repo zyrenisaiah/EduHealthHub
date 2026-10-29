@@ -522,6 +522,7 @@ function render(){
  if(S.user&&(PAGE==='home'||PAGE!==S.user.role)){location.replace(ROLE_PAGE[S.user.role]);return}
  if(!S.user&&PAGE!=='home'){$('#root').innerHTML='<div class="login"><div class="small muted" role="status">Opening the '+PAGE+' page…</div></div>';return}
  $('#root').innerHTML=S.user?shell():loginView();
+ appBackdrop();
  if(!S.user)loginFX();
  if(typeof afterRender==='function')afterRender() }
 const goOpen=(id,tab)=>{S.back=S.view;S.view='student';S.sid=id;S.tab=tab||'profile';S.tooth=null;S.undo=[];S.brush=null;render();window.scrollTo(0,0)};
@@ -673,6 +674,12 @@ function boot(){
 /* ---------- login page effects: parallax, rotating tagline, caps-lock hint ---------- */
 let _tagT=null,_fxBound=false;
 const TAGS=['Healthy Students. Brighter Futures.','Health records, one trusted place.','From the clinic to the classroom.','Care that follows every learner.'];
+function appBackdrop(){
+ let el=$('#appbg');
+ if(!S.user){if(el)el.remove();return}
+ if(!el){el=document.createElement('div');el.id='appbg';el.className='bg appbg';el.setAttribute('aria-hidden','true');
+  el.innerHTML='<i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i>'+[1,2,3,4,5,6,7].map(n=>'<i class="fx x'+n+'"></i>').join('');document.body.prepend(el)}
+ el.dataset.role=S.user.role}
 function loginFX(){
  clearInterval(_tagT);
  const t=$('#tagtxt');
@@ -680,6 +687,6 @@ function loginFX(){
  const pw=$('#pw'),caps=$('#caps');
  if(pw&&caps){const chk=e=>{caps.hidden=!(e.getModifierState&&e.getModifierState('CapsLock'))};pw.addEventListener('keyup',chk);pw.addEventListener('keydown',chk);pw.addEventListener('blur',()=>caps.hidden=true)}
  if(!_fxBound){_fxBound=true;
-  addEventListener('pointermove',e=>{const st=$('.stage');if(!st)return;st.style.setProperty('--mx',((e.clientX/innerWidth)-.5).toFixed(3));st.style.setProperty('--my',((e.clientY/innerHeight)-.5).toFixed(3))},{passive:true})}
+  addEventListener('pointermove',e=>{const mx=((e.clientX/innerWidth)-.5).toFixed(3),my=((e.clientY/innerHeight)-.5).toFixed(3);['.stage','#appbg'].forEach(q=>{const st=$(q);if(st){st.style.setProperty('--mx',mx);st.style.setProperty('--my',my)}})},{passive:true})}
 }
 boot();

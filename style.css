@@ -289,3 +289,13 @@ tr.grp td{background:var(--surface2);font-weight:600;font-size:12px}
 @media (max-width:860px){.stage .login{padding-inline:16px}.stage .login-card{padding:20px}.b1,.b2,.b3{opacity:.4}}
 .stage{margin-inline:calc(-1*max(16px,env(safe-area-inset-left,0px)))}
 @media (max-width:860px){.stage .role-strip{gap:8px;flex-wrap:nowrap}.stage .role-strip a{flex:1;min-width:0;padding:10px 4px}.stage .role-strip .role-ic{width:44px;height:44px}}
+
+/* ===== Animated backdrop inside the role pages, tinted per role ===== */
+.appbg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;--mx:0;--my:0;--c1:#8fd0b0;--c2:#8cc7dd;--c3:#c6e3a5;--cx:#2f8a62}
+.appbg[data-role="Nurse"]{--c1:#f2b8c2;--c2:#f6cfa8;--c3:#d9c4ee;--cx:#c2506a}
+.appbg[data-role="Dentist"]{--c1:#8cc7dd;--c2:#a9b8ee;--c3:#9fe0d6;--cx:#2b7a99}
+.appbg[data-role="Teacher"]{--c1:#f3dc8a;--c2:#b9dd9a;--c3:#f4c9a0;--cx:#b0831a}
+.appbg .blob{opacity:.34}
+.appbg .b1{background:var(--c1)}.appbg .b2{background:var(--c2)}.appbg .b3{background:var(--c3)}
+.appbg .fx{opacity:.16;background:linear-gradient(var(--cx),var(--cx)) center/100% 7px no-repeat,linear-gradient(var(--cx),var(--cx)) center/7px 100% no-repeat}
+.shell{position:relative;z-index:1}
