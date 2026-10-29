@@ -80,12 +80,15 @@ const ICON='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="
 /* ---------- login ---------- */
 function loginView(){
  const L=S.login;
- return `<div class="login"><div>
+ return `<div class="stage"><div class="bg" aria-hidden="true"><i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i>${[1,2,3,4,5,6,7].map(n=>`<i class="fx x${n}"></i>`).join('')}<svg class="ecg" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0 60 H300 l20 0 l15 -40 l25 80 l20 -70 l15 30 H620 l20 0 l15 -40 l25 80 l20 -70 l15 30 H940 l20 0 l15 -40 l25 80 l20 -70 l15 30 H1200"/></svg></div>
+<div class="login"><div class="intro">
   <h1 class="sr">EduHealthHub</h1>
   <div class="logo-card"><img class="logo-full" src="${LOGO_FULL}" alt="EduHealthHub. Healthy Students. Brighter Futures."></div>
   <p class="lead">A Web-Based Student Health Record Management System</p>
-  <div class="role-strip">${['Doctor','Nurse','Dentist','Teacher'].map(r=>`<a href="${ROLE_PAGE[r]}" class="${WANT===r?'want':''}"><div><img class="role-ic" src="${ROLE_ICON[r]}" alt=""><span>${r}</span></div></a>`).join('')}</div>
-  <div class="chart-strip" aria-hidden="true"><span>SY ${CUR_SY}</span></div>
+  <p class="tag" aria-live="off"><span id="tagtxt">Healthy Students. Brighter Futures.</span></p>
+  <div class="eyebrow" style="margin:6px 0 8px">Choose your role</div>
+  <div class="role-strip">${['Doctor','Nurse','Dentist','Teacher'].map((r,i)=>`<a href="${ROLE_PAGE[r]}" style="--d:${i*70}ms" class="${WANT===r?'want':''}" ${WANT===r?'aria-current="page"':''}><div><img class="role-ic" src="${ROLE_ICON[r]}" alt=""><span>${r}</span></div></a>`).join('')}</div>
+  <div class="chart-strip" aria-hidden="true"><span>SY ${CUR_SY}</span><span>Private &amp; role-based</span><span>Synced online</span></div>
  </div>
  <div style="display:grid;gap:14px;min-width:0">
 ${L.pending?` <form class="login-card" id="codeform" autocomplete="off">
@@ -95,14 +98,14 @@ ${L.pending?` <form class="login-card" id="codeform" autocomplete="off">
   ${L.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.err)}</div>`:''}${L.info?`<div class="pill good" role="status" style="white-space:normal">${esc(L.info)}</div>`:''}
   ${(GOOGLE_CLIENT_ID&&!EMAIL_CODES_ON)?'':'<button class="btn primary" type="submit">Confirm and log in</button>'}
   <div class="trow">${(GOOGLE_CLIENT_ID&&!EMAIL_CODES_ON)?'':`<button type="button" class="btn sm" data-act="resendcode">${GOOGLE_CLIENT_ID?'Email me a code':'Send a new code'}</button>`}<button type="button" class="btn sm" data-act="codeback">Back</button></div>
- </form>`:` <form class="login-card" id="loginform" autocomplete="on">
-  <div><h2>Log in</h2><div class="small muted">${WANT?`Log in with a ${WANT} account to open the ${WANT} page.`:'Use your own username or email. Learners do not have accounts.'}</div></div>
+ </form>`:` <form class="login-card ${L.err?'err':''}" id="loginform" autocomplete="on">
+  <div class="lhead">${WANT&&ROLE_ICON[WANT]?`<img class="role-ic lg" src="${ROLE_ICON[WANT]}" alt="">`:'<span class="lock" aria-hidden="true">&#128274;</span>'}<div><h2>${WANT?esc(WANT)+' log in':'Welcome back'}</h2><div class="small muted">${WANT?`Log in with a ${WANT} account to open the ${WANT} page.`:'Use your own username or email. Learners do not have accounts.'}</div></div></div>
   <div class="field"><label for="lu">Username or email</label><input class="inp" id="lu" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" required></div>
-  <div class="field"><label for="pw">Password</label><div class="who-cell"><input class="inp" id="pw" name="password" type="password" autocomplete="current-password" required><button type="button" class="btn sm" data-act="showpw" aria-pressed="false">Show</button></div></div>
+  <div class="field"><label for="pw">Password</label><div class="who-cell"><input class="inp" id="pw" name="password" type="password" autocomplete="current-password" required><button type="button" class="btn sm" data-act="showpw" aria-pressed="false">Show</button></div><div class="caps" id="caps" hidden>Caps Lock is on</div></div>
   ${L.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.err)}</div>`:''}
   <button class="btn primary" type="submit">Log in</button>
  </form>`}
-</div></div>`;
+</div></div></div>`;
 }
 
 /* ---------- shell ---------- */

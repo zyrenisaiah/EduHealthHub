@@ -522,6 +522,7 @@ function render(){
  if(S.user&&(PAGE==='home'||PAGE!==S.user.role)){location.replace(ROLE_PAGE[S.user.role]);return}
  if(!S.user&&PAGE!=='home'){$('#root').innerHTML='<div class="login"><div class="small muted" role="status">Opening the '+PAGE+' page…</div></div>';return}
  $('#root').innerHTML=S.user?shell():loginView();
+ if(!S.user)loginFX();
  if(typeof afterRender==='function')afterRender() }
 const goOpen=(id,tab)=>{S.back=S.view;S.view='student';S.sid=id;S.tab=tab||'profile';S.tooth=null;S.undo=[];S.brush=null;render();window.scrollTo(0,0)};
 const ACT={
@@ -668,5 +669,17 @@ function boot(){
   const m=cloudErr(r),c=(r&&r.code)||'error';
   $('#root').innerHTML='<div class="login"><div style="display:grid;gap:12px;max-width:420px"><h2>Could not open this page</h2><div class="pill bad" style="white-space:normal">'+esc(m)+' ('+esc(c)+')</div><div class="small muted">Your login is still active. Check the connection and try again.</div><div><button class="btn primary" onclick="location.reload()">Try again</button> <button class="btn" onclick="sessionStorage.clear();location.href=&quot;index.html&quot;">Back to login</button></div></div></div>'})}
  else{if(localRestore())render();else bad()}
+}
+/* ---------- login page effects: parallax, rotating tagline, caps-lock hint ---------- */
+let _tagT=null,_fxBound=false;
+const TAGS=['Healthy Students. Brighter Futures.','Health records, one trusted place.','From the clinic to the classroom.','Care that follows every learner.'];
+function loginFX(){
+ clearInterval(_tagT);
+ const t=$('#tagtxt');
+ if(t&&!matchMedia('(prefers-reduced-motion: reduce)').matches){let i=0;_tagT=setInterval(()=>{if(!document.body.contains(t)){clearInterval(_tagT);return}i=(i+1)%TAGS.length;t.classList.add('out');setTimeout(()=>{t.textContent=TAGS[i];t.classList.remove('out')},350)},3800)}
+ const pw=$('#pw'),caps=$('#caps');
+ if(pw&&caps){const chk=e=>{caps.hidden=!(e.getModifierState&&e.getModifierState('CapsLock'))};pw.addEventListener('keyup',chk);pw.addEventListener('keydown',chk);pw.addEventListener('blur',()=>caps.hidden=true)}
+ if(!_fxBound){_fxBound=true;
+  addEventListener('pointermove',e=>{const st=$('.stage');if(!st)return;st.style.setProperty('--mx',((e.clientX/innerWidth)-.5).toFixed(3));st.style.setProperty('--my',((e.clientY/innerHeight)-.5).toFixed(3))},{passive:true})}
 }
 boot();
