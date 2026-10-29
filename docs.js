@@ -194,9 +194,10 @@ function docView(){
    ${r==='Dentist'?'':`<button class="btn ${ed?'':'primary'}" data-act="dpdf">Download PDF</button>`}${ed&&dc.custom?'<button class="btn" data-act="dreset">Reset to dummy template</button>':''}${r==='Dentist'?'<span class="ro">View only</span>':''}</div>`;
  const e=fileEntry(st,d.sy,d.kind),status=e&&e.date?pill('On file','good'):pill('Not filed','mute');
  return `<div><button class="btn sm" data-act="docback">← Back to ${esc(fullName(st))}</button></div>
- <section class="panel"><div class="head"><div><div class="eyebrow">${esc(d.sy)} · LRN <span class="mono">${st.lrn}</span></div><h2>${esc(d.kind)}</h2><div class="muted">${esc(fullName(st))} ${status} ${pill('Dummy file','warn')} ${dc.custom?`<span class="small muted">Edited by ${esc(dc.by||'')} on ${esc(dc.at||'')}</span>`:'<span class="small muted">Dummy template, not edited yet</span>'}</div></div></div>
+ <section class="panel" ${ed&&!d.edit?'data-drop="viewer"':''}><div class="head"><div><div class="eyebrow">${esc(d.sy)} · LRN <span class="mono">${st.lrn}</span></div><h2>${esc(d.kind)}</h2><div class="muted">${esc(fullName(st))} ${status} ${pill('Dummy file','warn')} ${dc.custom?`<span class="small muted">Edited by ${esc(dc.by||'')} on ${esc(dc.at||'')}</span>`:'<span class="small muted">Dummy template, not edited yet</span>'}</div></div></div>
  ${S.docMsg?`<div class="pill ${S.docMsg[0]}" role="status" style="white-space:normal;margin-bottom:8px">${esc(S.docMsg[1])}</div>`:''}
  ${tools}
+ ${ed&&!d.edit?'<div class="dropzone" aria-hidden="true">Drag a Word (.docx) file here to replace this file</div>':''}
  <article class="docpage" id="docedit" ${d.edit?'contenteditable="true" spellcheck="true"':''} aria-label="${esc(d.kind)} content">${blocksToHtml(dc.blocks)}</article></section>`}
 const DOC_ACT={
  docopen:a=>{S.doc={sid:a.dataset.id,sy:a.dataset.sy,kind:a.dataset.k,edit:false};S.docMsg=null;S.dback=S.view;S.view='doc';render();scrollTo(0,0)},
@@ -213,7 +214,25 @@ const DOC_ACT={
  dupload:()=>{const i=$('#docup');if(i)i.click()}
 };
 async function docUpload(el){
- const f=el.files&&el.files[0];el.value='';if(!f||!canEditDocs())return;
- try{const b=await readDocx(f);storeDoc(stu(S.doc.sid),S.doc.sy,S.doc.kind,b);S.doc.edit=false;S.docMsg=['good','Uploaded '+f.name+'. The content was replaced.']}
- catch(e){S.docMsg=['bad',e.message||'That file could not be read.']}
+ const f=el.files&&el.files[0];el.value='';if(f)docAccept(f,S.doc.sid,S.doc.sy,S.doc.kind,true)}
+/* shared by the Upload button and drag and drop */
+async function docAccept(f,sid,sy,kind,inViewer){
+ if(!canEditDocs()||!stu(sid))return;
+ try{const b=await readDocx(f);storeDoc(stu(sid),sy,kind,b);
+  if(inViewer){S.doc.edit=false;S.docMsg=['good','Uploaded '+f.name+'. The content was replaced.']}else toast('Uploaded '+f.name+' to '+kind)}
+ catch(e){if(inViewer)S.docMsg=['bad',e.message||'That file could not be read.'];else toast(e.message||'That file could not be read.')}
  render()}
+/* drag and drop: drop a .docx on a file row or on the open document */
+(()=>{
+ const hasFiles=e=>e.dataTransfer&&[...(e.dataTransfer.types||[])].includes('Files');
+ const zone=e=>e.target.closest&&e.target.closest('[data-drop]');
+ let hot=null;const clear=()=>{if(hot){hot.classList.remove('dragover');hot=null}};
+ addEventListener('dragover',e=>{if(!hasFiles(e))return;e.preventDefault();const z=zone(e);
+  if(z&&canEditDocs()){e.dataTransfer.dropEffect='copy';if(hot!==z){clear();hot=z;z.classList.add('dragover')}}else{e.dataTransfer.dropEffect='none';clear()}});
+ addEventListener('dragleave',e=>{if(!e.relatedTarget)clear()});
+ addEventListener('drop',e=>{if(!hasFiles(e))return;e.preventDefault();const z=zone(e);clear();
+  if(!z||!canEditDocs()){if(z)toast('Only the Doctor and Nurse can upload files.');return}
+  const f=e.dataTransfer.files[0];if(!f)return;
+  if(z.dataset.drop==='viewer'&&S.doc)docAccept(f,S.doc.sid,S.doc.sy,S.doc.kind,true);
+  else docAccept(f,z.dataset.id,z.dataset.sy,z.dataset.k,false)});
+})();
