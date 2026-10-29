@@ -23,8 +23,8 @@ function profileTab(st,edit){
   <div class="field"><label for="p-sex">Sex</label><select class="inp" id="p-sex" data-bind="prof" data-f="sex" ${d}>${['Female','Male'].map(x=>`<option ${st.sex===x?'selected':''}>${x}</option>`).join('')}</select></div>
   ${f('guardian','Parent / guardian')}${f('contact','Contact number')}${f('blood','Blood type')}${f('allergies','Allergies')}${f('conditions','Known conditions')}
  </div></section>
- <section class="panel"><div class="head"><h3>Health files</h3><span class="small muted">Held per school year</span></div><div class="tw"><table><thead><tr><th>School year</th><th>File</th><th>Filed on</th><th>Status</th></tr></thead><tbody>
- ${st.files.slice().sort((a,b)=>b.sy.localeCompare(a.sy)).map(x=>`<tr><td class="mono">${x.sy}</td><td>${esc(x.name)}</td><td class="mono">${x.date||'-'}</td><td>${x.date?pill('On file','good'):pill('Missing','warn')}</td></tr>`).join('')}
+ <section class="panel"><div class="head"><h3>Health files</h3><span class="small muted">Held per school year. Open a file to read it${canEditDocs()?', edit it, or use Word':(S.user.role==='Teacher'?' or download it as PDF':'')}.</span></div><div class="tw"><table><thead><tr><th>School year</th><th>File</th><th>Filed on</th><th>Status</th><th></th></tr></thead><tbody>
+ ${st.enr.map(e=>e.sy).sort().reverse().map(sy=>filesFor(st,sy,DOC_KINDS).map(f=>{const en=fileEntry(st,sy,f.name);return `<tr><td class="mono">${sy}</td><td>${esc(f.name)}${en&&en.doc?' '+pill('Edited','mute'):''}</td><td class="mono">${f.date||'-'}</td><td>${f.status==='On file'?pill('On file','good'):f.status==='Missing'?pill('Missing','warn'):pill('Not filed','mute')}</td><td><button class="btn sm" data-act="docopen" data-id="${st.id}" data-sy="${sy}" data-k="${esc(f.name)}">Open</button></td></tr>`}).join('')).join('')}
  </tbody></table></div></section>`;
 }
 
@@ -337,8 +337,8 @@ function setAccPhoto(file,remove){
  openCropper(file,store)}
 /* ---------- record of files + export (teacher) ---------- */
 S.sel=new Set();S.lrnText='';S.lrnMsg='';
-function filesFor(st,sy){
- return FILE_KINDS.map(k=>{
+function filesFor(st,sy,kinds){
+ return (kinds||FILE_KINDS).map(k=>{
   const f=st.files.find(x=>x.sy===sy&&x.name===k);let date=f?f.date:'';
   if(k==='Dental Record'&&sy===CUR_SY&&st.dental&&st.dental.date)date=st.dental.date;
   const missing=!date&&(f||(k==='Dental Record'&&sy===CUR_SY));
@@ -368,7 +368,7 @@ function filesView(){
  ${rows||`<tr><td colspan="9" class="muted">No learners were in this advisory for ${sy}.</td></tr>`}</tbody></table></div></section>`;
 }
 function browserSave(filename,data){
- const type=/\.pdf$/i.test(filename)?'application/pdf':/\.html$/i.test(filename)?'text/html':'application/octet-stream';
+ const type=/\.pdf$/i.test(filename)?'application/pdf':/\.docx$/i.test(filename)?'application/vnd.openxmlformats-officedocument.wordprocessingml.document':'application/octet-stream';
  const blob=data instanceof Blob?data:new Blob([data],{type}),u=URL.createObjectURL(blob),a=document.createElement('a');
  a.href=u;a.download=filename;a.style.display='none';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),5000);
  toast('Downloaded '+filename);
@@ -578,7 +578,7 @@ const ACT={
  exportfull:()=>exportRecords(exportList()),
  exportone:a=>exportRecords([stu(a.dataset.id)])
 };
-Object.assign(ACT,HOME_ACT);
+Object.assign(ACT,HOME_ACT,DOC_ACT);
 document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');if(a&&ACT[a.dataset.act])ACT[a.dataset.act](a)});
 const KEYS={s:'✓',x:'X',f:'F',o:'O',r:'RF',h:'HS'};
 document.addEventListener('keydown',e=>{
@@ -601,6 +601,7 @@ function onBind(e){
  const el=e.target.closest('[data-bind]'); if(!el)return; const b=el.dataset.bind, ch=e.type==='change', v=el.value;
  const st=S.sid?stu(S.sid):null;
  if(b==='hq'){if(!ch)homeSearch(el);return}
+ if(b==='docup'){if(ch)docUpload(el);return}
  if(b==='filter'){S.f[el.dataset.f]=v; if(ch||el.dataset.f==='q'){const pos=el.selectionStart;render();if(el.dataset.f==='q'){const q=$('#q');q.focus();q.setSelectionRange(pos,pos)}}return}
  if(b==='loginadv'){S.login.adv=v;return}
  if(b==='sy'){S.sy=v;S.sel=new Set();S.lrnMsg='';render();return}

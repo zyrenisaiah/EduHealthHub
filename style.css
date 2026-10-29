@@ -294,3 +294,9 @@ tr.grp td{background:var(--surface2);font-weight:600;font-size:12px}
 @keyframes shimmer{to{transform:translateX(100%)}}
 .sk-t{height:12px;margin:6px 0}.sk-n{height:30px;width:45%;margin:10px 0}.sk-h{height:34px;width:220px;margin-bottom:14px}.sk-in{height:44px;margin-top:12px}
 .sk-row{height:38px;margin-top:10px}.sk-nav{height:34px;margin-bottom:8px}.sk-logo{width:170px;height:34px}.sk-av{width:34px;height:34px;border-radius:50%}
+
+/* Documents */
+.docpage{background:#fff;color:#10282e;border:1px solid var(--line-strong);border-radius:6px;padding:28px 34px;margin-top:12px;min-height:320px;max-width:780px;line-height:1.55;box-shadow:var(--shadow)}
+.docpage h1{font-size:24px;color:#0b6f72;margin:10px 0 8px}.docpage h2{font-size:17px;margin:14px 0 6px}.docpage p{margin:0 0 8px}.docpage ul{margin:0 0 8px;padding-left:22px}
+.docpage[contenteditable="true"]{outline:2px solid var(--accent);outline-offset:2px}
+.doctools{position:sticky;top:0;background:var(--surface);padding:8px 0;z-index:2;align-items:center}

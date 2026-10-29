@@ -109,8 +109,8 @@ ${L.pending?` <form class="login-card" id="codeform" autocomplete="off">
 /* ---------- shell ---------- */
 function shell(){
  const u=S.user, nav=NAV[u.role];
- const body={activity:activityView,home:()=>S.user.role==='Teacher'?teacherHome():homeView(),overview:overviewView,students:studentsView,stock:stockView,dash:teacherView,student:studentView,account:accountView,files:filesView}[S.view]();
- const navKey=S.view==='student'?S.back:S.view;
+ const body={doc:docView,activity:activityView,home:()=>S.user.role==='Teacher'?teacherHome():homeView(),overview:overviewView,students:studentsView,stock:stockView,dash:teacherView,student:studentView,account:accountView,files:filesView}[S.view]();
+ const navKey=(S.view==='student'||S.view==='doc')?S.back:S.view;
  return `<div class="shell"><header class="topbar"><button class="name homebtn" data-act="nav" data-v="${nav[0][0]}" title="Go to Home" aria-label="EduHealthHub, go to Home"><span class="logo-chip"><img src="${LOGO_EMBLEM}" alt="" height="34"></span>EduHealthHub</button><div class="spacer"></div>
   <img class="role-ic" style="object-fit:cover" src="${u.photo||ROLE_ICON[u.role]}" alt="${u.role}">
   <div class="who"><b>${esc(u.name)}</b><span class="small muted">${u.role}${u.role==='Teacher'?' · '+esc(secLabel(secOf(u.adv))):''}</span></div>

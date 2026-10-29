@@ -45,7 +45,7 @@ function applySync(r){
  if(r.transfers&&DB.transfers.length===TR_SYNCED){if(r.transfers.length!==DB.transfers.length)changed=true;DB.transfers=r.transfers;TR_SYNCED=r.transfers.length}
  REV=Math.max(REV,r.rev||0);CLOUD_COUNT=r.count||0;
  return changed}
-function inField(){const a=document.activeElement;return !!(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))}
+function inField(){const a=document.activeElement;return !!(a&&(/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)||a.isContentEditable))||!!(S.view==='doc'&&S.doc&&S.doc.edit)}
 function softRender(){if(!S.user)return;if(inField()){S.stale=true;return}S.stale=false;render()}
 addEventListener('focusout',()=>setTimeout(()=>{if(S.stale&&S.user&&!inField()){S.stale=false;render()}},60));
 async function cloudSync(initial){
