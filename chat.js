@@ -126,13 +126,16 @@ function panelHtml(){
   const list=m.q.trim().length>=2||/^\d{3,}$/.test(m.q.trim())?searchMatches(m.q):[];
   return `<div class="cpanel"><div class="head"><h3>${isSend?'Send a student to the clinic':'Attach a learner or health file'}</h3>${close}</div><input class="inp" id="cq" data-bind="cq" placeholder="Type the LRN or the student's name" value="${esc(m.q)}" autocomplete="off"><div class="cres" id="cres">${list.map(x=>`<button class="btn sm" data-act="cpick" data-id="${x.id}">${esc(fullName(x))} <span class="mono small">${x.lrn}</span></button>`).join('')}</div></div>`}
  return ''}
+function chHead(c){
+ const id=convOtherId(c),inner=`<img class="role-ic" src="${esc(convIcon(c))}" alt=""><div><b>${esc(convTitle(c))}</b><div class="small muted">${esc(convSub(c))}${canProf(id)?' · tap to view advisory':''}</div></div>`;
+ return canProf(id)?`<button type="button" class="chwho" data-act="cprof" data-id="${id}" aria-label="View advisory class of ${esc(convTitle(c))}">${inner}</button>`:`<div class="chwho">${inner}</div>`}
 function chatView(){
  if(!CLOUD_ON)return `<div class="head"><div><div class="eyebrow">Messages</div><h2>Messages</h2></div></div><section class="panel"><p class="muted">Messaging needs the online database. It is not available in offline mode.</p></section>`;
  const c=S.msg.active,u=S.user,canSend=u.role==='Teacher'&&c==='desk:'+u.id;
  return `<div class="head"><div><div class="eyebrow">Messages</div><h2>Messages</h2></div><button class="btn primary" data-act="cpanel" data-k="new">New chat</button></div>
  ${S.msg.err?`<div class="pill bad" style="white-space:normal;margin-bottom:8px">${esc(S.msg.err)}</div>`:''}
  <div class="chat ${c||S.msg.panel==='new'?'has-active':''}"><aside class="chlist" id="chlist" aria-label="Conversations">${listHtml()}</aside>
- <section class="chmain" aria-label="Conversation">${c?`<div class="chhead"><button class="btn sm cback" data-act="cback" aria-label="Back to conversations">←</button>${profImg(convOtherId(c),'role-ic',convIcon(c))}<div><b>${esc(convTitle(c))}</b><div class="small muted">${esc(convSub(c))}</div></div></div>
+ <section class="chmain" aria-label="Conversation">${c?`<div class="chhead"><button class="btn sm cback" data-act="cback" aria-label="Back to conversations">←</button>${chHead(c)}</div>
   <div class="chthread" id="chthread" role="log" aria-live="polite">${threadHtml(c)}</div><div id="chpanel">${panelHtml()}</div>
   <form class="chcomp" id="chform"><button type="button" class="btn" data-act="cpanel" data-k="attach" title="Attach a learner or health file" aria-label="Attach">+</button>${canSend?'<button type="button" class="btn" data-act="cpanel" data-k="send">Send student to clinic</button>':''}<textarea id="chtext" rows="1" maxlength="2000" placeholder="Write a message" aria-label="Message">${esc(S.msg.draft[c]||'')}</textarea><button class="btn primary" type="submit">Send</button></form>`
   :`<div class="chempty"><p class="muted">Choose a conversation, or start a new chat.</p><div id="chpanel">${panelHtml()}</div></div>`}</section></div>`}
