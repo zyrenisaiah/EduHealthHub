@@ -815,3 +815,10 @@ begin
   insert into public.msg_reads(account_id,conv,last_id) values (a.id,p_conv,p_id)
     on conflict (account_id,conv) do update set last_id=greatest(public.msg_reads.last_id,excluded.last_id);
 end $$;
+
+-- ============ HARDENING (advisor fixes) ============
+alter function public.ehh_acct_json set search_path = public, pg_temp;
+alter function public.ehh_norm set search_path = public, pg_temp;
+alter function public.ehh_mask set search_path = public, pg_temp;
+alter function public.ehh_conv_ok set search_path = public, pg_temp;
+create index if not exists sessions_account_id_idx on public.sessions(account_id);
