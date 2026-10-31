@@ -765,7 +765,7 @@ language plpgsql security definer set search_path = public, extensions as $$
 declare a public.accounts;
 begin
   a := public.ehh_auth(p_token);
-  return coalesce((select jsonb_agg(jsonb_build_object('id',x.id,'name',x.name,'role',x.role,'adv',x.adv) order by x.role,x.name)
+  return coalesce((select jsonb_agg(jsonb_build_object('id',x.id,'name',x.name,'role',x.role,'adv',x.adv,'photo',x.photo) order by x.role,x.name)
     from public.accounts x where x.id<>a.id and (a.role<>'Teacher' or x.role<>'Teacher')),'[]'::jsonb);
 end $$;
 

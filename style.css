@@ -337,3 +337,5 @@ tr[data-drop].dragover td{background:var(--accent-soft)}
 .chcomp textarea:focus{outline:2px solid var(--accent);outline-offset:0}.chcomp .btn{border-radius:99px;min-height:40px}
 .chempty{display:grid;place-items:center;align-content:center;height:100%;padding:20px;gap:10px}
 @media (max-width:860px){.chat{grid-template-columns:1fr}.chat .chmain{display:none}.chat.has-active .chlist{display:none}.chat.has-active .chmain{display:flex}.cback{display:inline-flex}.mrow{max-width:90%}}
+.mrow.them{position:relative;margin-left:34px}.mav{position:absolute;left:-34px;bottom:2px;width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--surface2)}
+.role-ic,.citem img,.chhead img{object-fit:cover}

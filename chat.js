@@ -11,11 +11,12 @@ function convSub(c){
  if(c==='clinic')return 'Doctors, nurses and dentist';
  if(c.startsWith('desk:'))return c.slice(5)===S.user.id?'You and the clinic staff':'Teacher and clinic staff';
  const p=c.split(':'),o=S.msg.dir.find(d=>d.id===(p[1]===S.user.id?p[2]:p[1]));return o?o.role+(o.adv?' · '+secLabel(secOf(o.adv)):''):''}
+const avOf=(id,role)=>{if(id===S.user.id)return S.user.photo||ROLE_ICON[S.user.role];const o=S.msg.dir.find(d=>d.id===id);return(o&&o.photo)||ROLE_ICON[(o&&o.role)||role||'Teacher']};
 function convIcon(c){
  if(c==='clinic')return ROLE_ICON.Doctor;
  const id=c.startsWith('desk:')?c.slice(5):(c.split(':')[1]===S.user.id?c.split(':')[2]:c.split(':')[1]);
  if(c.startsWith('desk:')&&id===S.user.id)return ROLE_ICON.Nurse;
- const o=S.msg.dir.find(d=>d.id===id);return ROLE_ICON[(o&&o.role)||'Teacher']}
+ return avOf(id)}
 const convMsgs=c=>S.msg.msgs.filter(m=>m.conv===c);
 const unreadOf=c=>{const r=S.msg.reads[c]||0;return convMsgs(c).filter(m=>m.id>r&&m.s!==S.user.id&&m.k!=='event').length};
 const unreadAll=()=>Object.keys(S.msg.msgs.reduce((o,m)=>(o[m.conv]=1,o),{})).reduce((n,c)=>n+unreadOf(c),0);
@@ -37,7 +38,7 @@ function msgMerge(list){let add=0,others=[];
 async function msgSync(){
  if(!CLOUD_ON||!TOK||!S.user||S.msg.busy)return;S.msg.busy=true;
  try{
-  if(!S.msg.dirOk){S.msg.dir=await rpc('app_directory',{p_token:TOK});S.msg.dirOk=true}
+  if(!S.msg.dirOk||Date.now()-(S.msg.dirT||0)>120000){S.msg.dir=await rpc('app_directory',{p_token:TOK});S.msg.dirOk=true;S.msg.dirT=Date.now()}
   const first=S.msg.last===0&&!S.msg.msgs.length,r=await rpc('app_msg_sync',{p_token:TOK,p_since:S.msg.last});
   Object.keys(r.reads||{}).forEach(c=>{S.msg.reads[c]=Math.max(S.msg.reads[c]||0,r.reads[c])});
   const others=msgMerge(r.messages||[]);S.msg.err='';
@@ -96,7 +97,8 @@ function threadHtml(c){
   if(m.k==='event'){out+=`<div class="evt">${esc(m.b)} <span>${mtime(m.t)}</span></div>`;return}
   const me=m.s===S.user.id,prev=ms[i-1],showName=!me&&(!prev||prev.s!==m.s||prev.k==='event');
   const body=m.k==='pass'?passCard(m):m.k==='record'?recCard(m):`<div class="mtext">${esc(m.b).replace(/\n/g,'<br>')}</div>`;
-  out+=`<div class="mrow ${me?'me':'them'}">${showName&&!c.startsWith('dm:')?`<div class="mname">${esc(m.sn)} <span class="mrole">${esc(m.sr)}</span></div>`:''}<div class="bubble ${m.k!=='text'?'bwide':''}">${body}</div><div class="mtime">${mtime(m.t)}</div></div>`});
+  const av=!me&&(!prev||prev.s!==m.s||prev.k==='event'||mday(prev.t)!==d)?`<img class="mav" src="${avOf(m.s,m.sr)}" alt="">`:'';
+  out+=`<div class="mrow ${me?'me':'them'}">${av}${showName&&!c.startsWith('dm:')?`<div class="mname">${esc(m.sn)} <span class="mrole">${esc(m.sr)}</span></div>`:''}<div class="bubble ${m.k!=='text'?'bwide':''}">${body}</div><div class="mtime">${mtime(m.t)}</div></div>`});
  return out}
 function listHtml(){
  return convList().map(c=>{const l=convMsgs(c).slice(-1)[0],u=unreadOf(c);
