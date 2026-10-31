@@ -65,7 +65,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.user)ms
 
 /* ---- tracking events posted by the clinic flow ---- */
 /* post only after the record change has reached the database, so everyone sees the same status */
-async function afterSave(fn){await 0;try{clearTimeout(_t);if(CLOUD_ON)await doSave()}catch(e){}fn()}
+async function afterSave(fn){await 0;try{clearTimeout(_t);await doSave()}catch(e){}fn()}
 function sendPassFor(s,note){
  const me=S.user,p={id:nid('G'),date:localDate(),time:nowT(),by:me.name,byId:me.id,note:note||'',status:'sent'};
  arr(s,'passes').push(p);save();
