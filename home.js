@@ -271,12 +271,12 @@ function teacherHome(){
  <section class="panel"><div class="head"><h3>Returned to class today</h3><span class="small muted">time-outs to verify</span></div>${tbl(back,'No time-outs recorded today.')}</section>`}
 
 /* ---- Activity log (Doctor): who changed what and when ---- */
-S.audit={rows:null,err:'',busy:false};
+S.audit={rows:null,errs:[],err:'',busy:false};
 const FIELD_LABEL={exam:'health exam',dental:'dental chart',visits:'clinic visits',refs:'referrals',clear:'clearances',plans:'care plans',passes:'clinic passes',otherExams:'other examinations',files:'record of files',photo:'photo',enr:'enrolment',allergies:'allergies',conditions:'conditions',guardian:'guardian',contact:'contact',blood:'blood type',first:'name',last:'name',birth:'birthdate',sex:'sex'};
 async function loadAudit(){
  if(!CLOUD_ON){S.audit={rows:[],err:'The activity log is kept in the online database. It is empty in offline mode.',busy:false};render();return}
  S.audit.busy=true;S.audit.err='';render();
- try{S.audit.rows=await rpc('app_audit',{p_token:TOK,p_limit:200})}catch(e){S.audit.err=cloudErr(e)}
+ try{const[a,b]=await Promise.all([rpc('app_audit',{p_token:TOK,p_limit:200}),rpc('app_errors',{p_token:TOK,p_limit:100})]);S.audit.rows=a;S.audit.errs=b||[]}catch(e){S.audit.err=cloudErr(e)}
  S.audit.busy=false;if(S.view==='activity')render()}
 function auditText(r){
  const d=r.detail||{};
@@ -292,4 +292,8 @@ function activityView(){
  <p class="small muted">Every change to a record, supply stock, note or transfer is recorded with who made it and when. Showing the latest 200.</p>
  ${a.err?`<div class="pill bad" style="white-space:normal">${esc(a.err)}</div>`:''}
  <section class="panel" style="padding:0"><div class="tw"><table class="wrapth"><thead><tr><th>When</th><th>Who</th><th>What changed</th><th>Learner</th></tr></thead><tbody>
- ${a.busy||a.rows===null?sk:(rows||'<tr><td colspan="4" class="muted">Nothing recorded yet.</td></tr>')}</tbody></table></div></section>`}
+ ${a.busy||a.rows===null?sk:(rows||'<tr><td colspan="4" class="muted">Nothing recorded yet.</td></tr>')}</tbody></table></div></section>
+ <div class="head" style="margin-top:22px"><div><div class="eyebrow">Health of the site</div><h2>Browser errors</h2></div></div>
+ <p class="small muted">When something breaks in anyone's browser, it is reported here automatically (last 30 days, latest 100). An empty list is good news.</p>
+ <section class="panel" style="padding:0"><div class="tw"><table class="wrapth"><thead><tr><th>When</th><th>Who</th><th>Page</th><th>Error</th></tr></thead><tbody>
+ ${(a.errs||[]).map(r=>{const t=new Date(r.at);return `<tr><td class="mono small" style="white-space:nowrap">${t.toLocaleDateString()} ${t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td><td>${r.actor?`<b>${esc(r.actor)}</b> ${pill(esc(r.role||''),'mute')}`:'<span class="muted">Not signed in</span>'}</td><td class="mono small">${esc(r.page||'')}</td><td><b>${esc(r.msg)}</b>${r.stack?`<details><summary class="small muted">Details</summary><pre class="small" style="white-space:pre-wrap;margin:4px 0 0">${esc(r.stack)}</pre></details>`:''}</td></tr>`}).join('')||'<tr><td colspan="4" class="muted">No errors reported.</td></tr>'}</tbody></table></div></section>`}

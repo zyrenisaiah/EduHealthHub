@@ -822,3 +822,45 @@ alter function public.ehh_norm set search_path = public, pg_temp;
 alter function public.ehh_mask set search_path = public, pg_temp;
 alter function public.ehh_conv_ok set search_path = public, pg_temp;
 create index if not exists sessions_account_id_idx on public.sessions(account_id);
+-- ============ ERROR REPORTING ============
+create table if not exists public.error_log(
+  id bigserial primary key,
+  at timestamptz not null default now(),
+  account_id text,
+  actor text,
+  role text,
+  page text,
+  msg text not null,
+  stack text,
+  ua text
+);
+alter table public.error_log enable row level security;
+revoke all on public.error_log from anon, authenticated;
+create index if not exists error_log_at_idx on public.error_log(at desc);
+
+-- Browsers report their own JavaScript errors. Works before login too (account stays empty),
+-- so it is limited to 30 reports a minute in total and every field is cut to a safe length.
+create or replace function public.app_report_error(p_token text, p_data jsonb) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  if (select count(*) from public.error_log where at>now()-interval '1 minute')>=30 then return; end if;
+  begin a := public.ehh_auth(p_token); exception when others then a := null; end;
+  insert into public.error_log(account_id,actor,role,page,msg,stack,ua)
+  values (a.id,a.name,a.role,left(coalesce(p_data->>'page',''),200),left(coalesce(p_data->>'msg','(no message)'),500),
+          left(p_data->>'stack',2000),left(p_data->>'ua',300));
+  delete from public.error_log where at<now()-interval '30 days';
+end $$;
+
+create or replace function public.app_errors(p_token text, p_limit int default 100) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_auth(p_token);
+  if a.role<>'Doctor' then raise exception 'NOT_ALLOWED'; end if;
+  return coalesce((select jsonb_agg(to_jsonb(x) order by x.id desc) from (
+    select id,at,actor,role,page,msg,stack,ua from public.error_log order by id desc limit least(greatest(p_limit,1),300)) x),'[]'::jsonb);
+end $$;
+
+revoke all on function public.app_report_error(text,jsonb), public.app_errors(text,int) from public;
+grant execute on function public.app_report_error(text,jsonb), public.app_errors(text,int) to anon, authenticated;

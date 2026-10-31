@@ -9,6 +9,15 @@ async function rpc(fn,args,keep){
  const t=await r.text();let j=null;try{j=t?JSON.parse(t):null}catch(e){}
  if(!r.ok){const m=(j&&(j.message||j.error||j.hint))||('HTTP '+r.status);const x=new Error(m);x.code=m;x.status=r.status;throw x}
  return j}
+/* ---- error reporting: unexpected browser errors are saved to the error_log table (Doctor reads them in Activity log) ---- */
+(function(){let n=0;const seen=new Set();
+ function report(msg,stack){
+  if(!CLOUD_ON||n>=5||!msg||/ResizeObserver|^Script error/.test(msg))return;
+  const k=String(msg).slice(0,200);if(seen.has(k))return;seen.add(k);n++;
+  try{rpc('app_report_error',{p_token:TOK,p_data:{msg:String(msg),stack:String(stack||''),page:location.pathname.split('/').pop()+(S&&S.view?'#'+S.view:''),ua:navigator.userAgent}},true).catch(()=>{})}catch(e){}}
+ addEventListener('error',e=>report(e.message,(e.error&&e.error.stack)||(e.filename+':'+e.lineno)));
+ addEventListener('unhandledrejection',e=>{const r=e.reason;if(r&&(r.code||r.status))return;report('Unhandled: '+((r&&r.message)||r),r&&r.stack)});
+})();
 function cloudErr(e){
  const c=e&&e.code;
  if(c==='OFFLINE')return 'Cannot reach the online database. Check your internet connection and try again.';
