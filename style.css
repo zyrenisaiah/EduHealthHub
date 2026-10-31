@@ -339,3 +339,5 @@ tr[data-drop].dragover td{background:var(--accent-soft)}
 @media (max-width:860px){.chat{grid-template-columns:1fr}.chat .chmain{display:none}.chat.has-active .chlist{display:none}.chat.has-active .chmain{display:flex}.cback{display:inline-flex}.mrow{max-width:90%}}
 .mrow.them{position:relative;margin-left:34px}.mav{position:absolute;left:-34px;bottom:2px;width:28px;height:28px;border-radius:50%;object-fit:cover;background:var(--surface2)}
 .role-ic,.citem img,.chhead img{object-fit:cover}
+.avbtn{border:0;background:none;padding:0;cursor:pointer;border-radius:50%;display:block;flex:none}.avbtn:hover img,.avbtn:focus-visible img{box-shadow:0 0 0 2px var(--accent)}
+.mrow.them>.avbtn{position:absolute;left:-34px;bottom:2px}.mrow.them>.avbtn .mav{position:static}

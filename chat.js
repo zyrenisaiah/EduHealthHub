@@ -12,6 +12,7 @@ function convSub(c){
  if(c.startsWith('desk:'))return c.slice(5)===S.user.id?'You and the clinic staff':'Teacher and clinic staff';
  const p=c.split(':'),o=S.msg.dir.find(d=>d.id===(p[1]===S.user.id?p[2]:p[1]));return o?o.role+(o.adv?' · '+secLabel(secOf(o.adv)):''):''}
 const avOf=(id,role)=>{if(id===S.user.id)return S.user.photo||ROLE_ICON[S.user.role];const o=S.msg.dir.find(d=>d.id===id);return(o&&o.photo)||ROLE_ICON[(o&&o.role)||role||'Teacher']};
+const convOtherId=c=>c.startsWith('desk:')?c.slice(5):c.startsWith('dm:')?(c.split(':')[1]===S.user.id?c.split(':')[2]:c.split(':')[1]):'';
 function convIcon(c){
  if(c==='clinic')return ROLE_ICON.Doctor;
  const id=c.startsWith('desk:')?c.slice(5):(c.split(':')[1]===S.user.id?c.split(':')[2]:c.split(':')[1]);
@@ -97,15 +98,23 @@ function threadHtml(c){
   if(m.k==='event'){out+=`<div class="evt">${esc(m.b)} <span>${mtime(m.t)}</span></div>`;return}
   const me=m.s===S.user.id,prev=ms[i-1],showName=!me&&(!prev||prev.s!==m.s||prev.k==='event');
   const body=m.k==='pass'?passCard(m):m.k==='record'?recCard(m):`<div class="mtext">${esc(m.b).replace(/\n/g,'<br>')}</div>`;
-  const av=!me&&(!prev||prev.s!==m.s||prev.k==='event'||mday(prev.t)!==d)?`<img class="mav" src="${avOf(m.s,m.sr)}" alt="">`:'';
+  const av=!me&&(!prev||prev.s!==m.s||prev.k==='event'||mday(prev.t)!==d)?profImg(m.s,'mav',avOf(m.s,m.sr)):'';
   out+=`<div class="mrow ${me?'me':'them'}">${av}${showName&&!c.startsWith('dm:')?`<div class="mname">${esc(m.sn)} <span class="mrole">${esc(m.sr)}</span></div>`:''}<div class="bubble ${m.k!=='text'?'bwide':''}">${body}</div><div class="mtime">${mtime(m.t)}</div></div>`});
  return out}
 function listHtml(){
  return convList().map(c=>{const l=convMsgs(c).slice(-1)[0],u=unreadOf(c);
   return `<button class="citem ${S.msg.active===c?'on':''} ${u?'unr':''}" data-act="copenconv" data-c="${esc(c)}"><img class="role-ic" src="${convIcon(c)}" alt=""><span class="cmid"><b>${esc(convTitle(c))}</b><span class="small muted">${l?esc((l.s===S.user.id?'You: ':'')+mprev(l)).slice(0,48):esc(convSub(c))}</span></span><span class="cend">${l?`<span class="small muted">${mtime(l.t)}</span>`:''}${u?`<span class="badge">${u}</span>`:''}</span></button>`}).join('')}
+const canProf=id=>S.user.role!=='Teacher'&&(S.msg.dir.find(d=>d.id===id)||{}).role==='Teacher';
+const profImg=(id,cls,src)=>canProf(id)?`<button type="button" class="avbtn" data-act="cprof" data-id="${id}" title="View advisory" aria-label="View advisory class"><img class="${cls}" src="${src}" alt=""></button>`:`<img class="${cls}" src="${src}" alt="">`;
+function profHtml(close){
+ const o=S.msg.dir.find(d=>d.id===S.msg.prof);if(!o)return '';
+ const sec=o.adv?secOf(o.adv):null,list=sec?DB.students.filter(s=>{const e=enrOf(s,S.sy);return e&&e.section===o.adv}).sort((a,b)=>a.last.localeCompare(b.last)||a.first.localeCompare(b.first)):[];
+ return `<div class="cpanel"><div class="head"><h3>Teacher profile</h3>${close}</div><div class="who-cell"><img class="role-ic lg" src="${avOf(o.id)}" alt=""><div><b>${esc(o.name)}</b><div class="small muted">${o.role}${sec?' · Adviser of '+esc(secLabel(sec)):' · No advisory section'}</div></div></div>
+ ${sec?`<div class="small muted">${list.length} student${list.length===1?'':'s'} in this advisory</div><div class="tw" style="max-height:240px;overflow:auto"><table class="wrapth"><thead><tr><th>Student</th><th>LRN</th><th>Today</th></tr></thead><tbody>${list.map(s=>{const st=statusOf(s);return `<tr class="click" data-act="open" data-id="${s.id}" data-tab="profile"><td><b>${esc(fullName(s))}</b></td><td class="mono small">${s.lrn}</td><td>${st.k==='none'?'<span class="small muted">In class</span>':pill(esc(st.t),st.c)}</td></tr>`}).join('')}</tbody></table></div>`:''}</div>`}
 function panelHtml(){
  const p=S.msg.panel,m=S.msg;if(!p)return '';
  const close='<button type="button" class="btn sm" data-act="cpanel" data-k="">Close</button>';
+ if(p==='prof')return profHtml(close);
  if(p==='new'){const q=m.q.toLowerCase(),list=m.dir.filter(d=>!q||(d.name+' '+d.role).toLowerCase().includes(q)).slice(0,30);
   return `<div class="cpanel"><div class="head"><h3>New chat</h3>${close}</div><input class="inp" id="cq" data-bind="cq" placeholder="Search a name or role" value="${esc(m.q)}" autocomplete="off"><div class="cres">${list.map(d=>`<button class="btn sm" data-act="cdm" data-id="${d.id}">${esc(d.name)} <span class="small muted">${d.role}</span></button>`).join('')||'<span class="small muted">No match.</span>'}</div></div>`}
  if(p==='attach'||p==='send'){
@@ -123,7 +132,7 @@ function chatView(){
  return `<div class="head"><div><div class="eyebrow">Messages</div><h2>Messages</h2></div><button class="btn primary" data-act="cpanel" data-k="new">New chat</button></div>
  ${S.msg.err?`<div class="pill bad" style="white-space:normal;margin-bottom:8px">${esc(S.msg.err)}</div>`:''}
  <div class="chat ${c||S.msg.panel==='new'?'has-active':''}"><aside class="chlist" id="chlist" aria-label="Conversations">${listHtml()}</aside>
- <section class="chmain" aria-label="Conversation">${c?`<div class="chhead"><button class="btn sm cback" data-act="cback" aria-label="Back to conversations">←</button><img class="role-ic" src="${convIcon(c)}" alt=""><div><b>${esc(convTitle(c))}</b><div class="small muted">${esc(convSub(c))}</div></div></div>
+ <section class="chmain" aria-label="Conversation">${c?`<div class="chhead"><button class="btn sm cback" data-act="cback" aria-label="Back to conversations">←</button>${profImg(convOtherId(c),'role-ic',convIcon(c))}<div><b>${esc(convTitle(c))}</b><div class="small muted">${esc(convSub(c))}</div></div></div>
   <div class="chthread" id="chthread" role="log" aria-live="polite">${threadHtml(c)}</div><div id="chpanel">${panelHtml()}</div>
   <form class="chcomp" id="chform"><button type="button" class="btn" data-act="cpanel" data-k="attach" title="Attach a learner or health file" aria-label="Attach">+</button>${canSend?'<button type="button" class="btn" data-act="cpanel" data-k="send">Send student to clinic</button>':''}<textarea id="chtext" rows="1" maxlength="2000" placeholder="Write a message" aria-label="Message">${esc(S.msg.draft[c]||'')}</textarea><button class="btn primary" type="submit">Send</button></form>`
   :`<div class="chempty"><p class="muted">Choose a conversation, or start a new chat.</p><div id="chpanel">${panelHtml()}</div></div>`}</section></div>`}
@@ -142,6 +151,7 @@ const CHAT_ACT={
  copenconv:a=>chatOpen(a.dataset.c),
  cback:()=>{S.msg.active='';render()},
  cpanel:a=>{S.msg.panel=a.dataset.k;S.msg.q='';S.msg.pick=null;if(!S.msg.active)render();else chatPanelRender();const i=$('#cq');if(i)i.focus()},
+ cprof:a=>{S.msg.prof=a.dataset.id;S.msg.panel='prof';if(!S.msg.active)render();else chatPanelRender()},
  cdm:a=>{const c=dmId(S.user.id,a.dataset.id);S.msg.tmp[c]=1;chatOpen(c)},
  cpick:a=>{S.msg.pick=a.dataset.id;chatPanelRender()},
  cattach:async a=>{const s=stu(a.dataset.id),k=a.dataset.k,sy=k?(s.enr.map(e=>e.sy).sort().pop()):'';
