@@ -341,3 +341,4 @@ tr[data-drop].dragover td{background:var(--accent-soft)}
 .role-ic,.citem img,.chhead img{object-fit:cover}
 .avbtn{border:0;background:none;padding:0;cursor:pointer;border-radius:50%;display:block;flex:none}.avbtn:hover img,.avbtn:focus-visible img{box-shadow:0 0 0 2px var(--accent)}
 .mrow.them>.avbtn{position:absolute;left:-34px;bottom:2px}.mrow.them>.avbtn .mav{position:static}
+.chmain .cpanel{max-height:min(55%,300px);overflow:auto;flex:none}.chthread{min-height:90px}
