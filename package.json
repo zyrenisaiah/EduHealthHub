@@ -1,0 +1,13 @@
+{
+  "name": "eduhealthhub",
+  "private": true,
+  "version": "1.0.0",
+  "description": "School clinic health records (static site + Supabase). Tests run the real pages in a headless browser.",
+  "scripts": {
+    "check": "node tests/syntax.js",
+    "test": "node tests/run.js"
+  },
+  "devDependencies": {
+    "playwright": "1.56.0"
+  }
+}
