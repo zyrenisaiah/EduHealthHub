@@ -22,3 +22,4 @@ People can link their Google account under **My account**. After that, every log
 - Teachers only download learners from their own advisory. Staff download everything once, then only changes.
 - Every change is written to `audit_log` (who, what, when). The Doctor can read it under **Activity log**.
 - Run the whole `supabase-setup.sql` again after updating the site; it is safe to repeat.
+- **Messages**: chat between accounts (teacher and clinic desk, clinic team, direct messages). A teacher's "send to clinic" pass appears as a live tracking card that updates as the clinic receives and times out the learner.

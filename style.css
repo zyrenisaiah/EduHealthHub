@@ -305,3 +305,35 @@ tr.grp td{background:var(--surface2);font-weight:600;font-size:12px}
 [data-drop].dragover{outline:2px dashed var(--accent);outline-offset:-2px;background:var(--accent-soft)}
 [data-drop].dragover .dropzone{border-color:var(--accent);color:var(--ink);background:#fff}
 tr[data-drop].dragover td{background:var(--accent-soft)}
+
+/* ===== Messages ===== */
+.badge{display:inline-block;min-width:18px;padding:0 6px;margin-left:8px;border-radius:99px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}
+.chat{display:grid;grid-template-columns:300px 1fr;gap:0;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);height:min(680px,calc(100vh - 190px));min-height:420px;overflow:hidden}
+.chlist{border-right:1px solid var(--line);overflow-y:auto;padding:6px}
+.citem{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:transparent;border-radius:10px;padding:9px 8px;min-width:0}
+.citem:hover{background:var(--surface2)}.citem.on{background:var(--accent-soft)}
+.citem .role-ic{width:42px;height:42px}.cmid{display:grid;min-width:0;flex:1}.cmid b,.cmid span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.citem.unr .cmid b{color:var(--ink)}.citem.unr .cmid span{color:var(--ink);font-weight:600}
+.cend{display:grid;justify-items:end;gap:4px}.cend .badge{margin:0}
+.chmain{display:flex;flex-direction:column;min-width:0;min-height:0}
+.chhead{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line)}.chhead .role-ic{width:40px;height:40px}.cback{display:none}
+.chthread{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:4px;background:linear-gradient(180deg,var(--bg),var(--surface))}
+.mday{align-self:center;font-size:11px;color:var(--muted);background:var(--surface2);padding:2px 10px;border-radius:99px;margin:8px 0}
+.evt{align-self:center;max-width:88%;text-align:center;font-size:12px;color:var(--muted);background:var(--surface2);padding:4px 12px;border-radius:12px;margin:4px 0}.evt span{opacity:.7;margin-left:6px}
+.mrow{display:flex;flex-direction:column;max-width:78%;margin-top:2px}.mrow.me{align-self:flex-end;align-items:flex-end}.mrow.them{align-self:flex-start;align-items:flex-start}
+.mname{font-size:11px;color:var(--muted);margin:6px 8px 2px}.mrole{background:var(--surface2);border-radius:99px;padding:0 6px;margin-left:4px}
+.bubble{padding:8px 12px;border-radius:18px;line-height:1.4;word-break:break-word;overflow-wrap:anywhere}
+.me .bubble{background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:5px}.them .bubble{background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:5px}
+.bubble.bwide{background:transparent!important;border:0!important;padding:0;color:var(--ink)}
+.mtime{font-size:10px;color:var(--muted);margin:2px 8px 0}
+.mcard{background:var(--surface);color:var(--ink);border:1px solid var(--line-strong);border-radius:14px;padding:12px;min-width:250px;box-shadow:var(--shadow)}
+.msteps{list-style:none;margin:6px 0;padding:0;display:grid;gap:3px;font-size:12.5px}.msteps li{padding-left:20px;position:relative;color:var(--muted)}
+.msteps li::before{content:"";position:absolute;left:3px;top:5px;width:9px;height:9px;border-radius:50%;border:2px solid var(--line-strong)}
+.msteps li.done{color:var(--ink)}.msteps li.done::before{background:var(--good);border-color:var(--good)}
+.cpanel{border-top:1px solid var(--line);background:var(--surface2);padding:10px 14px;display:grid;gap:8px}.cpanel .head{margin:0}
+.cres{display:flex;flex-wrap:wrap;gap:6px}
+.chcomp{display:flex;gap:8px;align-items:flex-end;padding:10px 12px;border-top:1px solid var(--line);background:var(--surface)}
+.chcomp textarea{flex:1;resize:none;border:1px solid var(--line-strong);border-radius:18px;padding:9px 14px;min-height:40px;max-height:140px;background:var(--bg);line-height:1.35}
+.chcomp textarea:focus{outline:2px solid var(--accent);outline-offset:0}.chcomp .btn{border-radius:99px;min-height:40px}
+.chempty{display:grid;place-items:center;align-content:center;height:100%;padding:20px;gap:10px}
+@media (max-width:860px){.chat{grid-template-columns:1fr}.chat .chmain{display:none}.chat.has-active .chlist{display:none}.chat.has-active .chmain{display:flex}.cback{display:inline-flex}.mrow{max-width:90%}}

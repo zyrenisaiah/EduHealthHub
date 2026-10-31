@@ -189,7 +189,7 @@ function certificate(s,c){
 
 /* ---- actions ---- */
 const HOME_ACT={
- nav:a=>{S.view=a.dataset.v;render();scrollTo(0,0);if(S.view==='activity')loadAudit()},
+ nav:a=>{S.view=a.dataset.v;if(S.view==='chat'&&!S.msg.active&&innerWidth>860)S.msg.active=convList()[0]||'';render();scrollTo(0,0);if(S.view==='activity')loadAudit();if(S.view==='chat'){msgSync();msgMarkRead()}},
  auditrefresh:()=>loadAudit(),
  hpanel:a=>{S.hm.panel=a.dataset.k;render();const f=$('.hform');if(f)f.scrollIntoView({block:'nearest'})},
  hpick:a=>{S.hm.sid=a.dataset.id;S.hm.q=stu(a.dataset.id).lrn;S.hm.msg='';S.hm.panel=a.dataset.k||'';render();const r=$('#hres');if(r)r.scrollIntoView({block:'start'})},
@@ -201,8 +201,8 @@ const HOME_ACT={
  gorefs:()=>{const e=$('#refq');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})},
  gorest:()=>{const e=$('#restq');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})},
  'nav-stock':()=>{S.view='stock';render();scrollTo(0,0)},
- hreturn:a=>{const s=stu(a.dataset.id),v=(s.visits||[]).find(x=>x.id===a.dataset.v);if(!v||!canSlip())return;v.out=nowT();v.outcome=a.dataset.o==='home'?'home':'class';v.outBy=S.user.name;save();render();toast(v.outcome==='home'?'Sent home at '+v.out:'Returned to class at '+v.out);clinicPass(s,v)},
- hrecv:a=>{const s=stu(a.dataset.id),x=(s.passes||[]).find(p=>p.id===a.dataset.v);if(!x||!canSlip())return;x.status='arrived';x.arr=nowT();x.recvBy=S.user.name;save();S.hm.sid=s.id;S.hm.q=s.lrn;S.hm.panel=canTreat()?'walk':'';render();toast('Received. Log the visit.')},
+ hreturn:a=>{const s=stu(a.dataset.id),v=(s.visits||[]).find(x=>x.id===a.dataset.v);if(!v||!canSlip())return;v.out=nowT();v.outcome=a.dataset.o==='home'?'home':'class';v.outBy=S.user.name;save();postTimeout(s,v);render();toast(v.outcome==='home'?'Sent home at '+v.out:'Returned to class at '+v.out);clinicPass(s,v)},
+ hrecv:a=>{const s=stu(a.dataset.id),x=(s.passes||[]).find(p=>p.id===a.dataset.v);if(!x||!canSlip())return;receivePass(s,x);S.hm.sid=s.id;S.hm.q=s.lrn;S.hm.panel=canTreat()?'walk':'';render();toast('Received. Log the visit.')},
  hsend:()=>{if(!S.hm.sid){S.hm.msg='Type the learner\'s LRN first.';render();homeFocusSearch();return}S.hm.panel='send';render()},
  hver:a=>{S.hm.ver=S.hm.ver===a.dataset.v?'':a.dataset.v;render()},
  gowhere:()=>{const e=$('#restq');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})},
@@ -221,9 +221,10 @@ function homeSubmit(e){
  if(id==='hf-note'){if(!canTreat())return true;const t=v('n-text').trim();if(!t)return true;DB.notes.push({id:nid('N'),text:t,by:me.name,role:me.role,date,time});save();render();return true}
  if(!s)return false;
  if(id==='hf-send'&&me.role==='Teacher'){if(!pool().includes(s))return true;const st=statusOf(s);if(st.k==='in'||st.k==='way'){S.hm.msg='That learner is already '+(st.k==='way'?'on the way to':'in')+' the clinic.';S.hm.panel='';render();return true}
-  arr(s,'passes').push({id:nid('G'),date,time,by:me.name,note:v('s-note').trim(),status:'sent'});S.hm.panel='';save();render();toast('Pass sent. The clinic has been alerted.');return true}
+  sendPassFor(s,v('s-note').trim());S.hm.panel='';render();toast('Pass sent. The clinic has been alerted.');return true}
  if(id==='hf-walk'&&canTreat()){
   const ail=v('w-ail'),ref=$('#w-ref').checked,vis={id:nid('V'),date,time,ailment:ail,tx:v('w-tx').trim(),rest:$('#w-rest').checked,out:'',by:me.name};
+  const op=openPass(s);if(op){vis.passId=op.id;vis.from=op.byId||'';if(op.byId)afterSave(()=>chatPost('desk:'+op.byId,`${fullName(s)} is now being attended to by ${me.name} (in clinic since ${time}).`,'event',null))}
   arr(s,'visits').push(vis);(s.passes||[]).forEach(x=>{if(x.status==='sent'||x.status==='arrived')x.status='done'});
   const it=DB.stock.find(x=>x.id===v('w-item'));if(it){const n=Math.max(1,parseInt(v('w-qty'))||1);it.qty=Math.max(0,it.qty-n);vis.tx+=(vis.tx?'; ':'')+n+' '+it.unit+' '+it.name}
   if(ref)arr(s,'refs').push({id:nid('R'),date,time,reason:v('w-why').trim()||ail,by:me.name,status:'pending'});

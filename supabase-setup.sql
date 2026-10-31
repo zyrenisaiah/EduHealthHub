@@ -724,3 +724,94 @@ begin
   insert into public.transfers(data) values (p_data);
   perform public.ehh_log(a,'transfer',p_data->>'lrn',jsonb_build_object('from',p_data->>'from','to',p_data->>'to'));
 end $$;
+-- =====================================================================
+--  MESSAGES: chat between accounts (teacher <-> clinic desk, staff team, direct messages)
+-- =====================================================================
+create table if not exists public.messages(
+  id bigserial primary key,
+  conv text not null,
+  sender text not null,
+  sname text not null,
+  srole text not null,
+  body text not null default '',
+  kind text not null default 'text' check (kind in ('text','pass','record','event')),
+  ref jsonb,
+  at timestamptz not null default now()
+);
+create index if not exists messages_conv_id_idx on public.messages(conv,id);
+create table if not exists public.msg_reads(
+  account_id text not null,
+  conv text not null,
+  last_id bigint not null default 0,
+  primary key(account_id,conv)
+);
+alter table public.messages enable row level security;
+alter table public.msg_reads enable row level security;
+revoke all on public.messages, public.msg_reads from anon, authenticated;
+revoke all on sequence public.messages_id_seq from anon, authenticated;
+
+-- who may see a conversation: 'clinic' = clinic staff; 'desk:<teacher id>' = that teacher + all clinic staff; 'dm:<a>:<b>' = those two
+create or replace function public.ehh_conv_ok(a public.accounts, p_conv text) returns boolean
+language sql immutable as $$
+  select case
+    when p_conv='clinic' then a.role<>'Teacher'
+    when p_conv like 'desk:%' then a.role<>'Teacher' or p_conv='desk:'||a.id
+    when p_conv like 'dm:%' then a.id in (split_part(p_conv,':',2),split_part(p_conv,':',3)) and split_part(p_conv,':',2) collate "C" < split_part(p_conv,':',3)
+    else false end
+$$;
+
+create or replace function public.app_directory(p_token text) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_auth(p_token);
+  return coalesce((select jsonb_agg(jsonb_build_object('id',x.id,'name',x.name,'role',x.role,'adv',x.adv) order by x.role,x.name)
+    from public.accounts x where x.id<>a.id and (a.role<>'Teacher' or x.role<>'Teacher')),'[]'::jsonb);
+end $$;
+
+create or replace function public.app_msg_send(p_token text, p_conv text, p_body text, p_kind text default 'text', p_ref jsonb default null) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; o public.accounts; oid text; m public.messages;
+begin
+  a := public.ehh_auth(p_token);
+  if not public.ehh_conv_ok(a,p_conv) then raise exception 'NOT_ALLOWED'; end if;
+  if p_kind not in ('text','pass','record','event') then raise exception 'BAD_REQUEST'; end if;
+  if p_conv like 'dm:%' then
+    oid := case when split_part(p_conv,':',2)=a.id then split_part(p_conv,':',3) else split_part(p_conv,':',2) end;
+    select * into o from public.accounts where id=oid;
+    if not found then raise exception 'NOT_ALLOWED'; end if;
+    if a.role='Teacher' and o.role='Teacher' then raise exception 'NOT_ALLOWED'; end if;
+  end if;
+  p_body := btrim(coalesce(p_body,''));
+  if p_kind='text' and p_body='' then raise exception 'EMPTY'; end if;
+  if length(p_body)>2000 or length(coalesce(p_ref::text,''))>2000 then raise exception 'TOO_LONG'; end if;
+  if (select count(*) from public.messages where sender=a.id and at>now()-interval '1 minute')>=40 then raise exception 'SLOW_DOWN'; end if;
+  insert into public.messages(conv,sender,sname,srole,body,kind,ref) values (p_conv,a.id,a.name,a.role,p_body,p_kind,p_ref) returning * into m;
+  insert into public.msg_reads(account_id,conv,last_id) values (a.id,p_conv,m.id)
+    on conflict (account_id,conv) do update set last_id=greatest(public.msg_reads.last_id,excluded.last_id);
+  return jsonb_build_object('id',m.id,'conv',m.conv,'s',m.sender,'sn',m.sname,'sr',m.srole,'b',m.body,'k',m.kind,'r',m.ref,'t',m.at);
+end $$;
+
+create or replace function public.app_msg_sync(p_token text, p_since bigint default 0) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; ms jsonb; rd jsonb;
+begin
+  a := public.ehh_auth(p_token);
+  select coalesce(jsonb_agg(x order by x.id),'[]'::jsonb) into ms from (
+    select m.id, m.conv, m.sender as s, m.sname as sn, m.srole as sr, m.body as b, m.kind as k, m.ref as r, m.at as t
+      from public.messages m
+     where m.id>p_since and public.ehh_conv_ok(a,m.conv)
+     order by m.id desc limit 500) x;
+  select coalesce(jsonb_object_agg(conv,last_id),'{}'::jsonb) into rd from public.msg_reads where account_id=a.id;
+  return jsonb_build_object('messages',ms,'reads',rd);
+end $$;
+
+create or replace function public.app_msg_read(p_token text, p_conv text, p_id bigint) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_auth(p_token);
+  if not public.ehh_conv_ok(a,p_conv) then raise exception 'NOT_ALLOWED'; end if;
+  insert into public.msg_reads(account_id,conv,last_id) values (a.id,p_conv,p_id)
+    on conflict (account_id,conv) do update set last_id=greatest(public.msg_reads.last_id,excluded.last_id);
+end $$;

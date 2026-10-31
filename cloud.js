@@ -81,7 +81,7 @@ async function cloudPollOnce(){
  if(!TOK||document.hidden||_pushing)return;
  try{const {ch}=await cloudSync(false);if(!SYNC_TXT.startsWith('Saving'))syncStat('Saved online ✓');if(ch)softRender()}
  catch(e){if(e.code==='SESSION_EXPIRED')cloudKick();else syncStat('Offline: will retry',true)}}
-function cloudStart(){clearInterval(_poll);_poll=setInterval(cloudPollOnce,12000)}
+function cloudStart(){clearInterval(_poll);_poll=setInterval(cloudPollOnce,12000);if(typeof msgStart==='function')msgStart()}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)cloudPollOnce()});
 async function cloudEnter(r){
  TOK=r.token;ss.set('ehh_tok',TOK);ss.set('ehh_role',r.account.role);

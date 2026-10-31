@@ -578,7 +578,7 @@ const ACT={
  exportfull:()=>exportRecords(exportList()),
  exportone:a=>exportRecords([stu(a.dataset.id)])
 };
-Object.assign(ACT,HOME_ACT,DOC_ACT);
+Object.assign(ACT,HOME_ACT,DOC_ACT,CHAT_ACT);
 document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');if(a&&ACT[a.dataset.act])ACT[a.dataset.act](a)});
 const KEYS={s:'✓',x:'X',f:'F',o:'O',r:'RF',h:'HS'};
 document.addEventListener('keydown',e=>{
@@ -602,6 +602,7 @@ function onBind(e){
  const st=S.sid?stu(S.sid):null;
  if(b==='hq'){if(!ch)homeSearch(el);return}
  if(b==='docup'){if(ch)docUpload(el);return}
+ if(b==='cq'){if(!ch){S.msg.q=el.value;chatResults()}return}
  if(b==='filter'){S.f[el.dataset.f]=v; if(ch||el.dataset.f==='q'){const pos=el.selectionStart;render();if(el.dataset.f==='q'){const q=$('#q');q.focus();q.setSelectionRange(pos,pos)}}return}
  if(b==='loginadv'){S.login.adv=v;return}
  if(b==='sy'){S.sy=v;S.sel=new Set();S.lrnMsg='';render();return}

@@ -10,7 +10,7 @@ if(!CLOUD_ON)try{const j=localStorage.getItem('ehh3');
  else{const o=localStorage.getItem('ehh2');if(o){const sv=JSON.parse(o);if(sv.stock)DB.stock=sv.stock;if(sv.accounts)DB.accounts=sv.accounts}}}catch(e){}
 if(!CLOUD_ON)DB.students.forEach(s=>{if(SEEDLRN[s.id])s.lrn=SEEDLRN[s.id]});
 let _t=null;
-function doSave(){_t=null;if(CLOUD_ON){cloudPush();return}try{const ch=DB.students.filter(s=>JSON.stringify(s)!==SEEDJ[s.id]);localStorage.setItem('ehh3',JSON.stringify({students:ch,stock:DB.stock,accounts:DB.accounts,transfers:DB.transfers,notes:DB.notes}))}catch(e){}}
+function doSave(){_t=null;if(CLOUD_ON){return cloudPush()}try{const ch=DB.students.filter(s=>JSON.stringify(s)!==SEEDJ[s.id]);localStorage.setItem('ehh3',JSON.stringify({students:ch,stock:DB.stock,accounts:DB.accounts,transfers:DB.transfers,notes:DB.notes}))}catch(e){}}
 const save=()=>{clearTimeout(_t);_t=setTimeout(doSave,350)};
 addEventListener('pagehide',()=>{if(_t){clearTimeout(_t);doSave()}});
 function h53(s){let a=0xdeadbeef,b=0x41c6ce57;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);a=Math.imul(a^c,2654435761);b=Math.imul(b^c,1597334677)}
@@ -46,10 +46,10 @@ const P={
  Teacher:{exam:'view',dental:'view',prof:'view',stock:null}
 };
 const NAV={
- Doctor:[['home','Home'],['overview','Overview'],['students','Students'],['stock','Supply stock'],['activity','Activity log'],['account','My account']],
- Nurse:[['home','Home'],['students','Students'],['stock','Supply stock'],['account','My account']],
- Dentist:[['home','Home'],['students','Students'],['account','My account']],
- Teacher:[['home','Home'],['dash','My advisory'],['files','Record of files'],['account','My account']]
+ Doctor:[['home','Home'],['chat','Messages'],['overview','Overview'],['students','Students'],['stock','Supply stock'],['activity','Activity log'],['account','My account']],
+ Nurse:[['home','Home'],['chat','Messages'],['students','Students'],['stock','Supply stock'],['account','My account']],
+ Dentist:[['home','Home'],['chat','Messages'],['students','Students'],['account','My account']],
+ Teacher:[['home','Home'],['chat','Messages'],['dash','My advisory'],['files','Record of files'],['account','My account']]
 };
 const PERM_NOTE={
  Doctor:'Full access to records, referrals, clearances and the activity log. Odontogram is read only.',
@@ -109,13 +109,13 @@ ${L.pending?` <form class="login-card" id="codeform" autocomplete="off">
 /* ---------- shell ---------- */
 function shell(){
  const u=S.user, nav=NAV[u.role];
- const body={doc:docView,activity:activityView,home:()=>S.user.role==='Teacher'?teacherHome():homeView(),overview:overviewView,students:studentsView,stock:stockView,dash:teacherView,student:studentView,account:accountView,files:filesView}[S.view]();
+ const body={chat:chatView,doc:docView,activity:activityView,home:()=>S.user.role==='Teacher'?teacherHome():homeView(),overview:overviewView,students:studentsView,stock:stockView,dash:teacherView,student:studentView,account:accountView,files:filesView}[S.view]();
  const navKey=(S.view==='student'||S.view==='doc')?S.back:S.view;
  return `<div class="shell"><header class="topbar"><button class="name homebtn" data-act="nav" data-v="${nav[0][0]}" title="Go to Home" aria-label="EduHealthHub, go to Home"><span class="logo-chip"><img src="${LOGO_EMBLEM}" alt="" height="34"></span>EduHealthHub</button><div class="spacer"></div>
   <img class="role-ic" style="object-fit:cover" src="${u.photo||ROLE_ICON[u.role]}" alt="${u.role}">
   <div class="who"><b>${esc(u.name)}</b><span class="small muted">${u.role}${u.role==='Teacher'?' · '+esc(secLabel(secOf(u.adv))):''}</span></div>
   ${CLOUD_ON?`<span class="small muted" id="syncstat" aria-live="polite">${esc(SYNC_TXT)}</span>`:''}<button class="btn sm" data-act="logout">Log out</button></header>
-  <div class="layout"><nav class="nav" aria-label="Main">${nav.map(n=>`<button data-act="nav" data-v="${n[0]}" ${navKey===n[0]?'aria-current="page"':''}>${n[1]}</button>`).join('')}<div class="perm">${PERM_NOTE[u.role]}</div></nav>
+  <div class="layout"><nav class="nav" aria-label="Main">${nav.map(n=>`<button data-act="nav" data-v="${n[0]}" ${navKey===n[0]?'aria-current="page"':''}>${n[1]}${n[0]==='chat'&&unreadAll()?`<span class="badge">${unreadAll()}</span>`:''}</button>`).join('')}<div class="perm">${PERM_NOTE[u.role]}</div></nav>
   <main>${body}</main></div></div>`;
 }
 
