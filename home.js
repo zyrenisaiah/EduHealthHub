@@ -97,7 +97,7 @@ function panelForm(s,k){
  const wrapf=(id,title,inner,btn,extra)=>`<form class="panel hform" id="${id}" data-id="${s.id}" ${extra||''} style="background:var(--surface2);margin:8px 0"><div class="head"><h3>${title}</h3><button type="button" class="btn sm" data-act="hpanel" data-k="">Close</button></div><div class="filters">${inner}</div><div style="margin-top:10px"><button class="btn primary" type="submit">${btn}</button></div></form>`;
  if(k==='walk'&&canTreat()){const items=DB.stock.map(i=>`<option value="${i.id}">${esc(i.name)} (${i.qty} ${esc(i.unit)})</option>`).join('');
   return wrapf('hf-walk','Log walk-in visit',
-   fld('Ailment',sel('w-ail',AILMENTS))+fld('Treatment given','<input class="inp" id="w-tx" placeholder="e.g. Paracetamol 500 mg, rest, cold compress" maxlength="200">',2)+
+   fld('Ailment',sel('w-ail',AILMENTS))+`<div class="field" id="w-other-f" style="flex:2;display:none"><label for="w-other">What is the ailment? (required)</label><input class="inp" id="w-other" placeholder="e.g. eye irritation, insect bite" maxlength="80" autocomplete="off"></div>`+fld('Treatment given','<input class="inp" id="w-tx" placeholder="e.g. Paracetamol 500 mg, rest, cold compress" maxlength="200">',2)+
    fld('Supply used (optional)',`<select class="inp" id="w-item"><option value="">None</option>${items}</select>`)+fld('Qty','<input class="inp" id="w-qty" type="number" min="1" value="1" style="width:80px">')+
    `<div class="field" style="flex:1 1 100%"><label><input type="checkbox" id="w-rest"> Student will rest in a clinic bed</label><label><input type="checkbox" id="w-ref"> Needs a doctor referral</label></div>`+
    fld('Referral reason (if referred)','<input class="inp" id="w-why" placeholder="e.g. persistent fever for 3 days" maxlength="200">',2),'Save visit')}
@@ -224,7 +224,8 @@ function homeSubmit(e){
  if(id==='hf-send'&&me.role==='Teacher'){if(!pool().includes(s))return true;const st=statusOf(s);if(st.k==='in'||st.k==='way'){S.hm.msg='That learner is already '+(st.k==='way'?'on the way to':'in')+' the clinic.';S.hm.panel='';render();return true}
   sendPassFor(s,v('s-note').trim());S.hm.panel='';render();toast('Pass sent. The clinic has been alerted.');return true}
  if(id==='hf-walk'&&canTreat()){
-  const ail=v('w-ail'),ref=$('#w-ref').checked,vis={id:nid('V'),date,time,ailment:ail,tx:v('w-tx').trim(),rest:$('#w-rest').checked,out:'',by:me.name};
+  let ail=v('w-ail');if(ail==='Other'){const o=v('w-other').trim();if(!o){const i=$('#w-other');if(i){i.focus();i.setCustomValidity('Please type the ailment.');i.reportValidity()}return true}ail='Other: '+o}
+  const ref=$('#w-ref').checked,vis={id:nid('V'),date,time,ailment:ail,tx:v('w-tx').trim(),rest:$('#w-rest').checked,out:'',by:me.name};
   const op=openPass(s);if(op){vis.passId=op.id;vis.from=op.byId||'';if(op.byId)afterSave(()=>chatPost('desk:'+op.byId,`${fullName(s)} is now being attended to by ${me.name} (in clinic since ${time}).`,'event',null))}
   arr(s,'visits').push(vis);(s.passes||[]).forEach(x=>{if(x.status==='sent'||x.status==='arrived')x.status='done'});
   const it=DB.stock.find(x=>x.id===v('w-item'));if(it){const n=Math.max(1,parseInt(v('w-qty'))||1);it.qty=Math.max(0,it.qty-n);vis.tx+=(vis.tx?'; ':'')+n+' '+it.unit+' '+it.name}
@@ -299,3 +300,7 @@ function activityView(){
  <p class="small muted">When something breaks in anyone's browser, it is reported here automatically (last 30 days, latest 100). An empty list is good news.</p>
  <section class="panel" style="padding:0"><div class="tw"><table class="wrapth"><thead><tr><th>When</th><th>Who</th><th>Page</th><th>Error</th></tr></thead><tbody>
  ${(a.errs||[]).map(r=>{const t=new Date(r.at);return `<tr><td class="mono small" style="white-space:nowrap">${t.toLocaleDateString()} ${t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td><td>${r.actor?`<b>${esc(r.actor)}</b> ${pill(esc(r.role||''),'mute')}`:'<span class="muted">Not signed in</span>'}</td><td class="mono small">${esc(r.page||'')}</td><td><b>${esc(r.msg)}</b>${r.stack?`<details><summary class="small muted">Details</summary><pre class="small" style="white-space:pre-wrap;margin:4px 0 0">${esc(r.stack)}</pre></details>`:''}</td></tr>`}).join('')||'<tr><td colspan="4" class="muted">No errors reported.</td></tr>'}</tbody></table></div></section>`}
+
+/* "Other" ailment: ask the nurse to type it */
+document.addEventListener('change',e=>{if(e.target.id!=='w-ail')return;const f=$('#w-other-f'),i=$('#w-other'),on=e.target.value==='Other';if(!f||!i)return;f.style.display=on?'':'none';i.required=on;i.setCustomValidity('');if(on)i.focus()});
+document.addEventListener('input',e=>{if(e.target.id==='w-other')e.target.setCustomValidity('')});
