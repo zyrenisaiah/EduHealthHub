@@ -950,3 +950,59 @@ grant execute on function public.app_backup(text) to anon, authenticated;
 create extension if not exists pg_cron;
 select cron.unschedule('ehh-nightly-backup') where exists (select 1 from cron.job where jobname='ehh-nightly-backup');
 select cron.schedule('ehh-nightly-backup','0 19 * * *','select public.ehh_backup()');
+
+-- ============ STRICTER LOGIN ============
+-- * Username and password are CASE-SENSITIVE ("Dummy Doctor1" is not "dummy doctor1"; spaces count).
+--   (Email addresses stay case-insensitive, as emails always are.)
+-- * Lockout grows: 5 wrong tries lock that name for 5 minutes, 10 wrong tries for 15 minutes.
+--   The lock is kept per lower-cased name so changing capitals cannot dodge it.
+-- * A site-wide brake stops guessing across many names (100 failures a minute).
+-- * Unknown names cost the same time as wrong passwords, so the response does not reveal which names exist.
+-- * Sessions last 8 hours and each account keeps at most 5 at a time.
+create or replace function public.app_login(p_user text, p_pw text) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; u text := btrim(coalesce(p_user,'')); nk text := lower(btrim(coalesce(p_user,''))); f public.login_fails; tok text; hit boolean; okpw boolean := false;
+begin
+  if length(u)=0 or length(u)>120 or length(coalesce(p_pw,''))>200 then return jsonb_build_object('error','BAD_LOGIN'); end if;
+  if (select coalesce(sum(n),0) from public.login_fails where t>now()-interval '1 minute')>=100 then
+    return jsonb_build_object('error','TOO_MANY_ATTEMPTS'); end if;
+  select * into f from public.login_fails where login_fails.k=nk;
+  if found and ((f.n>=10 and f.t>now()-interval '15 minutes') or (f.n>=5 and f.t>now()-interval '5 minutes')) then
+    return jsonb_build_object('error','TOO_MANY_ATTEMPTS'); end if;
+  select * into a from public.accounts
+   where username=u or lower(email)=nk or (gmail_ok and lower(gmail)=nk) limit 1;
+  hit := found;   -- keep FOUND: PERFORM/other statements would overwrite it
+  if hit then okpw := (a.pw = crypt(coalesce(p_pw,''), a.pw));
+  else okpw := (crypt(coalesce(p_pw,''), gen_salt('bf')) is null); end if;  -- same cost for unknown names
+  if not hit or not okpw then
+    insert into public.login_fails(k,n,t) values (nk,1,now())
+      on conflict (k) do update set n = case when public.login_fails.t>now()-interval '15 minutes' then public.login_fails.n+1 else 1 end, t=now();
+    return jsonb_build_object('error','BAD_LOGIN');
+  end if;
+  delete from public.login_fails where login_fails.k=nk;
+  delete from public.sessions where expires<now();
+  delete from public.sessions where account_id=a.id and token in (
+    select token from public.sessions where account_id=a.id order by expires desc offset 4);
+  tok := encode(gen_random_bytes(24),'hex');
+  if a.gmail_ok then
+    insert into public.sessions(token,account_id,expires,stage) values (tok,a.id,now()+interval '15 minutes','pending');
+    return jsonb_build_object('pending',tok,'hint',public.ehh_mask(a.gmail));
+  end if;
+  insert into public.sessions(token,account_id,expires) values (tok,a.id,now()+interval '8 hours');
+  return jsonb_build_object('token',tok,'account',public.ehh_acct_json(a));
+end $$;
+
+-- New passwords: at least 10 characters, with a letter and a number, not the username, not the old password.
+-- Changing the password signs out every other session of that account.
+create or replace function public.app_change_password(p_token text, p_old text, p_new text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; n text := coalesce(p_new,'');
+begin
+  a := public.ehh_auth(p_token);
+  if a.pw <> crypt(coalesce(p_old,''), a.pw) then raise exception 'BAD_PASSWORD'; end if;
+  if length(n)<10 or length(n)>200 or n !~ '[A-Za-z]' or n !~ '[0-9]' or lower(n)=lower(a.username) or n=coalesce(p_old,'') then
+    raise exception 'WEAK_PASSWORD'; end if;
+  update public.accounts set pw=crypt(n, gen_salt('bf')) where id=a.id;
+  delete from public.sessions where account_id=a.id and token<>p_token;
+  perform public.ehh_log(a,'password.change',null,'{}'::jsonb);
+end $$;

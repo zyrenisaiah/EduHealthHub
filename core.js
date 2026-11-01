@@ -99,7 +99,7 @@ ${L.pending?` <form class="login-card" id="codeform" autocomplete="off">
  </form>`:` <form class="login-card ${L.err?'err':''}" id="loginform" autocomplete="on">
   <div class="lhead">${WANT&&ROLE_ICON[WANT]?`<img class="role-ic lg" src="${ROLE_ICON[WANT]}" alt="">`:'<span class="lock" aria-hidden="true">&#128274;</span>'}<div><h2>${WANT?esc(WANT)+' log in':'Welcome back'}</h2><div class="small muted">${WANT?`Log in with a ${WANT} account to open the ${WANT} page.`:'Use your own username or email. Learners do not have accounts.'}</div></div></div>
   <div class="field"><label for="lu">Username or email</label><input class="inp" id="lu" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" required></div>
-  <div class="field"><label for="pw">Password</label><div class="who-cell"><input class="inp" id="pw" name="password" type="password" autocomplete="current-password" required><button type="button" class="btn sm" data-act="showpw" aria-pressed="false">Show</button></div><div class="caps" id="caps" hidden>Caps Lock is on</div></div>
+  <div class="field"><label for="pw">Password</label><div class="who-cell"><input class="inp" id="pw" name="password" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required><button type="button" class="btn sm" data-act="showpw" aria-pressed="false">Show</button></div><div class="caps" id="caps" hidden>Caps Lock is on</div><div class="small muted" style="margin-top:4px">Username and password are case-sensitive: capitals and small letters must match exactly.</div></div>
   ${L.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.err)}</div>`:''}
   <button class="btn primary" type="submit">Log in</button>
  </form>`}

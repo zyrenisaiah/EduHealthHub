@@ -22,7 +22,7 @@ function cloudErr(e){
  const c=e&&e.code;
  if(c==='OFFLINE')return 'Cannot reach the online database. Check your internet connection and try again.';
  if(c==='SLOW_DOWN')return 'Too many requests at once. Wait a few seconds and try again.';
- if(c==='TOO_MANY_ATTEMPTS')return 'Too many attempts. Wait a minute and try again.';
+ if(c==='TOO_MANY_ATTEMPTS')return 'Too many attempts. Wait 5 minutes and try again.';
  if(c==='BAD_LOGIN')return 'Username or password is incorrect.';
  if(c==='SESSION_EXPIRED')return 'Your session expired. Please log in again.';
  if(c==='NOT_ALLOWED')return 'Your account is not allowed to make that change.';
@@ -36,6 +36,7 @@ function cloudErr(e){
  if(c==='TOO_MANY_CODES')return 'Too many codes were requested. Try again in an hour.';
  if(c==='BAD_EMAIL')return 'Enter a Gmail address, like name@gmail.com.';
  if(c==='EMAIL_TAKEN')return 'That Gmail is already linked to another account.';
+ if(c==='WEAK_PASSWORD')return 'New password needs 10+ characters with a letter and a number, and must differ from your username and old password.';
  if(c==='BAD_PASSWORD')return 'Password is incorrect.';
  if(c==='MAIL_NOT_SET_UP'||c==='MAIL_FAILED')return 'The email could not be sent. '+((e&&e.detail)?'('+e.detail+') ':'')+'The site owner still needs to finish the email setup.';
  return 'The online database is not set up correctly ('+c+'). Check the setup steps.'}

@@ -273,7 +273,7 @@ function accountView(){
   <div id="ac-msg" class="small" role="status"></div><div><button class="btn primary" type="submit">Save details</button></div></form>
  <form class="panel" id="pwform" style="display:grid;gap:12px;align-content:start"><h3>Change password</h3>
   <div class="field"><label for="pw-c">Current password</label><input class="inp" id="pw-c" type="password" autocomplete="current-password" required></div>
-  <div class="field"><label for="pw-n">New password</label><input class="inp" id="pw-n" type="password" autocomplete="new-password" minlength="8" required><div class="small muted">At least 8 characters.</div></div>
+  <div class="field"><label for="pw-n">New password</label><input class="inp" id="pw-n" type="password" autocomplete="new-password" minlength="10" required><div class="small muted">At least 10 characters with a letter and a number. Capitals count.</div></div>
   <div class="field"><label for="pw-r">Repeat new password</label><input class="inp" id="pw-r" type="password" autocomplete="new-password" required></div>
   <div id="pw-msg" class="small" role="status"></div><div><button class="btn primary" type="submit">Change password</button></div></form>
  </div>`;
@@ -345,6 +345,7 @@ function filesFor(st,sy,kinds){
   return {name:k,date,status:date?'On file':missing?'Missing':'Not filed'};
  });
 }
+const pwWeak=(n,user,old)=>n.length<10?'New password needs at least 10 characters.':!/[A-Za-z]/.test(n)||!/[0-9]/.test(n)?'New password needs at least one letter and one number.':n.toLowerCase()===String(user).toLowerCase()?'New password cannot be your username.':n===old?'New password must be different from the current one.':'';
 const advList=()=>DB.students.filter(s=>{const e=enrOf(s,S.sy);return e&&e.section===S.user.adv});
 const exportList=()=>advList().filter(s=>!S.sel.size||S.sel.has(s.id));
 const safeName=s=>String(s).replace(/[^A-Za-z0-9._-]+/g,'_').replace(/^_+|_+$/g,'');
@@ -630,10 +631,10 @@ document.addEventListener('submit',e=>{
  if(S.user&&homeSubmit(e))return;
  if(e.target.id==='loginform'){
   if(CLOUD_ON){cloudLogin($('#lu').value.trim(),$('#pw').value);return}
-  const id=normU($('#lu').value),pw=$('#pw').value,L=S.login,f=S.fails[id]||{n:0,t:0};
-  if(f.n>=5&&Date.now()-f.t<30000){L.err='Too many attempts. Wait 30 seconds and try again.';render();return}
-  const acc=DB.accounts.find(x=>normU(x.username)===id||normU(x.email)===id||(ALIAS[x.id]===id));
-  if(!acc||acc.pw!==pwHash(acc.id,pw)){S.fails[id]={n:f.n+1,t:Date.now()};L.err='Username or password is incorrect.';render();$('#lu').value=id;return}
+  const typed=$('#lu').value.trim(),id=typed.toLowerCase(),pw=$('#pw').value,L=S.login,f=S.fails[id]||{n:0,t:0};
+  if(f.n>=5&&Date.now()-f.t<300000){L.err='Too many attempts. Wait 5 minutes and try again.';render();return}
+  const acc=DB.accounts.find(x=>x.username===typed||x.email.toLowerCase()===id);   /* username and password are case-sensitive */
+  if(!acc||acc.pw!==pwHash(acc.id,pw)){S.fails[id]={n:f.n+1,t:Date.now()};L.err='Username or password is incorrect.';render();$('#lu').value=typed;return}
   delete S.fails[id];L.err='';
   ss.set('ehh_uid',acc.id);ss.set('ehh_role',acc.role);location.href=ROLE_PAGE[acc.role];return}
  if(e.target.id==='gm-unlink'){const pw=$('#gm-pw').value;rpc('app_unlink_gmail',{p_token:TOK,p_password:pw}).then(r=>{Object.assign(DB.accounts[0],r);S.gm=null;toast('Gmail unlinked');render()}).catch(x=>{S.gm=Object.assign(S.gm||{},{err:cloudErr(x)});render()});return}
@@ -646,7 +647,7 @@ document.addEventListener('submit',e=>{
   a.username=u;a.email=m;save();accMsg('ac-msg','Saved. Use these to log in next time.',true);return}
  if(e.target.id==='pwform'){
   const a=DB.accounts.find(x=>x.id===S.user.id),c=$('#pw-c').value,n=$('#pw-n').value,r=$('#pw-r').value;
-  if(n.length<8)return accMsg('pw-msg','New password needs at least 8 characters.');
+  const weak=pwWeak(n,a.username,c);if(weak)return accMsg('pw-msg',weak);
   if(n!==r)return accMsg('pw-msg','The new passwords do not match.');
   if(CLOUD_ON){const f=e.target;rpc('app_change_password',{p_token:TOK,p_old:c,p_new:n}).then(()=>{f.reset();accMsg('pw-msg','Password changed.',true)}).catch(x=>accMsg('pw-msg',x.code==='BAD_PASSWORD'?'Current password is incorrect.':cloudErr(x)));return}
   if(a.pw!==pwHash(a.id,c))return accMsg('pw-msg','Current password is incorrect.');
