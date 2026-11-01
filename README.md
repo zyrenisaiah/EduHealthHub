@@ -23,3 +23,18 @@ People can link their Google account under **My account**. After that, every log
 - Every change is written to `audit_log` (who, what, when). The Doctor can read it under **Activity log**.
 - Run the whole `supabase-setup.sql` again after updating the site; it is safe to repeat.
 - **Messages**: chat between accounts (teacher and clinic desk, clinic team, direct messages). A teacher's "send to clinic" pass appears as a live tracking card that updates as the clinic receives and times out the learner.
+
+## Keeping the site healthy
+
+**Tests.** `npm install`, then `npm test` runs the browser tests (they use fake local data and never touch the real database). `npm run check` checks every script for syntax errors. GitHub runs both automatically on every push (see `.github/workflows/ci.yml`); a red ✗ on a commit means something broke.
+
+**Error reports.** If something breaks in anyone's browser, it is saved to the `error_log` table. The Doctor reads it under **Activity log > Browser errors**.
+
+**Request caps.** Each signed-in account may make at most 300 requests a minute; beyond that the server answers `SLOW_DOWN`. Logins and messages have their own, tighter limits.
+
+**Backups.**
+- Every night at 03:00 (Manila time) the database copies all records into `backup_*` tables and keeps the last 7 days.
+- The Doctor can press **Activity log > Download backup** for a full copy as a `.json` file. Keep it somewhere private: it contains health records.
+- *Restore one learner* (SQL editor): `select id, at from backup_snapshots order by id desc;` then `select ehh_restore_student(<snapshot id>, '<student id>');`
+- *Take a backup right now:* `select ehh_backup('before big change');`
+- These in-database copies protect against bad edits and deletions. They do not protect if the whole Supabase project is lost, which is why the downloaded file matters. Do it weekly, and on a paid Supabase plan turn on its own daily backups too.

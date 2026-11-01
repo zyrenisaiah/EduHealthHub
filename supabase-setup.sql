@@ -864,3 +864,89 @@ end $$;
 
 revoke all on function public.app_report_error(text,jsonb), public.app_errors(text,int) from public;
 grant execute on function public.app_report_error(text,jsonb), public.app_errors(text,int) to anon, authenticated;
+
+-- ============ REQUEST CAPS ============
+-- Every signed-in call goes through ehh_auth, so one counter per account caps ALL requests:
+-- at most 300 a minute (normal use is well under 100). Beyond that the call fails with SLOW_DOWN.
+create table if not exists public.rate_limit(
+  account_id text primary key,
+  win timestamptz not null,
+  n int not null
+);
+alter table public.rate_limit enable row level security;
+revoke all on public.rate_limit from anon, authenticated;
+
+create or replace function public.ehh_auth(p_token text) returns public.accounts
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; c int;
+begin
+  select ac.* into a from public.sessions s join public.accounts ac on ac.id=s.account_id
+   where s.token=p_token and s.expires>now() and s.stage='ok';
+  if not found then raise exception 'SESSION_EXPIRED'; end if;
+  insert into public.rate_limit as r(account_id,win,n) values (a.id,now(),1)
+  on conflict (account_id) do update set
+    win = case when r.win < now()-interval '1 minute' then now() else r.win end,
+    n   = case when r.win < now()-interval '1 minute' then 1 else r.n+1 end
+  returning n into c;
+  if c>300 then raise exception 'SLOW_DOWN'; end if;
+  return a;
+end $$;
+
+-- ============ BACKUPS ============
+-- 1) Every night at 03:00 (Manila) the database copies the records into backup_* tables and keeps 7 days.
+--    Use it to undo a bad edit or deletion (see "Restore" in README.md).
+-- 2) The Doctor can also download a full copy as a file (Activity log > Download backup).
+create table if not exists public.backup_snapshots(id bigserial primary key, at timestamptz not null default now(), students int, note text);
+create table if not exists public.backup_students(snap bigint not null references public.backup_snapshots(id) on delete cascade, id text not null, data jsonb not null, primary key(snap,id));
+create table if not exists public.backup_extra(snap bigint not null references public.backup_snapshots(id) on delete cascade, tbl text not null, data jsonb not null, primary key(snap,tbl));
+alter table public.backup_snapshots enable row level security;
+alter table public.backup_students enable row level security;
+alter table public.backup_extra enable row level security;
+revoke all on public.backup_snapshots, public.backup_students, public.backup_extra from anon, authenticated;
+
+create or replace function public.ehh_backup(p_note text default 'nightly') returns bigint
+language plpgsql security definer set search_path = public, extensions as $$
+declare sid bigint; n int;
+begin
+  insert into public.backup_snapshots(note) values (p_note) returning id into sid;
+  insert into public.backup_students(snap,id,data) select sid,id,data from public.students;
+  get diagnostics n = row_count;
+  update public.backup_snapshots set students=n where id=sid;
+  insert into public.backup_extra(snap,tbl,data)
+    select sid,'stock',coalesce((select data from public.stock where id=1),'{}'::jsonb)
+    union all select sid,'clinic_notes',coalesce((select data from public.clinic_notes where id=1),'[]'::jsonb)
+    union all select sid,'transfers',coalesce((select jsonb_agg(data order by id) from public.transfers),'[]'::jsonb);
+  delete from public.backup_snapshots where at<now()-interval '7 days';
+  return sid;
+end $$;
+
+-- Put one learner's record back the way it was in a snapshot (run in the SQL editor).
+create or replace function public.ehh_restore_student(p_snap bigint, p_id text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+begin
+  update public.students s set data=b.data, rev=nextval('public.ehh_rev'), updated_at=now(), updated_by='restore'
+    from public.backup_students b where b.snap=p_snap and b.id=p_id and s.id=b.id;
+  if not found then raise exception 'NOT_FOUND'; end if;
+end $$;
+revoke all on function public.ehh_backup(text), public.ehh_restore_student(bigint,text) from public, anon, authenticated;
+
+-- Doctor-only full export for the "Download backup" button.
+create or replace function public.app_backup(p_token text) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_auth(p_token);
+  if a.role<>'Doctor' then raise exception 'NOT_ALLOWED'; end if;
+  perform public.ehh_log(a,'backup.download',null,'{}'::jsonb);
+  return jsonb_build_object('app','EduHealthHub','at',now(),'by',a.name,
+    'students',(select coalesce(jsonb_agg(jsonb_build_object('id',id,'data',data) order by id),'[]'::jsonb) from public.students),
+    'stock',(select data from public.stock where id=1),
+    'clinic_notes',(select data from public.clinic_notes where id=1),
+    'transfers',(select coalesce(jsonb_agg(data order by id),'[]'::jsonb) from public.transfers));
+end $$;
+revoke all on function public.app_backup(text) from public;
+grant execute on function public.app_backup(text) to anon, authenticated;
+
+create extension if not exists pg_cron;
+select cron.unschedule('ehh-nightly-backup') where exists (select 1 from cron.job where jobname='ehh-nightly-backup');
+select cron.schedule('ehh-nightly-backup','0 19 * * *','select public.ehh_backup()');

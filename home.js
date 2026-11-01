@@ -191,6 +191,7 @@ function certificate(s,c){
 const HOME_ACT={
  nav:a=>{S.view=a.dataset.v;if(S.view==='chat'&&!S.msg.active&&innerWidth>860)S.msg.active=convList()[0]||'';render();scrollTo(0,0);if(S.view==='activity')loadAudit();if(S.view==='chat'){msgSync();msgMarkRead()}},
  auditrefresh:()=>loadAudit(),
+ backupdl:async()=>{if(!CLOUD_ON||S.audit.dl)return;S.audit.dl=true;render();try{const d=await rpc('app_backup',{p_token:TOK});browserSave('EduHealthHub-backup-'+localDate()+'.json',JSON.stringify(d))}catch(e){toast(cloudErr(e))}S.audit.dl=false;render();loadAudit()},
  hpanel:a=>{S.hm.panel=a.dataset.k;render();const f=$('.hform');if(f)f.scrollIntoView({block:'nearest'})},
  hpick:a=>{S.hm.sid=a.dataset.id;S.hm.q=stu(a.dataset.id).lrn;S.hm.msg='';S.hm.panel=a.dataset.k||'';render();const r=$('#hres');if(r)r.scrollIntoView({block:'start'})},
  hclear:()=>{S.hm={q:'',sid:null,panel:'',msg:''};render()},
@@ -282,14 +283,15 @@ function auditText(r){
  const d=r.detail||{};
  if(r.action==='student.update')return 'Updated '+(d.fields||[]).map(k=>FIELD_LABEL[k]||k).filter((v,i,a)=>a.indexOf(v)===i).join(', ');
  if(r.action==='stock.update')return 'Updated supply stock ('+(d.items||0)+' items)';
+ if(r.action==='backup.download')return 'Downloaded a full backup file';
  if(r.action==='notes.update')return 'Updated shift handover notes';
  if(r.action==='transfer')return 'Transferred a record'+(d.from?': '+d.from+' to '+d.to:'');
  return r.action}
 function activityView(){
  const a=S.audit,sk=Array.from({length:8},()=>'<tr><td colspan="4"><div class="sk sk-row" style="margin:0"></div></td></tr>').join('');
  const rows=(a.rows||[]).map(r=>{const t=new Date(r.at);return `<tr><td class="mono small" style="white-space:nowrap">${t.toLocaleDateString()} ${t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td><td><b>${esc(r.actor||'')}</b> ${pill(esc(r.role||''),'mute')}</td><td>${esc(auditText(r))}</td><td>${r.who?`<b>${esc(r.who)}</b><div class="small muted mono">${esc(r.lrn||'')}</div>`:esc(r.target&&r.action==='transfer'?'LRN '+r.target:'')}</td></tr>`}).join('');
- return `<div class="head"><div><div class="eyebrow">Tracking</div><h2>Activity log</h2></div><button class="btn" data-act="auditrefresh" ${a.busy?'disabled':''}>Refresh</button></div>
- <p class="small muted">Every change to a record, supply stock, note or transfer is recorded with who made it and when. Showing the latest 200.</p>
+ return `<div class="head"><div><div class="eyebrow">Tracking</div><h2>Activity log</h2></div><div class="trow"><button class="btn" data-act="backupdl" ${S.audit.dl||!CLOUD_ON?'disabled':''}>${S.audit.dl?'Preparing…':'Download backup'}</button><button class="btn" data-act="auditrefresh" ${a.busy?'disabled':''}>Refresh</button></div></div>
+ <p class="small muted">Every change to a record, supply stock, note or transfer is recorded with who made it and when. Showing the latest 200. The database also keeps its own nightly backup for 7 days; "Download backup" saves a full copy of all records to your computer (keep it somewhere private, it contains health data).</p>
  ${a.err?`<div class="pill bad" style="white-space:normal">${esc(a.err)}</div>`:''}
  <section class="panel" style="padding:0"><div class="tw"><table class="wrapth"><thead><tr><th>When</th><th>Who</th><th>What changed</th><th>Learner</th></tr></thead><tbody>
  ${a.busy||a.rows===null?sk:(rows||'<tr><td colspan="4" class="muted">Nothing recorded yet.</td></tr>')}</tbody></table></div></section>

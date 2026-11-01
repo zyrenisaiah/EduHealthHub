@@ -21,6 +21,7 @@ async function rpc(fn,args,keep){
 function cloudErr(e){
  const c=e&&e.code;
  if(c==='OFFLINE')return 'Cannot reach the online database. Check your internet connection and try again.';
+ if(c==='SLOW_DOWN')return 'Too many requests at once. Wait a few seconds and try again.';
  if(c==='TOO_MANY_ATTEMPTS')return 'Too many attempts. Wait a minute and try again.';
  if(c==='BAD_LOGIN')return 'Username or password is incorrect.';
  if(c==='SESSION_EXPIRED')return 'Your session expired. Please log in again.';
