@@ -1055,3 +1055,87 @@ create trigger ehh_notes_ping after insert or update on public.clinic_notes for 
 drop trigger if exists ehh_transfers_ping on public.transfers;
 create trigger ehh_transfers_ping after insert on public.transfers for each statement execute function public.ehh_trg_data();
 revoke all on function public.ehh_trg_msg(), public.ehh_trg_data() from public, anon, authenticated;
+
+-- ============ PRIVACY (forced password change, record-view log) ============
+alter table public.accounts add column if not exists must_change boolean not null default false;
+
+create or replace function public.ehh_acct_json(a public.accounts) returns jsonb
+language sql immutable as $$
+  select jsonb_build_object('id',a.id,'role',a.role,'name',a.name,'username',a.username,'email',a.email,'adv',a.adv,'photo',a.photo,'must_change',a.must_change) $$;
+-- session check WITHOUT the must-change rule (used only by change-password)
+create or replace function public.ehh_auth_any(p_token text) returns public.accounts
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; c int;
+begin
+  select ac.* into a from public.sessions s join public.accounts ac on ac.id=s.account_id
+   where s.token=p_token and s.expires>now() and s.stage='ok';
+  if not found then raise exception 'SESSION_EXPIRED'; end if;
+  insert into public.rate_limit as r(account_id,win,n) values (a.id,now(),1)
+  on conflict (account_id) do update set
+    win = case when r.win < now()-interval '1 minute' then now() else r.win end,
+    n   = case when r.win < now()-interval '1 minute' then 1 else r.n+1 end
+  returning n into c;
+  if c>300 then raise exception 'SLOW_DOWN'; end if;
+  return a;
+end $$;
+
+-- normal session check: accounts flagged must_change can do nothing until they set a new password
+create or replace function public.ehh_auth(p_token text) returns public.accounts
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_auth_any(p_token);
+  if a.must_change then raise exception 'PASSWORD_CHANGE_REQUIRED'; end if;
+  return a;
+end $$;
+revoke all on function public.ehh_auth_any(text) from public, anon, authenticated;
+
+create or replace function public.app_change_password(p_token text, p_old text, p_new text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; n text := coalesce(p_new,'');
+begin
+  a := public.ehh_auth_any(p_token);
+  if a.pw <> crypt(coalesce(p_old,''), a.pw) then raise exception 'BAD_PASSWORD'; end if;
+  if length(n)<10 or length(n)>200 or n !~ '[A-Za-z]' or n !~ '[0-9]' or lower(n)=lower(a.username) or n=coalesce(p_old,'') then
+    raise exception 'WEAK_PASSWORD'; end if;
+  update public.accounts set pw=crypt(n, gen_salt('bf')), must_change=false where id=a.id;
+  delete from public.sessions where account_id=a.id and token<>p_token;
+  perform public.ehh_log(a,'password.change',null,'{}'::jsonb);
+end $$;
+
+-- Go-live switch (run once in the SQL editor): every account must choose a new password at next login.
+create or replace function public.ehh_require_password_change() returns int
+language plpgsql security definer set search_path = public, extensions as $$
+declare n int;
+begin update public.accounts set must_change=true; get diagnostics n=row_count; return n; end $$;
+revoke all on function public.ehh_require_password_change() from public, anon, authenticated;
+-- Who OPENED a learner's record (reading is logged too). Same person + learner is logged once per 10 minutes.
+create or replace function public.app_log_view(p_token text, p_student text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_auth(p_token);
+  if not exists (select 1 from public.students where id=p_student) then return; end if;
+  if exists (select 1 from public.audit_log where account_id=a.id and action='student.view' and target=p_student and at>now()-interval '10 minutes') then return; end if;
+  perform public.ehh_log(a,'student.view',p_student,'{}'::jsonb);
+end $$;
+revoke all on function public.app_log_view(text,text) from public;
+grant execute on function public.app_log_view(text,text) to anon, authenticated;
+
+drop function if exists public.app_audit(text,int);
+create or replace function public.app_audit(p_token text, p_limit int default 200, p_kind text default null) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_auth(p_token);
+  if a.role<>'Doctor' then raise exception 'NOT_ALLOWED'; end if;
+  return coalesce((select jsonb_agg(x order by x.id desc) from (
+    select l.id, l.at, l.actor, l.role, l.action, l.target, l.detail,
+           (select s.data->>'first' || ' ' || (s.data->>'last') from public.students s where s.id=l.target) as who,
+           (select s.data->>'lrn' from public.students s where s.id=l.target) as lrn
+      from public.audit_log l
+     where case p_kind when 'views' then l.action='student.view' when 'changes' then l.action<>'student.view' else true end
+     order by l.id desc limit least(greatest(p_limit,1),500)) x),'[]'::jsonb);
+end $$;
+revoke all on function public.app_audit(text,int,text) from public;
+grant execute on function public.app_audit(text,int,text) to anon, authenticated;
