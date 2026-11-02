@@ -28,7 +28,7 @@ People can link their Google account under **My account**. After that, every log
 
 **Tests.** `npm install`, then `npm test` runs the browser tests (they use fake local data and never touch the real database). `npm run check` checks every script for syntax errors. GitHub runs both automatically on every push (see `.github/workflows/ci.yml`); a red ✗ on a commit means something broke.
 
-**Error reports.** If something breaks in anyone's browser, it is saved to the `error_log` table. The Doctor reads it under **Activity log > Browser errors**.
+**Error reports.** If something breaks in anyone's browser, it is saved to the `error_log` table. They are not shown in the Doctor screen (it is a technical matter, not a clinical one). Read them in Supabase: Table editor > `error_log`, or ask for a check.
 
 **Request caps.** Each signed-in account may make at most 300 requests a minute; beyond that the server answers `SLOW_DOWN`. Logins and messages have their own, tighter limits.
 

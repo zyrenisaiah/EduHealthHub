@@ -15,7 +15,7 @@ Health records are sensitive personal information (in the Philippines, covered b
 
 ## 3. Tracking
 - [x] **Code** Every change to a record is logged (who, what, when). Every time someone **opens** a learner's record is logged too (once per person per learner every 10 minutes). The Doctor reads both in **Activity log** (Changes / Records opened / Everything).
-- [x] **Code** Browser errors are reported to the Doctor in the same page.
+- [x] **Code** Browser errors are saved to the `error_log` table for the site maintainer (not shown to clinical staff).
 - [ ] **You** Review the Records opened list regularly (suggested: weekly) for people looking at learners they have no reason to see.
 
 ## 4. Backups
