@@ -1143,3 +1143,37 @@ grant execute on function public.app_audit(text,int,text) to anon, authenticated
 -- ============ CLEAN-UP (overall check, Nov 2) ============
 drop function if exists public.app_audit_v2(text,int,text);
 alter function public.ehh_acct_json(public.accounts) set search_path = public, pg_temp;
+
+-- ============ RENAME: Parental Consent Form -> Purga Consent Form ============
+update public.students
+   set data = jsonb_set(data,'{files}', (select jsonb_agg(case when f->>'name'='Parental Consent Form' then jsonb_set(f,'{name}','"Purga Consent Form"') else f end) from jsonb_array_elements(data->'files') f)),
+       rev = nextval('public.ehh_rev'), updated_at = now(), updated_by = 'rename'
+ where data::text like '%Parental Consent Form%' and jsonb_typeof(data->'files')='array';
+
+-- ============ BROWSER CLOSE = LOGOUT ============
+-- A session with no sign of life for 10 minutes is dead on the server. Every open page pings every 45 s (app_ping),
+-- and every normal call also counts as a sign of life.
+alter table public.sessions add column if not exists last_seen timestamptz not null default now();
+create or replace function public.ehh_auth_any(p_token text) returns public.accounts
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; c int;
+begin
+  select ac.* into a from public.sessions s join public.accounts ac on ac.id=s.account_id
+   where s.token=p_token and s.expires>now() and s.stage='ok' and s.last_seen>now()-interval '10 minutes';
+  if not found then raise exception 'SESSION_EXPIRED'; end if;
+  update public.sessions set last_seen=now() where token=p_token and last_seen<now()-interval '20 seconds';
+  insert into public.rate_limit as r(account_id,win,n) values (a.id,now(),1)
+  on conflict (account_id) do update set
+    win = case when r.win < now()-interval '1 minute' then now() else r.win end,
+    n   = case when r.win < now()-interval '1 minute' then 1 else r.n+1 end
+  returning n into c;
+  if c>300 then raise exception 'SLOW_DOWN'; end if;
+  return a;
+end $$;
+revoke all on function public.ehh_auth_any(text) from public, anon, authenticated;
+create or replace function public.app_ping(p_token text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin a := public.ehh_auth_any(p_token); end $$;
+revoke all on function public.app_ping(text) from public;
+grant execute on function public.app_ping(text) to anon, authenticated;

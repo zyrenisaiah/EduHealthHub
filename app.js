@@ -339,7 +339,7 @@ function setAccPhoto(file,remove){
 S.sel=new Set();S.lrnText='';S.lrnMsg='';
 function filesFor(st,sy,kinds){
  return (kinds||FILE_KINDS).map(k=>{
-  const f=st.files.find(x=>x.sy===sy&&x.name===k);let date=f?f.date:'';
+  const f=st.files.find(x=>x.sy===sy&&sameKind(x.name,k));let date=f?f.date:'';
   if(k==='Dental Record'&&sy===CUR_SY&&st.dental&&st.dental.date)date=st.dental.date;
   const missing=!date&&(f||(k==='Dental Record'&&sy===CUR_SY));
   return {name:k,date,status:date?'On file':missing?'Missing':'Not filed'};
@@ -408,7 +408,7 @@ function exportPDF(){
  const adv=secOf(S.user.adv),ex=exportList(),sy=S.sy,W=842,H=595,M=40;
  const esc2=t=>String(t).replace(/[\\()]/g,'\\$&');
  const col=[22,84,128,112,112,112,112,50];
- const heads=[['#'],['LRN'],['Learner'],['School Health','Examination Card'],['Dental','Record'],['Immunization','Card'],['Parental','Consent Form'],['On file']];
+ const heads=[['#'],['LRN'],['Learner'],['School Health','Examination Card'],['Dental','Record'],['Immunization','Card'],['Purga','Consent Form'],['On file']];
  const X=[];col.reduce((a,w,i)=>(X[i]=a,a+w),M);
  const GREEN=[.114,.455,.267],AMBER=[.6,.34,0],GRAY=[.45,.5,.52],INK=[.06,.16,.18],TEAL=[.043,.498,.51];
  const pagesOps=[];let ops,y;

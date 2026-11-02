@@ -76,7 +76,9 @@ const TEETH={
  pl:[48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38],
  tl:[85,84,83,82,81,71,72,73,74,75]
 };
-const FILE_KINDS=['School Health Examination Card','Dental Record','Immunization Card','Parental Consent Form'];
+const FILE_KINDS=['School Health Examination Card','Dental Record','Immunization Card','Purga Consent Form'];
+const OLD_KIND={'Parental Consent Form':'Purga Consent Form'};   /* renamed: old saved names still match */
+const sameKind=(a,b)=>a===b||OLD_KIND[a]===b||OLD_KIND[b]===a;
 
 /* ---------- seed ---------- */
 function rng(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}

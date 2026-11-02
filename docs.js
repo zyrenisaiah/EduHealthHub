@@ -18,14 +18,14 @@ function defaultDoc(kind,st,sy){
   'School Health Examination Card':[H2('Examination summary'),LI('Height: ______ cm      Weight: ______ kg'),LI('Vision: ______      Hearing: ______'),LI('Nutritional status: ______'),LI('Remarks: Lorem ipsum dolor sit amet, dummy remarks only.')],
   'Dental Record':[H2('Dental examination'),LI('Date examined: ______________'),LI('Findings: Lorem ipsum dolor sit amet, dummy dental findings only.'),LI('Treatment needed: ______________')],
   'Immunization Card':[H2('Vaccines received'),LI('BCG: ______________'),LI('Measles (MMR): ______________'),LI('Tetanus-diphtheria (Td): ______________'),LI('HPV: ______________')],
-  'Parental Consent Form':[H2('Consent'),P_('I, ______________________, parent/guardian of '+fullName(st)+', allow the school clinic to give first aid and basic health care to my child during school hours. (Dummy consent text.)'),P_(''),P_('Signature: ______________________    Date: ______________')],
+  'Purga Consent Form':[H2('Consent for deworming (purga)'),P_('I, ______________________, parent/guardian of '+fullName(st)+', allow my child to take the deworming medicine (purga) given by the school clinic during the school deworming program. I will tell the nurse about any allergy, current illness or medicine my child is taking. (Dummy consent text.)'),LI('Allergies or conditions to report: ______________________'),LI('Date of deworming: ______________'),P_(''),P_('Signature of parent/guardian: ______________________    Date: ______________')],
   'Medical Clearance':[H2('Clearance'),P_('This is to certify that '+fullName(st)+' was examined and is cleared for the activity below. (Dummy text.)'),LI('Cleared for: ______________________'),LI('Valid until: ______________'),P_(''),P_('Physician: ______________________   License no.: __________')],
   'Other Medical Records':[H2('Other medical records'),LI('Laboratory result: Lorem ipsum dolor sit amet (dummy).'),LI('Doctor\'s note: ______________________'),LI('Attachment list: ______________________')]
  }[kind]||[P_('Lorem ipsum dolor sit amet, dummy content only.')];
  return head.concat(body,sign)}
 
 /* the stored document (if edited) or the dummy template */
-function fileEntry(st,sy,kind){return st.files.find(f=>f.sy===sy&&f.name===kind)}
+function fileEntry(st,sy,kind){const f=st.files.find(f=>f.sy===sy&&sameKind(f.name,kind));if(f&&f.name!==kind)f.name=kind;return f}
 function docOf(st,sy,kind){const e=fileEntry(st,sy,kind);return e&&e.doc&&e.doc.b?{blocks:e.doc.b,custom:true,by:e.doc.by,at:e.doc.at}:{blocks:defaultDoc(kind,st,sy),custom:false}}
 function storeDoc(st,sy,kind,blocks){
  let e=fileEntry(st,sy,kind);if(!e){e={sy,name:kind,date:''};st.files.push(e)}

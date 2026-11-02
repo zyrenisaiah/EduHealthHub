@@ -13,6 +13,10 @@ const assert = require('assert'), { start } = require('./helpers');
   assert(/Title/.test(out) && /"h1"/.test(out) && /"b":true/.test(out) && /item/.test(out), 'docx round trip lost content: ' + out);
   assert(await d.evaluate(() => pdfText('Hello', 10, false) > 0 && pdfText('Hello', 10, true) > pdfText('Hello', 10, false)), 'pdfText widths');
 
+  // Purga Consent Form exists, reads as a deworming consent, and old saved names still match
+  assert(await d.evaluate(() => DOC_KINDS.includes('Purga Consent Form') && !DOC_KINDS.some(k => /Parental/.test(k))), 'Purga Consent Form replaces the parental form');
+  assert(await d.evaluate(() => { const st = DB.students[0], sy = st.enr[0].sy; st.files = st.files.filter(f => !(f.sy === sy && /Consent/.test(f.name))); st.files.push({ sy, name: 'Parental Consent Form', date: '2026-06-01' }); const e = fileEntry(st, sy, 'Purga Consent Form'); return !!e && e.name === 'Purga Consent Form' && e.date === '2026-06-01'; }), 'old saved name is upgraded');
+  assert(await d.evaluate(() => /deworming/i.test(JSON.stringify(defaultDoc('Purga Consent Form', DB.students[0], DB.students[0].enr[0].sy)))), 'Purga form text is about deworming');
   // Doctor edits a document and downloads Word + PDF
   await d.fill('#hq', '110001000001'); await d.waitForSelector('#hres');
   await d.click('#hres [data-act=open][data-tab=profile]'); await d.waitForSelector('[data-act=docopen]');

@@ -88,6 +88,23 @@ async function cloudPush(){
    /* drop the rejected local edit so it does not retry forever */ try{await cloudSync(true);render()}catch(x){}}
   else{syncStat('Offline: will retry',true);_retry=setTimeout(cloudPush,8000)}}
  finally{_pushing=false;if(_again){_again=false;cloudPush()}}}
+/* ---- closing the browser signs you out ----
+   1) The login token lives in sessionStorage, so it disappears with the tab or browser.
+   2) When a page closes we leave a note; the next visit to the site ends that session on the server at once
+      (a quick reload or moving between pages within 15 seconds is not treated as closing).
+   3) Every open page pings the server every 45 s; a session with no ping for 10 minutes is dead on the server. */
+const CLOSE_KEY='ehh_closing';let _hb=null;
+const closeList=()=>{try{return JSON.parse(localStorage.getItem(CLOSE_KEY)||'[]')}catch(e){return[]}};
+const closeSave=l=>{try{l.length?localStorage.setItem(CLOSE_KEY,JSON.stringify(l.slice(-8))):localStorage.removeItem(CLOSE_KEY)}catch(e){}};
+addEventListener('pagehide',e=>{if(e.persisted||!CLOUD_ON||!TOK)return;const l=closeList().filter(m=>m.tok!==TOK);l.push({tok:TOK,t:Date.now()});closeSave(l)});
+(function sweepClosed(){
+ if(!CLOUD_ON)return;const mine=ss.get('ehh_tok'),now=Date.now(),keep=[];
+ closeList().forEach(m=>{
+  if(now-m.t<15000){if(m.tok!==mine)keep.push(m);return}
+  rpc('app_logout',{p_token:m.tok},true).catch(()=>{});
+  if(m.tok===mine){ss.del('ehh_tok');ss.del('ehh_role');ss.del('ehh_uid')}});
+ closeSave(keep)})();
+function hbStart(){clearInterval(_hb);_hb=setInterval(()=>{if(TOK)rpc('app_ping',{p_token:TOK}).catch(e=>{if(e&&e.code==='SESSION_EXPIRED')cloudKick()})},45000)}
 /* ---- live updates: the database pings this browser (Supabase Realtime) the moment something changes ----
    The ping carries no data; it only makes us fetch sooner through the normal checked calls.
    If the live connection is down we fall back to checking every few seconds (RT_ON=false). */
@@ -112,12 +129,12 @@ function rtConnect(key){
  ws.onerror=()=>{RT_ON=false}}
 function rtStop(){clearTimeout(_wsRetry);clearInterval(_wsHb);RT_ON=false;_rtKey='';const w=_ws;_ws=null;if(w){try{w.close()}catch(e){}}}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&TOK&&CLOUD_ON&&!RT_ON&&!_ws)rtStart()});
-function cloudKick(){rtStop();TOK=null;ss.del('ehh_tok');ss.del('ehh_role');clearInterval(_poll);S.user=null;location.replace('index.html?role='+PAGE)}
+function cloudKick(){rtStop();clearInterval(_hb);TOK=null;ss.del('ehh_tok');ss.del('ehh_role');clearInterval(_poll);S.user=null;location.replace('index.html?role='+PAGE)}
 async function cloudPollOnce(){
  if(!TOK||document.hidden||_pushing)return;
  try{const {ch}=await cloudSync(false);if(!SYNC_TXT.startsWith('Saving'))syncStat('Saved online ✓');if(ch)softRender()}
  catch(e){if(e.code==='SESSION_EXPIRED')cloudKick();else syncStat('Offline: will retry',true)}}
-function cloudStart(){clearInterval(_poll);_poll=setInterval(()=>{if(RT_ON&&++_pk%5)return;cloudPollOnce()},12000);if(typeof msgStart==='function')msgStart();rtStart()}
+function cloudStart(){clearInterval(_poll);_poll=setInterval(()=>{if(RT_ON&&++_pk%5)return;cloudPollOnce()},12000);if(typeof msgStart==='function')msgStart();rtStart();hbStart()}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)cloudPollOnce()});
 async function cloudEnter(r){
  TOK=r.token;ss.set('ehh_tok',TOK);ss.set('ehh_role',r.account.role);
@@ -142,7 +159,7 @@ async function cloudRestore(){
  try{TOK=t;const r=await rpc('app_sync',{p_token:t,p_since:0});
   await cloudEnter({token:t,account:r.account})}
  catch(e){console.error('restore failed',e);if(e&&e.code==='SESSION_EXPIRED'){TOK=null;ss.del('ehh_tok');ss.del('ehh_role');return 'expired'}return e}return 'ok'}
-async function cloudLogout(){rtStop();const t=TOK;TOK=null;clearInterval(_poll);ss.del('ehh_tok');ss.del('ehh_role');REV=0;
+async function cloudLogout(){rtStop();clearInterval(_hb);const t=TOK;TOK=null;clearInterval(_poll);ss.del('ehh_tok');ss.del('ehh_role');REV=0;
  if(t){try{await rpc('app_logout',{p_token:t})}catch(e){}}}
 async function seedCloud(){
  const btn=$('[data-act="seedcloud"]'),msg=$('#seedmsg');if(btn)btn.disabled=true;
