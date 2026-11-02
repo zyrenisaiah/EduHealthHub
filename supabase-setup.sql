@@ -1006,3 +1006,52 @@ begin
   delete from public.sessions where account_id=a.id and token<>p_token;
   perform public.ehh_log(a,'password.change',null,'{}'::jsonb);
 end $$;
+
+-- ============ LIVE UPDATES (Supabase Realtime) ============
+-- The database "pings" each signed-in browser the moment a message or record changes, so pages
+-- refresh instantly instead of asking every few seconds. The ping carries NO data: it is an empty
+-- signal on a private-by-secrecy channel name (rt:<random per session>); the browser then fetches
+-- what it is allowed to see through the normal checked functions. If the live connection fails
+-- the browser quietly falls back to checking every few seconds, as before.
+alter table public.sessions add column if not exists rt text not null default encode(extensions.gen_random_bytes(12),'hex');
+
+create or replace function public.app_rt(p_token text) returns text
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; r text;
+begin
+  a := public.ehh_auth(p_token);
+  select rt into r from public.sessions where token=p_token;
+  return r;
+end $$;
+revoke all on function public.app_rt(text) from public;
+grant execute on function public.app_rt(text) to anon, authenticated;
+
+-- new message: ping only the sessions that may read that conversation
+create or replace function public.ehh_trg_msg() returns trigger
+language plpgsql security definer set search_path = public, extensions as $$
+begin
+  perform realtime.send('{}'::jsonb,'ping','rt:'||s.rt,false)
+    from public.sessions s join public.accounts ac on ac.id=s.account_id
+   where s.stage='ok' and s.expires>now() and public.ehh_conv_ok(ac,NEW.conv);
+  return null;
+end $$;
+drop trigger if exists ehh_msg_ping on public.messages;
+create trigger ehh_msg_ping after insert on public.messages for each row execute function public.ehh_trg_msg();
+
+-- record / stock / notes / transfer changed: ping every signed-in session (they re-sync what they may see)
+create or replace function public.ehh_trg_data() returns trigger
+language plpgsql security definer set search_path = public, extensions as $$
+begin
+  perform realtime.send('{}'::jsonb,'ping','rt:'||s.rt,false)
+    from public.sessions s where s.stage='ok' and s.expires>now();
+  return null;
+end $$;
+drop trigger if exists ehh_students_ping on public.students;
+create trigger ehh_students_ping after insert or update on public.students for each statement execute function public.ehh_trg_data();
+drop trigger if exists ehh_stock_ping on public.stock;
+create trigger ehh_stock_ping after insert or update on public.stock for each statement execute function public.ehh_trg_data();
+drop trigger if exists ehh_notes_ping on public.clinic_notes;
+create trigger ehh_notes_ping after insert or update on public.clinic_notes for each statement execute function public.ehh_trg_data();
+drop trigger if exists ehh_transfers_ping on public.transfers;
+create trigger ehh_transfers_ping after insert on public.transfers for each statement execute function public.ehh_trg_data();
+revoke all on function public.ehh_trg_msg(), public.ehh_trg_data() from public, anon, authenticated;
