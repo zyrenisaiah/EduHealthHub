@@ -15,7 +15,7 @@ async function rpc(fn,args,keep){
   if(!CLOUD_ON||n>=5||!msg||/ResizeObserver|^Script error/.test(msg))return;
   const k=String(msg).slice(0,200);if(seen.has(k))return;seen.add(k);n++;
   try{rpc('app_report_error',{p_token:TOK,p_data:{msg:String(msg),stack:String(stack||''),page:location.pathname.split('/').pop()+(S&&S.view?'#'+S.view:''),ua:navigator.userAgent}},true).catch(()=>{})}catch(e){}}
- addEventListener('error',e=>report(e.message,(e.error&&e.error.stack)||(e.filename+':'+e.lineno)));
+ addEventListener('error',e=>{const where=e.filename?String(e.filename).split('/').pop()+':'+e.lineno+':'+e.colno:'';report((e.message||'')+(where?' ['+where+']':''),(e.error&&e.error.stack)||where)});
  addEventListener('unhandledrejection',e=>{const r=e.reason;if(r&&(r.code||r.status))return;report('Unhandled: '+((r&&r.message)||r),r&&r.stack)});
 })();
 function cloudErr(e){

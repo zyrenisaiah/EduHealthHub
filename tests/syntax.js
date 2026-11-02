@@ -10,3 +10,7 @@ for (const f of ['index', 'doctor', 'nurse', 'dentist', 'teacher']) {
   for (const s of ['config.js', 'core.js', 'app.js', 'chat.js']) if (!h.includes(s)) { bad++; console.error(f + '.html does not load ' + s); }
 }
 if (bad) process.exit(1); console.log('syntax: ok');
+// No inline event handlers (the content security policy blocks them, and a typo in one broke the font loader once).
+const bad2 = fs.readdirSync(root).filter(f => f.endsWith('.html')).filter(f => /\son[a-z]+\s*=\s*["']/i.test(fs.readFileSync(path.join(root, f), 'utf8')));
+if (bad2.length) { console.error('Inline event handlers (onload=, onclick=...) found in: ' + bad2.join(', ')); process.exit(1); }
+console.log('no inline handlers: ok');

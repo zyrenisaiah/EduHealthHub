@@ -1139,3 +1139,7 @@ begin
 end $$;
 revoke all on function public.app_audit(text,int,text) from public;
 grant execute on function public.app_audit(text,int,text) to anon, authenticated;
+
+-- ============ CLEAN-UP (overall check, Nov 2) ============
+drop function if exists public.app_audit_v2(text,int,text);
+alter function public.ehh_acct_json(public.accounts) set search_path = public, pg_temp;
