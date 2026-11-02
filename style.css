@@ -345,3 +345,28 @@ tr[data-drop].dragover td{background:var(--accent-soft)}
 .chwho{display:flex;align-items:center;gap:10px;flex:1;min-width:0;text-align:left;background:none;border:0;padding:4px 6px;margin:-4px -6px;border-radius:12px;font:inherit;color:inherit}
 button.chwho{cursor:pointer}button.chwho:hover,button.chwho:focus-visible{background:var(--surface2)}
 .chwho>div{min-width:0}
+/* Messenger-style attach / new-chat sheet */
+.chmain .cpanel.sheet{max-height:none;overflow:visible;background:var(--surface);border:0;border-top:1px solid var(--line);border-radius:18px 18px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.08);padding:8px 16px 16px;gap:10px}
+.grab{width:40px;height:4px;border-radius:99px;background:var(--line-strong);margin:0 auto}
+.cclose{border-radius:50%;width:32px;height:32px;padding:0;display:grid;place-items:center}
+.csearch{border-radius:99px;padding:10px 16px}
+.clist{display:grid;gap:2px;max-height:220px;overflow:auto}
+.crow{display:flex;gap:12px;align-items:center;width:100%;text-align:left;padding:8px 10px;border:0;background:none;border-radius:12px;font:inherit;color:inherit;cursor:pointer}
+.crow:hover,.crow:focus-visible{background:var(--surface2)}
+.cav{width:40px;height:40px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--surface2);color:var(--accent);font-weight:700;font-size:14px;object-fit:cover}
+.crow .cmid{display:grid;min-width:0}.cwho{display:flex;gap:12px;align-items:center;padding:6px 4px}.cwho .cmid{display:grid;flex:1;min-width:0}
+.ctiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.ctile{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:6px;padding:12px 8px;border:1px solid var(--line);border-radius:16px;background:var(--bg);font:inherit;color:inherit;cursor:pointer;text-align:center;line-height:1.2;transition:transform .12s,border-color .12s}
+.ctile:hover,.ctile:focus-visible{border-color:var(--accent);transform:translateY(-2px)}
+.ctile .ico{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-size:23px;background:var(--surface2)}
+.ctile.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}.ctile.primary .ico{background:rgba(255,255,255,.22)}
+.ctiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ctile{flex-direction:row;align-items:center;justify-content:flex-start;text-align:left;gap:10px;padding:8px 10px;border-radius:14px}
+.ctile .ico{width:38px;height:38px;font-size:20px;flex:none}.ctile .tl{display:grid;min-width:0}.ctile.primary{grid-column:1/-1}
+.chmain .cpanel.sheet{max-height:calc(100% - 96px);overflow:auto}
+@media (max-width:520px){.ctiles{grid-template-columns:1fr}}
+.chthread{min-height:50px}.chmain{overflow:hidden}
+.chmain .cpanel.sheet{max-height:calc(100% - 172px)}
+.ctile{padding:6px 10px}.cwho{padding:2px 4px}.cpanel.sheet .head h3{font-size:16px}
+.chmain #chpanel{flex:0 1 auto;min-height:0;overflow:auto}.chthread{flex:1 1 0}
+.chmain .cpanel.sheet{max-height:none;overflow:visible}
