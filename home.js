@@ -141,9 +141,12 @@ function homeView(){
   ${DB.notes.length?`<ul class="plainlist" style="margin-top:10px">${DB.notes.slice().reverse().slice(0,10).map(n=>`<li><div>${esc(n.text)}</div><div class="small muted">${esc(n.by)} · ${esc(n.date)} ${esc(n.time)}${(n.by===S.user.name||r==='Doctor')?` <button class="btn sm" data-act="hdelnote" data-v="${n.id}">Delete</button>`:''}</div></li>`).join('')}</ul>`:'<p class="small muted" style="margin-top:10px">No notes yet.</p>'}</section></div>`:''}`}
 
 /* ---- search ---- */
+const _viewed=new Map();
+/* reading a record is logged too (once per person + learner every 10 minutes) */
+function logView(id){if(!CLOUD_ON||!TOK||!id)return;const t=Date.now();if(t-(_viewed.get(id)||0)<600000)return;_viewed.set(id,t);rpc('app_log_view',{p_token:TOK,p_student:id}).catch(()=>_viewed.delete(id))}
 function homeFind(){
  const h=S.hm,q=h.q.trim();h.msg='';
- if(/^\d{12}$/.test(q)){const s=pool().find(x=>x.lrn===q);if(s){if(h.sid!==s.id)h.panel='';h.sid=s.id}else{h.sid=null;h.msg=S.user.role==='Teacher'?'That LRN is not in your advisory.':'No learner has that LRN.'}return}
+ if(/^\d{12}$/.test(q)){const s=pool().find(x=>x.lrn===q);if(s){if(h.sid!==s.id)h.panel='';h.sid=s.id;logView(s.id)}else{h.sid=null;h.msg=S.user.role==='Teacher'?'That LRN is not in your advisory.':'No learner has that LRN.'}return}
  h.sid=null}
 function homeSearch(el){
  S.hm.q=el.value;const was=S.hm.sid;homeFind();
@@ -191,9 +194,10 @@ function certificate(s,c){
 const HOME_ACT={
  nav:a=>{S.view=a.dataset.v;if(S.view==='chat'&&!S.msg.active&&innerWidth>860)S.msg.active=convList()[0]||'';render();scrollTo(0,0);if(S.view==='activity')loadAudit();if(S.view==='chat'){msgSync();msgMarkRead()}},
  auditrefresh:()=>loadAudit(),
+ auditkind:a=>{S.audit.kind=a.dataset.k;loadAudit()},
  backupdl:async()=>{if(!CLOUD_ON||S.audit.dl)return;S.audit.dl=true;render();try{const d=await rpc('app_backup',{p_token:TOK});browserSave('EduHealthHub-backup-'+localDate()+'.json',JSON.stringify(d))}catch(e){toast(cloudErr(e))}S.audit.dl=false;render();loadAudit()},
  hpanel:a=>{S.hm.panel=a.dataset.k;render();const f=$('.hform');if(f)f.scrollIntoView({block:'nearest'})},
- hpick:a=>{S.hm.sid=a.dataset.id;S.hm.q=stu(a.dataset.id).lrn;S.hm.msg='';S.hm.panel=a.dataset.k||'';render();const r=$('#hres');if(r)r.scrollIntoView({block:'start'})},
+ hpick:a=>{logView(a.dataset.id);S.hm.sid=a.dataset.id;S.hm.q=stu(a.dataset.id).lrn;S.hm.msg='';S.hm.panel=a.dataset.k||'';render();const r=$('#hres');if(r)r.scrollIntoView({block:'start'})},
  hclear:()=>{S.hm={q:'',sid:null,panel:'',msg:''};render()},
  'qa-walk':()=>{S.hm.panel='walk';S.hm.msg=S.hm.sid?'':'Type the learner\'s LRN first.';render();S.hm.sid?0:homeFocusSearch()},
  'qa-refer':()=>{S.hm.panel='refer';S.hm.msg=S.hm.sid?'':'Type the learner\'s LRN first.';render();S.hm.sid?0:homeFocusSearch()},
@@ -273,17 +277,19 @@ function teacherHome(){
  <section class="panel"><div class="head"><h3>Returned to class today</h3><span class="small muted">time-outs to verify</span></div>${tbl(back,'No time-outs recorded today.')}</section>`}
 
 /* ---- Activity log (Doctor): who changed what and when ---- */
-S.audit={rows:null,errs:[],err:'',busy:false};
+S.audit={rows:null,errs:[],err:'',busy:false,kind:'changes'};
 const FIELD_LABEL={exam:'health exam',dental:'dental chart',visits:'clinic visits',refs:'referrals',clear:'clearances',plans:'care plans',passes:'clinic passes',otherExams:'other examinations',files:'record of files',photo:'photo',enr:'enrolment',allergies:'allergies',conditions:'conditions',guardian:'guardian',contact:'contact',blood:'blood type',first:'name',last:'name',birth:'birthdate',sex:'sex'};
 async function loadAudit(){
  if(!CLOUD_ON){S.audit={rows:[],err:'The activity log is kept in the online database. It is empty in offline mode.',busy:false};render();return}
  S.audit.busy=true;S.audit.err='';render();
- try{const[a,b]=await Promise.all([rpc('app_audit',{p_token:TOK,p_limit:200}),rpc('app_errors',{p_token:TOK,p_limit:100})]);S.audit.rows=a;S.audit.errs=b||[]}catch(e){S.audit.err=cloudErr(e)}
+ try{const[a,b]=await Promise.all([rpc('app_audit',{p_token:TOK,p_limit:200,p_kind:S.audit.kind||null}),rpc('app_errors',{p_token:TOK,p_limit:100})]);S.audit.rows=a;S.audit.errs=b||[]}catch(e){S.audit.err=cloudErr(e)}
  S.audit.busy=false;if(S.view==='activity')render()}
 function auditText(r){
  const d=r.detail||{};
  if(r.action==='student.update')return 'Updated '+(d.fields||[]).map(k=>FIELD_LABEL[k]||k).filter((v,i,a)=>a.indexOf(v)===i).join(', ');
  if(r.action==='stock.update')return 'Updated supply stock ('+(d.items||0)+' items)';
+ if(r.action==='student.view')return 'Opened the record';
+ if(r.action==='password.change')return 'Changed their password';
  if(r.action==='backup.download')return 'Downloaded a full backup file';
  if(r.action==='notes.update')return 'Updated shift handover notes';
  if(r.action==='transfer')return 'Transferred a record'+(d.from?': '+d.from+' to '+d.to:'');
@@ -292,6 +298,7 @@ function activityView(){
  const a=S.audit,sk=Array.from({length:8},()=>'<tr><td colspan="4"><div class="sk sk-row" style="margin:0"></div></td></tr>').join('');
  const rows=(a.rows||[]).map(r=>{const t=new Date(r.at);return `<tr><td class="mono small" style="white-space:nowrap">${t.toLocaleDateString()} ${t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td><td><b>${esc(r.actor||'')}</b> ${pill(esc(r.role||''),'mute')}</td><td>${esc(auditText(r))}</td><td>${r.who?`<b>${esc(r.who)}</b><div class="small muted mono">${esc(r.lrn||'')}</div>`:esc(r.target&&r.action==='transfer'?'LRN '+r.target:'')}</td></tr>`}).join('');
  return `<div class="head"><div><div class="eyebrow">Tracking</div><h2>Activity log</h2></div><div class="trow"><button class="btn" data-act="backupdl" ${S.audit.dl||!CLOUD_ON?'disabled':''}>${S.audit.dl?'Preparing…':'Download backup'}</button><button class="btn" data-act="auditrefresh" ${a.busy?'disabled':''}>Refresh</button></div></div>
+ <div class="trow" role="group" aria-label="Show">${[['changes','Changes'],['views','Records opened'],['','Everything']].map(([k,l])=>`<button class="btn sm ${(a.kind||'')===k?'primary':''}" data-act="auditkind" data-k="${k}" aria-pressed="${(a.kind||'')===k}">${l}</button>`).join('')}</div>
  <p class="small muted">Every change to a record, supply stock, note or transfer is recorded with who made it and when. Showing the latest 200. The database also keeps its own nightly backup for 7 days; "Download backup" saves a full copy of all records to your computer (keep it somewhere private, it contains health data).</p>
  ${a.err?`<div class="pill bad" style="white-space:normal">${esc(a.err)}</div>`:''}
  <section class="panel" style="padding:0"><div class="tw"><table class="wrapth"><thead><tr><th>When</th><th>Who</th><th>What changed</th><th>Learner</th></tr></thead><tbody>

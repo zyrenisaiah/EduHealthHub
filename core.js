@@ -91,7 +91,13 @@ function loginView(){
   <div class="chart-strip" aria-hidden="true"><span>SY ${CUR_SY}</span><span>Private &amp; role-based</span><span>Synced online</span></div>
  </div>
  <div style="display:grid;gap:14px;min-width:0">
-${L.pending?` <form class="login-card" id="codeform" autocomplete="off">
+${L.must?` <form class="login-card" id="mustform" autocomplete="off">
+  <div><h2>Choose a new password</h2><div class="small muted">For privacy, this account must set its own password before opening any records. Capitals and small letters count.</div></div>
+  <div class="field"><label for="mu-n">New password</label><input class="inp" id="mu-n" type="password" autocomplete="new-password" autocapitalize="off" minlength="10" required><div class="small muted">At least 10 characters with a letter and a number.</div></div>
+  <div class="field"><label for="mu-r">Repeat new password</label><input class="inp" id="mu-r" type="password" autocomplete="new-password" autocapitalize="off" required></div>
+  ${L.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.err)}</div>`:''}
+  <button class="btn primary" type="submit">Save and continue</button>
+ </form>`:L.pending?` <form class="login-card" id="codeform" autocomplete="off">
   <div><h2>Confirm it is you</h2><div class="small muted">Your account is linked to <b>${esc(L.pending.hint)}</b>. Confirm with the same Google account.</div></div>
   <div style="display:grid;gap:6px;justify-items:start"><div id="g-login" style="min-height:44px"></div></div>
   ${L.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.err)}</div>`:''}

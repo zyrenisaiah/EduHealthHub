@@ -530,7 +530,7 @@ function render(){
  appBackdrop();
  if(!S.user)loginFX();
  if(typeof afterRender==='function')afterRender() }
-const goOpen=(id,tab)=>{S.back=S.view;S.view='student';S.sid=id;S.tab=tab||'profile';S.tooth=null;S.undo=[];S.brush=null;render();window.scrollTo(0,0)};
+const goOpen=(id,tab)=>{logView(id);S.back=S.view;S.view='student';S.sid=id;S.tab=tab||'profile';S.tooth=null;S.undo=[];S.brush=null;render();window.scrollTo(0,0)};
 const ACT={
  fill:a=>{const d=DEMO.find(x=>x.id===a.dataset.id);$('#lu').value=d.username;$('#pw').value=d.pw;const acc=DB.accounts.find(x=>x.id===d.id);
   if(acc&&acc.pw!==pwHash(d.id,d.pw))toast('That account changed its password. Type the new one.');$('#pw').focus()},
@@ -637,6 +637,9 @@ document.addEventListener('submit',e=>{
   if(!acc||acc.pw!==pwHash(acc.id,pw)){S.fails[id]={n:f.n+1,t:Date.now()};L.err='Username or password is incorrect.';render();$('#lu').value=typed;return}
   delete S.fails[id];L.err='';
   ss.set('ehh_uid',acc.id);ss.set('ehh_role',acc.role);location.href=ROLE_PAGE[acc.role];return}
+ if(e.target.id==='mustform'){const L=S.login,m=L.must,n=$('#mu-n').value,r=$('#mu-r').value;if(!m)return;
+  const weak=pwWeak(n,'',m.old);if(weak){L.err=weak;render();return}if(n!==r){L.err='The new passwords do not match.';render();return}
+  rpc('app_change_password',{p_token:m.token,p_old:m.old,p_new:n}).then(()=>{L.must=null;TOK=m.token;ss.set('ehh_tok',TOK);ss.set('ehh_role',m.role);location.href=ROLE_PAGE[m.role]}).catch(x=>{L.err=cloudErr(x);render()});return}
  if(e.target.id==='gm-unlink'){const pw=$('#gm-pw').value;rpc('app_unlink_gmail',{p_token:TOK,p_password:pw}).then(r=>{Object.assign(DB.accounts[0],r);S.gm=null;toast('Gmail unlinked');render()}).catch(x=>{S.gm=Object.assign(S.gm||{},{err:cloudErr(x)});render()});return}
  if(e.target.id==='acctform'){
   const a=DB.accounts.find(x=>x.id===S.user.id),u=$('#ac-u').value.trim(),m=$('#ac-e').value.trim();
@@ -667,11 +670,20 @@ function boot(){
  if(PAGE==='home'){ if(role&&ROLE_PAGE[role]&&(ss.get('ehh_tok')||ss.get('ehh_uid'))){location.replace(ROLE_PAGE[role]);return} render();return}
  render();
  const bad=()=>{ss.del('ehh_tok');ss.del('ehh_uid');ss.del('ehh_role');location.replace('index.html?role='+PAGE)};
- if(CLOUD_ON){cloudRestore().then(r=>{if(r==='ok'&&S.user)return;if(r==='none'||r==='expired')return bad();
+ if(CLOUD_ON){cloudRestore().then(r=>{if(r==='ok'&&S.user)return;if(r==='none'||r==='expired'||(r&&r.code==='PASSWORD_CHANGE_REQUIRED'))return bad();
   const m=cloudErr(r),c=(r&&r.code)||'error';
   $('#root').innerHTML='<div class="login"><div style="display:grid;gap:12px;max-width:420px"><h2>Could not open this page</h2><div class="pill bad" style="white-space:normal">'+esc(m)+' ('+esc(c)+')</div><div class="small muted">Your login is still active. Check the connection and try again.</div><div><button class="btn primary" onclick="location.reload()">Try again</button> <button class="btn" onclick="sessionStorage.clear();location.href=&quot;index.html&quot;">Back to login</button></div></div></div>'})}
  else{if(localRestore())render();else bad()}
 }
+/* ---------- privacy: log out after 15 idle minutes (warns at 14) ---------- */
+const IDLE_MS=15*60000;let _idleT=null,_idleW=null,_idleLast=Date.now();
+function idleReset(){_idleLast=Date.now()}
+function idleTick(){
+ if(!S.user)return;const idle=Date.now()-_idleLast;
+ if(idle>=IDLE_MS){ACT.logout();return}
+ if(idle>=IDLE_MS-60000){if(!_idleW){_idleW=true;toast('You will be logged out in a minute because of no activity. Move the mouse or press a key to stay.')}}else _idleW=null}
+['pointerdown','mousemove','keydown','scroll','touchstart'].forEach(ev=>addEventListener(ev,idleReset,{passive:true,capture:true}));
+setInterval(idleTick,15000);
 /* ---------- login page effects: parallax, rotating tagline, caps-lock hint ---------- */
 let _tagT=null,_fxBound=false;
 const TAGS=['Healthy Students. Brighter Futures.','Health records, one trusted place.','From the clinic to the classroom.','Care that follows every learner.'];

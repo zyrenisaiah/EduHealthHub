@@ -21,6 +21,7 @@ async function rpc(fn,args,keep){
 function cloudErr(e){
  const c=e&&e.code;
  if(c==='OFFLINE')return 'Cannot reach the online database. Check your internet connection and try again.';
+ if(c==='PASSWORD_CHANGE_REQUIRED')return 'You must choose a new password before continuing. Log in again to set it.';
  if(c==='SLOW_DOWN')return 'Too many requests at once. Wait a few seconds and try again.';
  if(c==='TOO_MANY_ATTEMPTS')return 'Too many attempts. Wait 5 minutes and try again.';
  if(c==='BAD_LOGIN')return 'Username or password is incorrect.';
@@ -132,6 +133,7 @@ async function cloudLogin(u,pw){
   if(r.pending){L.pending={token:r.pending,hint:r.hint};L.err='';L.info='';
    render();const ci=$('#lc');if(ci)ci.focus();return}
   L.err='';
+  if(r.account&&r.account.must_change){L.must={token:r.token,old:pw,role:r.account.role};L.info='';render();const ni=$('#mu-n');if(ni)ni.focus();return}
   /* app_sync needs the token; the account comes back from app_login */
   TOK=r.token;ss.set('ehh_tok',TOK);ss.set('ehh_role',r.account.role);location.href=ROLE_PAGE[r.account.role]}
  catch(e){TOK=null;L.err=cloudErr(e);render();const i=$('#lu');if(i)i.value=u}}

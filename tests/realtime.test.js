@@ -4,10 +4,10 @@ const assert = require('assert'), { chromium } = require('playwright'), { start 
   const h = await start(), browser = await chromium.launch(), p = await browser.newPage(), frames = []; let server = null;
   p.on('pageerror', e => { throw e; });
   await p.route(/fonts\./, r => r.abort());
-  await p.route('**/config.js', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:"https://example.test"').replace(/key:"[^"]*"/, 'key:"pubkey"') }); });
-  await p.route('https://example.test/**', r => r.fulfill({ status: 400, contentType: 'application/json', body: '{"message":"x"}' }));
-  await p.route('https://example.test/rest/v1/rpc/app_rt', r => r.fulfill({ status: 200, contentType: 'application/json', body: '"secretkey123"' }));
-  await p.routeWebSocket(/example\.test\/realtime\/v1\/websocket/, ws => {
+  await p.route('**/config.js', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:"https://test.supabase.co"').replace(/key:"[^"]*"/, 'key:"pubkey"') }); });
+  await p.route('https://test.supabase.co/**', r => r.fulfill({ status: 400, contentType: 'application/json', body: '{"message":"x"}' }));
+  await p.route('https://test.supabase.co/rest/v1/rpc/app_rt', r => r.fulfill({ status: 200, contentType: 'application/json', body: '"secretkey123"' }));
+  await p.routeWebSocket(/test\.supabase\.co\/realtime\/v1\/websocket/, ws => {
     server = ws; ws.onMessage(m => { const f = JSON.parse(m); frames.push(f); if (f.event === 'phx_join') ws.send(JSON.stringify({ topic: f.topic, event: 'phx_reply', payload: { status: 'ok', response: {} }, ref: f.ref })); });
   });
   await p.goto(h.base + 'index.html'); await p.waitForSelector('#loginform');
