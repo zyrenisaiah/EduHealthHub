@@ -87,12 +87,36 @@ async function cloudPush(){
    /* drop the rejected local edit so it does not retry forever */ try{await cloudSync(true);render()}catch(x){}}
   else{syncStat('Offline: will retry',true);_retry=setTimeout(cloudPush,8000)}}
  finally{_pushing=false;if(_again){_again=false;cloudPush()}}}
-function cloudKick(){TOK=null;ss.del('ehh_tok');ss.del('ehh_role');clearInterval(_poll);S.user=null;location.replace('index.html?role='+PAGE)}
+/* ---- live updates: the database pings this browser (Supabase Realtime) the moment something changes ----
+   The ping carries no data; it only makes us fetch sooner through the normal checked calls.
+   If the live connection is down we fall back to checking every few seconds (RT_ON=false). */
+let RT_ON=false,_ws=null,_wsHb=null,_wsRetry=null,_wsTry=0,_wsDeb=null,_rtKey='',_pk=0;
+function rtPing(){clearTimeout(_wsDeb);_wsDeb=setTimeout(()=>{if(!TOK||!S.user)return;cloudPollOnce();if(typeof msgSync==='function')msgSync()},120)}
+async function rtStart(){
+ rtStop();if(!CLOUD_ON||!TOK||typeof WebSocket==='undefined')return;
+ let key;try{key=await rpc('app_rt',{p_token:TOK})}catch(e){return}
+ if(!key||!TOK)return;_rtKey=key;rtConnect(key)}
+function rtConnect(key){
+ const url=CLOUD.url.replace(/\/+$/,'').replace(/^http/,'ws')+'/realtime/v1/websocket?apikey='+encodeURIComponent(CLOUD.key)+'&vsn=1.0.0';
+ let ws;try{ws=new WebSocket(url)}catch(e){return}
+ _ws=ws;let ref=0;const send=(topic,event,payload)=>{try{ws.send(JSON.stringify({topic,event,payload,ref:String(++ref),join_ref:'1'}))}catch(e){}};
+ ws.onopen=()=>{send('realtime:rt:'+key,'phx_join',{config:{broadcast:{self:false,ack:false},presence:{enabled:false},private:false}});
+  clearInterval(_wsHb);_wsHb=setInterval(()=>send('phoenix','heartbeat',{}),25000)};
+ ws.onmessage=ev=>{let m;try{m=JSON.parse(ev.data)}catch(e){return}
+  if(m.event==='phx_reply'&&m.topic==='realtime:rt:'+key){if(m.payload&&m.payload.status==='ok'){RT_ON=true;_wsTry=0}else{RT_ON=false}}
+  else if(m.event==='broadcast'&&m.topic==='realtime:rt:'+key)rtPing();
+  else if(m.event==='phx_close'||m.event==='phx_error'){RT_ON=false}};
+ ws.onclose=()=>{clearInterval(_wsHb);RT_ON=false;if(_ws!==ws||!TOK)return;_ws=null;
+  _wsTry++;_wsRetry=setTimeout(()=>{if(TOK&&_rtKey===key)rtConnect(key)},Math.min(30000,1000*Math.pow(2,Math.min(_wsTry,5))))};
+ ws.onerror=()=>{RT_ON=false}}
+function rtStop(){clearTimeout(_wsRetry);clearInterval(_wsHb);RT_ON=false;_rtKey='';const w=_ws;_ws=null;if(w){try{w.close()}catch(e){}}}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&TOK&&CLOUD_ON&&!RT_ON&&!_ws)rtStart()});
+function cloudKick(){rtStop();TOK=null;ss.del('ehh_tok');ss.del('ehh_role');clearInterval(_poll);S.user=null;location.replace('index.html?role='+PAGE)}
 async function cloudPollOnce(){
  if(!TOK||document.hidden||_pushing)return;
  try{const {ch}=await cloudSync(false);if(!SYNC_TXT.startsWith('Saving'))syncStat('Saved online ✓');if(ch)softRender()}
  catch(e){if(e.code==='SESSION_EXPIRED')cloudKick();else syncStat('Offline: will retry',true)}}
-function cloudStart(){clearInterval(_poll);_poll=setInterval(cloudPollOnce,12000);if(typeof msgStart==='function')msgStart()}
+function cloudStart(){clearInterval(_poll);_poll=setInterval(()=>{if(RT_ON&&++_pk%5)return;cloudPollOnce()},12000);if(typeof msgStart==='function')msgStart();rtStart()}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)cloudPollOnce()});
 async function cloudEnter(r){
  TOK=r.token;ss.set('ehh_tok',TOK);ss.set('ehh_role',r.account.role);
@@ -116,7 +140,7 @@ async function cloudRestore(){
  try{TOK=t;const r=await rpc('app_sync',{p_token:t,p_since:0});
   await cloudEnter({token:t,account:r.account})}
  catch(e){console.error('restore failed',e);if(e&&e.code==='SESSION_EXPIRED'){TOK=null;ss.del('ehh_tok');ss.del('ehh_role');return 'expired'}return e}return 'ok'}
-async function cloudLogout(){const t=TOK;TOK=null;clearInterval(_poll);ss.del('ehh_tok');ss.del('ehh_role');REV=0;
+async function cloudLogout(){rtStop();const t=TOK;TOK=null;clearInterval(_poll);ss.del('ehh_tok');ss.del('ehh_role');REV=0;
  if(t){try{await rpc('app_logout',{p_token:t})}catch(e){}}}
 async function seedCloud(){
  const btn=$('[data-act="seedcloud"]'),msg=$('#seedmsg');if(btn)btn.disabled=true;

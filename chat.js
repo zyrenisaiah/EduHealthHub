@@ -62,7 +62,7 @@ function msgMarkRead(){
  S.msg.reads[c]=l.id;clearTimeout(_rd);_rd=setTimeout(()=>rpc('app_msg_read',{p_token:TOK,p_conv:c,p_id:l.id}).catch(()=>{}),300)}
 function msgStart(){
  clearInterval(_msgT);if(!_baseTitle)_baseTitle=document.title;msgSync();
- _msgT=setInterval(()=>{if(document.hidden||!S.user)return;_msgTick++;if(S.view==='chat'||_msgTick%3===0)msgSync()},3000)}
+ _msgT=setInterval(()=>{if(document.hidden||!S.user)return;_msgTick++;if(RT_ON){if(_msgTick%7===0)msgSync();return}if(S.view==='chat'||_msgTick%3===0)msgSync()},3000)}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&S.user)msgSync()});
 
 /* ---- tracking events posted by the clinic flow ---- */
