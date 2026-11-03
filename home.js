@@ -115,7 +115,7 @@ function homeView(){
  const r=S.user.role,h=S.hm,t=localDate();
  const s=h.sid?stu(h.sid):null;
  const m=!s?searchMatches(h.q):[];
- const rest=flat('visits').filter(x=>!x.x.out),inc=flat('passes').filter(x=>x.x.status==='sent');
+ const rest=flat('visits').filter(x=>!x.x.out),waitLog=flat('passes').filter(x=>x.x.status==='arrived'&&!openVisit(x.s)),inc=flat('passes').filter(x=>x.x.status==='sent');
  const q=flat('refs').filter(x=>x.x.status==='pending');
  const low=DB.stock.filter(i=>stockState(i)[1]!=='good');
  return `<div class="head"><div><div class="eyebrow">${r} hub · ${new Date().toDateString()}</div><h2>Home</h2></div></div>
@@ -130,8 +130,8 @@ function homeView(){
  <div class="grid2">
  ${r!=='Dentist'?`<section class="panel" id="refq"><div class="head"><h3>Doctor referral queue</h3><span class="small muted">${q.length} waiting</span></div>
   ${q.length?`<div class="tw"><table class="wrapth"><tbody>${q.map(({s:x,x:rf})=>`<tr><td><b>${esc(fullName(x))}</b><div class="small muted mono">${x.lrn}</div></td><td>${esc(rf.reason)}<div class="small muted">${esc(rf.date)} ${esc(rf.time)} · ${esc(rf.by)}</div></td><td><button class="btn sm" data-act="hpick" data-id="${x.id}" data-k="${r==='Doctor'?'eval:'+rf.id:''}">${r==='Doctor'?'Evaluate':'Open'}</button></td></tr>`).join('')}</tbody></table></div>`:'<p class="small muted">No learners are waiting for the doctor.</p>'}</section>`:''}
- <section class="panel" id="restq"><div class="head"><h3>In the clinic now</h3><span class="small muted">${rest.length} in clinic</span></div>
-  ${rest.length?`<div class="tw"><table class="wrapth"><tbody>${rest.map(({s:x,x:v})=>`<tr><td><b>${esc(fullName(x))}</b><div class="small muted mono">${x.lrn}</div></td><td>Since ${esc(v.time)}${v.rest?' '+pill('resting','mute'):''}<div class="small muted">${r==='Dentist'?'':esc(v.ailment)}</div></td><td style="white-space:nowrap">${canSlip()?`<button class="btn sm primary" data-act="hreturn" data-o="class" data-id="${x.id}" data-v="${v.id}">Return to class</button> <button class="btn sm" data-act="hreturn" data-o="home" data-id="${x.id}" data-v="${v.id}">Send home</button>`:''}</td></tr>`).join('')}</tbody></table></div>`:'<p class="small muted">Nobody is in the clinic.</p>'}</section>
+ <section class="panel" id="restq"><div class="head"><h3>In the clinic now</h3><span class="small muted">${rest.length+waitLog.length} in clinic</span></div>
+  ${rest.length+waitLog.length?`<div class="tw"><table class="wrapth"><tbody>${waitLog.map(({s:x,x:ps})=>`<tr><td><b>${esc(fullName(x))}</b><div class="small muted mono">${x.lrn}</div></td><td>Arrived ${esc(ps.arr||'')} ${pill('visit not logged','warn')}<div class="small muted">Received by ${esc(ps.recvBy||'')}</div></td><td style="white-space:nowrap">${canSlip()?`<button class="btn sm primary" data-act="hpick" data-id="${x.id}" data-k="walk">Log visit</button>`:''}</td></tr>`).join('')}${rest.map(({s:x,x:v})=>`<tr><td><b>${esc(fullName(x))}</b><div class="small muted mono">${x.lrn}</div></td><td>Since ${esc(v.time)}${v.rest?' '+pill('resting','mute'):''}<div class="small muted">${r==='Dentist'?'':esc(v.ailment)}</div></td><td style="white-space:nowrap">${canSlip()?`<button class="btn sm primary" data-act="hreturn" data-o="class" data-id="${x.id}" data-v="${v.id}">Return to class</button> <button class="btn sm" data-act="hreturn" data-o="home" data-id="${x.id}" data-v="${v.id}">Send home</button>`:''}</td></tr>`).join('')}</tbody></table></div>`:'<p class="small muted">Nobody is in the clinic.</p>'}</section>
  </div>
  ${canTreat()?`<div class="grid2">
  <section class="panel"><div class="head"><h3>Supply tracker</h3><button class="btn sm" data-act="nav-stock">Open stock</button></div>
