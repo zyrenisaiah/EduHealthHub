@@ -29,10 +29,10 @@ function convList(){
  return [...set].sort((a,b)=>lastId(b)-lastId(a)||convTitle(a).localeCompare(convTitle(b)))}
 const mtime=t=>{const d=new Date(t);return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})};
 const mday=t=>{const d=new Date(t),n=new Date(),y=new Date(Date.now()-864e5);return d.toDateString()===n.toDateString()?'Today':d.toDateString()===y.toDateString()?'Yesterday':d.toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})};
-const mprev=m=>m.k==='pass'?'Sent a student to the clinic':m.k==='record'?'Shared a record':m.k==='event'?m.b:m.b;
+const mprev=m=>m.k==='pass'?'Sent a student to the clinic':m.k==='record'?'Shared a record':m.k==='file'?'\u{1F4CE} '+((m.r&&m.r.name)||'File'):m.b;
 
 /* ---- network ---- */
-const msgErr=e=>({NOT_ALLOWED:'You cannot message that person.',SLOW_DOWN:'You are sending too fast. Wait a moment.',TOO_LONG:'That message is too long.',EMPTY:'Type a message first.'}[e&&e.code])||cloudErr(e);
+const msgErr=e=>({NOT_ALLOWED:'You cannot message that person.',SLOW_DOWN:'You are sending too fast. Wait a moment.',TOO_LONG:'That message is too long.',BAD_TYPE:'That file type is not allowed. Use PDF, JPG, PNG, WEBP, GIF, DOCX, XLSX or TXT.',TOO_BIG:'That file is too big. The limit is 2 MB.',EMPTY:'Type a message first.'}[e&&e.code])||cloudErr(e);
 function msgMerge(list){let add=0,others=[];
  list.forEach(m=>{if(S.msg.ids.has(m.id))return;S.msg.ids.add(m.id);S.msg.msgs.push(m);add++;if(m.id>S.msg.last)S.msg.last=m.id;if(m.s!==S.user.id&&m.k!=='event')others.push(m)});
  if(add)S.msg.msgs.sort((a,b)=>a.id-b.id);return others}
@@ -87,6 +87,26 @@ function passCard(m){
  const ov=openVisit(s),act=canSlip()?(p&&p.status==='sent'?`<button class="btn sm primary" data-act="crecv" data-id="${s.id}" data-v="${p.id}">Receive</button>`:(ov?`<button class="btn sm primary" data-act="hreturn" data-o="class" data-id="${s.id}" data-v="${ov.id}">Return to class</button> <button class="btn sm" data-act="hreturn" data-o="home" data-id="${s.id}" data-v="${ov.id}">Send home</button>`:'')):'';
  return `<div class="mcard"><div class="eyebrow">Student sent to the clinic</div><b>${esc(fullName(s))}</b> <span class="mono small">${s.lrn}</span><div class="small muted">${esc(secLabel(curSec(s)))}${r.note||(p&&p.note)?' · '+esc(r.note||p.note):''}</div>
  <div style="margin:6px 0">${pill(esc(st.t),st.c)}</div><ol class="msteps">${steps.map(x=>`<li class="${x[2]?'done':''}"><b>${x[0]}</b>${x[1]?' <span class="small muted">'+esc(x[1])+'</span>':''}</li>`).join('')}</ol>${act?`<div class="trow">${act}</div>`:''}</div>`}
+const FMAX=2000000,FEXT={pdf:'application/pdf',jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',txt:'text/plain',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'};
+const fsize=n=>n<1024?n+' B':n<1048576?Math.round(n/1024)+' KB':(n/1048576).toFixed(1)+' MB';
+const b64blob=(b,t)=>{const bin=atob(b),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new Blob([u],{type:t})};
+function fileCard(m){
+ const r=m.r||{},img=/^image\/(jpeg|png|webp|gif)$/.test(r.mime||''),F=(S.msg.files=S.msg.files||{});let pic='';
+ if(img){const f=F[r.fid];
+  if(f&&f.url)pic=`<img class="fimg" src="${f.url}" alt="${esc(r.name||'')}">`;
+  else{pic='<div class="fimg ph small muted">Loading photo...</div>';if(!f){F[r.fid]={};rpc('app_file_get',{p_token:TOK,p_fid:r.fid}).then(x=>{F[r.fid]={url:URL.createObjectURL(b64blob(x.b64,x.mime))};chatRefresh(true)}).catch(()=>{delete F[r.fid]})}}}
+ return `<div class="mcard fcard">${pic}<div class="frow"><span class="ico">${img?'&#128247;':'&#128206;'}</span><span class="cmid"><b>${esc(r.name||'File')}</b><span class="small muted">${fsize(r.size||0)}</span></span><button type="button" class="btn sm primary" data-act="cfdl" data-fid="${esc(r.fid)}" data-n="${esc(r.name||'file')}">Download</button></div></div>`}
+async function fileUpload(file){
+ const c=S.msg.active;if(!c||!file)return;
+ const ext=(file.name.split('.').pop()||'').toLowerCase(),mime=FEXT[ext];
+ if(!mime)return toast(msgErr({code:'BAD_TYPE'}));
+ if(file.size>FMAX)return toast(msgErr({code:'TOO_BIG'}));
+ if(!file.size)return toast('That file is empty.');
+ S.msg.panel='';S.msg.pick=null;chatPanelRender();toast('Uploading '+file.name+'...');
+ try{const b64=await new Promise((ok,no)=>{const fr=new FileReader();fr.onload=()=>ok(String(fr.result).split(',')[1]||'');fr.onerror=()=>no(fr.error);fr.readAsDataURL(file)});
+  const f=await rpc('app_file_put',{p_token:TOK,p_conv:c,p_name:file.name,p_mime:mime,p_b64:b64});
+  await msgSend(c,'','file',{fid:f.fid,name:f.name,mime:f.mime,size:f.size})}
+ catch(e){if(e&&e.code==='SESSION_EXPIRED')cloudKick();else toast(msgErr(e))}}
 function recCard(m){
  const r=m.r||{},s=stu(r.sid);if(!s)return `<div class="mcard"><b>Shared record</b></div>`;
  return `<div class="mcard"><div class="eyebrow">${r.kind?'Shared health file':'Shared learner'}</div><b>${esc(fullName(s))}</b> <span class="mono small">${s.lrn}</span><div class="small muted">${esc(secLabel(curSec(s)))}${r.kind?' · '+esc(r.kind)+' · '+esc(r.sy||''):''}</div>
@@ -97,7 +117,7 @@ function threadHtml(c){
  ms.forEach((m,i)=>{const d=mday(m.t);if(d!==day){day=d;out+=`<div class="mday">${esc(d)}</div>`}
   if(m.k==='event'){out+=`<div class="evt">${esc(m.b)} <span>${mtime(m.t)}</span></div>`;return}
   const me=m.s===S.user.id,prev=ms[i-1],showName=!me&&(!prev||prev.s!==m.s||prev.k==='event');
-  const body=m.k==='pass'?passCard(m):m.k==='record'?recCard(m):`<div class="mtext">${esc(m.b).replace(/\n/g,'<br>')}</div>`;
+  const body=m.k==='pass'?passCard(m):m.k==='record'?recCard(m):m.k==='file'?fileCard(m):`<div class="mtext">${esc(m.b).replace(/\n/g,'<br>')}</div>`;
   const av=!me&&(!prev||prev.s!==m.s||prev.k==='event'||mday(prev.t)!==d)?profImg(m.s,'mav',avOf(m.s,m.sr)):'';
   out+=`<div class="mrow ${me?'me':'them'}">${av}${showName&&!c.startsWith('dm:')?`<div class="mname">${esc(m.sn)} <span class="mrole">${esc(m.sr)}</span></div>`:''}<div class="bubble ${m.k!=='text'?'bwide':''}">${body}</div><div class="mtime">${mtime(m.t)}</div></div>`});
  return out}
@@ -128,7 +148,7 @@ function panelHtml(){
    ${isSend?`<div class="field"><label for="cnote">Reason (optional, non-medical)</label><input class="inp" id="cnote" maxlength="100" placeholder="e.g. says they feel unwell"></div><button class="btn primary" data-act="csendpass" data-id="${s.id}" style="justify-self:start">Send pass</button>`
    :`<div class="ctiles"><button type="button" class="ctile primary" data-act="cattach" data-id="${s.id}"><span class="ico">&#129706;</span><span class="tl"><b>Learner card</b><span class="small">Summary of the learner</span></span></button>${DOC_KINDS.map(k=>`<button type="button" class="ctile" data-act="cattach" data-id="${s.id}" data-k="${esc(k)}"><span class="ico">${ICON[k]||'&#128196;'}</span><span class="tl"><b>${esc(k)}</b></span></button>`).join('')}</div>`}</div>`}
   const list=m.q.trim().length>=2||/^\d{3,}$/.test(m.q.trim())?searchMatches(m.q):[];
-  return `<div class="cpanel sheet">${grab}<div class="head"><h3>${isSend?'Send a student to the clinic':'Attach a learner or health file'}</h3>${closeX}</div><input class="inp csearch" id="cq" data-bind="cq" placeholder="Type the LRN or the student's name" value="${esc(m.q)}" autocomplete="off"><div class="cres clist" id="cres">${list.length?list.map(rowS).join(''):`<span class="small muted" style="padding:8px">${m.q.trim()?'No learner found.':'Type at least 2 letters of the name, or the LRN.'}</span>`}</div></div>`}
+  return `<div class="cpanel sheet">${grab}<div class="head"><h3>${isSend?'Send a student to the clinic':'Attach a learner or health file'}</h3>${closeX}</div>${isSend?'':`<button type="button" class="ctile primary fup" data-act="cfilepick"><span class="ico">&#128206;</span><span class="tl"><b>Upload a file from this device</b><span class="small">PDF, photo, Word, Excel or text &middot; up to 2 MB</span></span></button><input type="file" id="cfile" hidden accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.docx,.xlsx,.txt"><div class="small muted" style="margin:8px 0 2px">Or attach a learner or health file</div>`}<input class="inp csearch" id="cq" data-bind="cq" placeholder="Type the LRN or the student's name" value="${esc(m.q)}" autocomplete="off"><div class="cres clist" id="cres">${list.length?list.map(rowS).join(''):`<span class="small muted" style="padding:8px">${m.q.trim()?'No learner found.':'Type at least 2 letters of the name, or the LRN.'}</span>`}</div></div>`}
  return ''}
 function chHead(c){
  const id=convOtherId(c),inner=`<img class="role-ic" src="${esc(convIcon(c))}" alt=""><div><b>${esc(convTitle(c))}</b><div class="small muted">${esc(convSub(c))}${canProf(id)?' · tap to view advisory':''}</div></div>`;
@@ -160,6 +180,8 @@ const CHAT_ACT={
  cpanel:a=>{S.msg.panel=a.dataset.k;S.msg.q='';S.msg.pick=null;if(!S.msg.active)render();else chatPanelRender();const i=$('#cq');if(i)i.focus()},
  cprof:a=>{S.msg.prof=a.dataset.id;S.msg.panel='prof';if(!S.msg.active)render();else chatPanelRender()},
  cdm:a=>{const c=dmId(S.user.id,a.dataset.id);S.msg.tmp[c]=1;chatOpen(c)},
+ cfilepick:()=>{const i=$('#cfile');if(i)i.click()},
+ cfdl:async a=>{try{const x=await rpc('app_file_get',{p_token:TOK,p_fid:+a.dataset.fid});browserSave(x.name,b64blob(x.b64,x.mime))}catch(e){toast(msgErr(e))}},
  cpick:a=>{S.msg.pick=a.dataset.id;chatPanelRender()},
  cattach:async a=>{const s=stu(a.dataset.id),k=a.dataset.k,sy=k?(s.enr.map(e=>e.sy).sort().pop()):'';
   S.msg.panel='';S.msg.pick=null;chatPanelRender();
@@ -177,4 +199,7 @@ function chatSubmit(){
  i.value='';S.msg.draft[c]='';i.style.height='';msgSend(c,t,'text',null).then(m=>{if(!m){i.value=t;S.msg.draft[c]=t}})}
 document.addEventListener('submit',e=>{if(e.target.id==='chform'){e.preventDefault();e.stopImmediatePropagation();chatSubmit()}},true);
 document.addEventListener('keydown',e=>{if(e.target.id==='chtext'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();chatSubmit()}});
+document.addEventListener('change',e=>{if(e.target.id==='cfile'){const f=e.target.files[0];e.target.value='';fileUpload(f)}});
+document.addEventListener('dragover',e=>{if(e.target.closest&&e.target.closest('.chmain')&&e.dataTransfer&&[...e.dataTransfer.types].includes('Files'))e.preventDefault()});
+document.addEventListener('drop',e=>{if(e.target.closest&&e.target.closest('.chmain')&&e.dataTransfer&&e.dataTransfer.files.length){e.preventDefault();fileUpload(e.dataTransfer.files[0])}});
 document.addEventListener('input',e=>{if(e.target.id==='chtext'){S.msg.draft[S.msg.active]=e.target.value;e.target.style.height='auto';e.target.style.height=Math.min(140,e.target.scrollHeight)+'px'}});

@@ -1177,3 +1177,76 @@ declare a public.accounts;
 begin a := public.ehh_auth_any(p_token); end $$;
 revoke all on function public.app_ping(text) from public;
 grant execute on function public.app_ping(text) to anon, authenticated;
+
+-- =====================================================================
+-- FILE ATTACHMENTS IN MESSAGES (pdf, photos, docx, xlsx, txt; max ~2 MB)
+-- =====================================================================
+alter table public.messages drop constraint if exists messages_kind_check;
+alter table public.messages add constraint messages_kind_check check (kind = any (array['text','pass','record','event','file']));
+create table if not exists public.message_files(id bigserial primary key, conv text not null, sender text not null, name text not null, mime text not null, size int not null, data text not null, at timestamptz not null default now());
+alter table public.message_files enable row level security;
+revoke all on public.message_files from anon, authenticated;
+create index if not exists message_files_conv_idx on public.message_files(conv);
+
+-- app_msg_send now also accepts kind 'file' (the file must be the sender's own upload in the same chat)
+create or replace function public.app_msg_send(p_token text, p_conv text, p_body text, p_kind text default 'text', p_ref jsonb default null) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; o public.accounts; oid text; m public.messages;
+begin
+  a := public.ehh_auth(p_token);
+  if not public.ehh_conv_ok(a,p_conv) then raise exception 'NOT_ALLOWED'; end if;
+  if p_kind not in ('text','pass','record','event','file') then raise exception 'BAD_REQUEST'; end if;
+  if p_conv like 'dm:%' then
+    oid := case when split_part(p_conv,':',2)=a.id then split_part(p_conv,':',3) else split_part(p_conv,':',2) end;
+    select * into o from public.accounts where id=oid;
+    if not found then raise exception 'NOT_ALLOWED'; end if;
+    if a.role='Teacher' and o.role='Teacher' then raise exception 'NOT_ALLOWED'; end if;
+  end if;
+  p_body := btrim(coalesce(p_body,''));
+  if p_kind='text' and p_body='' then raise exception 'EMPTY'; end if;
+  if p_kind='file' and not exists (select 1 from public.message_files f where f.id=(p_ref->>'fid')::bigint and f.sender=a.id and f.conv=p_conv) then raise exception 'BAD_REQUEST'; end if;
+  if length(p_body)>2000 or length(coalesce(p_ref::text,''))>2000 then raise exception 'TOO_LONG'; end if;
+  if (select count(*) from public.messages where sender=a.id and at>now()-interval '1 minute')>=40 then raise exception 'SLOW_DOWN'; end if;
+  insert into public.messages(conv,sender,sname,srole,body,kind,ref) values (p_conv,a.id,a.name,a.role,p_body,p_kind,p_ref) returning * into m;
+  insert into public.msg_reads(account_id,conv,last_id) values (a.id,p_conv,m.id)
+    on conflict (account_id,conv) do update set last_id=greatest(public.msg_reads.last_id,excluded.last_id);
+  return jsonb_build_object('id',m.id,'conv',m.conv,'s',m.sender,'sn',m.sname,'sr',m.srole,'b',m.body,'k',m.kind,'r',m.ref,'t',m.at);
+end $$;
+
+create or replace function public.app_file_put(p_token text, p_conv text, p_name text, p_mime text, p_b64 text) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; o public.accounts; oid text; nm text; f public.message_files;
+begin
+  a := public.ehh_auth(p_token);
+  if not public.ehh_conv_ok(a,p_conv) then raise exception 'NOT_ALLOWED'; end if;
+  if p_conv like 'dm:%' then
+    oid := case when split_part(p_conv,':',2)=a.id then split_part(p_conv,':',3) else split_part(p_conv,':',2) end;
+    select * into o from public.accounts where id=oid;
+    if not found or (a.role='Teacher' and o.role='Teacher') then raise exception 'NOT_ALLOWED'; end if;
+  end if;
+  nm := left(regexp_replace(coalesce(p_name,''),'[\\/:*?"<>|\r\n]+','_','g'),150);
+  if nm !~* '\.(pdf|jpe?g|png|webp|gif|docx|xlsx|txt)$' then raise exception 'BAD_TYPE'; end if;
+  if coalesce(p_mime,'') not in ('application/pdf','image/jpeg','image/png','image/webp','image/gif','text/plain',
+       'application/vnd.openxmlformats-officedocument.wordprocessingml.document','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') then raise exception 'BAD_TYPE'; end if;
+  if p_b64 is null or length(p_b64)=0 or p_b64 !~ '^[A-Za-z0-9+/=]+$' then raise exception 'BAD_REQUEST'; end if;
+  if length(p_b64)>2800000 then raise exception 'TOO_BIG'; end if;
+  if (select count(*) from public.message_files where sender=a.id and at>now()-interval '1 minute')>=5
+     or (select count(*) from public.message_files where sender=a.id and at>now()-interval '1 day')>=100 then raise exception 'SLOW_DOWN'; end if;
+  insert into public.message_files(conv,sender,name,mime,size,data) values (p_conv,a.id,nm,p_mime,(length(p_b64)*3)/4,p_b64) returning * into f;
+  perform public.ehh_log(a,'file.upload',null,jsonb_build_object('name',nm,'conv',p_conv,'size',f.size));
+  return jsonb_build_object('fid',f.id,'name',f.name,'mime',f.mime,'size',f.size);
+end $$;
+revoke all on function public.app_file_put(text,text,text,text,text) from public;
+grant execute on function public.app_file_put(text,text,text,text,text) to anon, authenticated;
+
+create or replace function public.app_file_get(p_token text, p_fid bigint) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; f public.message_files;
+begin
+  a := public.ehh_auth(p_token);
+  select * into f from public.message_files where id=p_fid;
+  if not found or not public.ehh_conv_ok(a,f.conv) then raise exception 'NOT_ALLOWED'; end if;
+  return jsonb_build_object('name',f.name,'mime',f.mime,'size',f.size,'b64',f.data);
+end $$;
+revoke all on function public.app_file_get(text,bigint) from public;
+grant execute on function public.app_file_get(text,bigint) to anon, authenticated;

@@ -370,3 +370,7 @@ button.chwho{cursor:pointer}button.chwho:hover,button.chwho:focus-visible{backgr
 .ctile{padding:6px 10px}.cwho{padding:2px 4px}.cpanel.sheet .head h3{font-size:16px}
 .chmain #chpanel{flex:0 1 auto;min-height:0;overflow:auto}.chthread{flex:1 1 0}
 .chmain .cpanel.sheet{max-height:none;overflow:visible}
+
+.fcard{min-width:220px}.fimg{display:block;max-width:100%;max-height:240px;border-radius:8px;margin-bottom:8px;object-fit:contain}.fimg.ph{padding:30px 10px;text-align:center;background:rgba(127,127,127,.1)}
+.frow{display:flex;align-items:center;gap:10px}.frow .ico{font-size:22px}.frow .cmid{min-width:0;overflow-wrap:anywhere}
+.chmain .ctile.fup{width:100%;margin-top:6px}
