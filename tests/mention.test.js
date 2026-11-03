@@ -1,0 +1,25 @@
+// @mention in group chats: popup, pick, highlight, not offered in direct messages.
+const assert = require('assert'), { start } = require('./helpers');
+(async () => {
+  const h = await start({ width: 1100, height: 760 }), p = await h.ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
+  await p.route(/fonts\./, r => r.abort());
+  await p.route('**/config.js', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:""').replace('const CLOUD_ON', 'var CLOUD_ON') }); });
+  await p.goto(h.base + 'nurse.html'); await p.waitForSelector('#loginform');
+  await p.fill('#lu', 'Dummy Nurse1'); await p.fill('#pw', 'nurse1'); await p.click('#loginform button[type=submit]'); await p.waitForSelector('.shell');
+  await p.evaluate(() => { CLOUD_ON = true; TOK = 't';
+    S.msg.dir = [{ id: 'D1', name: 'Dummy Doctor', role: 'Doctor' }, { id: 'T1', name: 'Dummy Teacher 11A1', role: 'Teacher' }]; S.msg.dirOk = true; S.msg.dirT = Date.now() + 1e9;
+    S.msg.msgs = [{ id: 1, conv: 'clinic', s: 'D1', sn: 'Dummy Doctor', sr: 'Doctor', k: 'text', b: 'Please check @Dummy Nurse1 and @Dummy Teacher 11A1 <b>x</b>', t: Date.now() }];
+    S.msg.active = 'clinic'; S.view = 'chat'; render(); });
+  assert(await p.$('.mention.tome'), 'mention of me is highlighted'); assert((await p.$$('.mention')).length === 2);
+  assert(!(await p.innerHTML('.mtext')).includes('<b>'), 'html stays escaped');
+  await p.fill('#chtext', 'hi @Dum'); await p.dispatchEvent('#chtext', 'input');
+  await p.waitForSelector('#mpop:not([hidden]) .mopt'); assert.strictEqual((await p.$$('.mopt')).length, 2);
+  await p.keyboard.press('ArrowDown'); await p.keyboard.press('Enter');
+  assert.strictEqual(await p.inputValue('#chtext'), 'hi @Dummy Teacher 11A1 ', 'arrow + enter picks the 2nd person');
+  await p.fill('#chtext', '@Doc'); await p.dispatchEvent('#chtext', 'input'); await p.click('.mopt');
+  assert.strictEqual(await p.inputValue('#chtext'), '@Dummy Doctor ', 'click picks');
+  await p.evaluate(() => { S.msg.active = 'dm:D1:' + S.user.id; });
+  await p.fill('#chtext', '@Dum'); await p.dispatchEvent('#chtext', 'input');
+  assert(await p.$eval('#mpop', e => e.hidden), 'no popup in a direct message');
+  assert.deepStrictEqual(errs, []); await h.stop(); console.log('mention ok');
+})().catch(e => { console.error(e); process.exit(1); });

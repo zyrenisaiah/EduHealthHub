@@ -44,7 +44,7 @@ async function msgSync(){
   Object.keys(r.reads||{}).forEach(c=>{S.msg.reads[c]=Math.max(S.msg.reads[c]||0,r.reads[c])});
   const others=msgMerge(r.messages||[]);S.msg.err='';
   if(!first&&others.length){const m=others[others.length-1];
-   if(!(S.view==='chat'&&S.msg.active===m.conv&&!document.hidden))toast(m.sn+': '+mprev(m).slice(0,60))}
+   if(!(S.view==='chat'&&S.msg.active===m.conv&&!document.hidden))toast(m.sn+(mentionsMe(m.b)?' mentioned you: ':': ')+mprev(m).slice(0,60))}
   chatRefresh();
   if(!first&&r.messages.some(m=>m.k==='event'||m.k==='pass'))cloudPollOnce().then(()=>chatRefresh())}
  catch(e){if(e.code==='SESSION_EXPIRED')cloudKick();else S.msg.err=msgErr(e)}
@@ -107,6 +107,23 @@ async function fileUpload(file){
   const f=await rpc('app_file_put',{p_token:TOK,p_conv:c,p_name:file.name,p_mime:mime,p_b64:b64});
   await msgSend(c,'','file',{fid:f.fid,name:f.name,mime:f.mime,size:f.size})}
  catch(e){if(e&&e.code==='SESSION_EXPIRED')cloudKick();else toast(msgErr(e))}}
+const mentionable=c=>{if(!c||c.startsWith('dm:'))return [];const t=c.startsWith('desk:')?c.slice(5):'';return S.msg.dir.filter(d=>d.id!==S.user.id&&(!t||d.role!=='Teacher'||d.id===t))};
+const mentionRe=()=>{const n=[S.user.name,...S.msg.dir.map(d=>d.name)].filter(Boolean).sort((a,b)=>b.length-a.length).map(x=>esc(x).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));return n.length?new RegExp('@('+n.join('|')+')(?![\\w])','g'):null};
+const mentionsMe=b=>!!b&&b.includes('@'+S.user.name);
+function mtextHtml(b){let h=esc(b).replace(/\n/g,'<br>');const re=mentionRe();
+ if(re)h=h.replace(re,(x,n)=>`<span class="mention ${n===esc(S.user.name)?'tome':''}">${x}</span>`);return h}
+function mentionPop(){
+ const i=$('#chtext'),pop=$('#mpop');if(!i||!pop)return;
+ const before=i.value.slice(0,i.selectionStart),m=/(^|\s)@([^@\n]{0,30})$/.exec(before);
+ const list=m?mentionable(S.msg.active).filter(d=>d.name.toLowerCase().includes(m[2].toLowerCase())).slice(0,6):[];
+ S.msg.mp={list,i:0,at:m?before.length-m[2].length-1:0};
+ pop.innerHTML=list.map((d,k)=>`<button type="button" class="mopt ${k===0?'on':''}" data-act="cmention" data-k="${k}"><img class="cav" src="${esc(avOf(d.id,d.role))}" alt=""><span><b>${esc(d.name)}</b> <span class="small muted">${esc(d.role)}</span></span></button>`).join('');
+ pop.hidden=!list.length}
+function mentionPick(k){
+ const i=$('#chtext'),mp=S.msg.mp;if(!i||!mp||!mp.list[k])return;
+ const d=mp.list[k],end=i.selectionStart,v=i.value;
+ i.value=v.slice(0,mp.at)+'@'+d.name+' '+v.slice(end);const pos=mp.at+d.name.length+2;i.setSelectionRange(pos,pos);
+ S.msg.draft[S.msg.active]=i.value;$('#mpop').hidden=true;S.msg.mp=null;i.focus()}
 function recCard(m){
  const r=m.r||{},s=stu(r.sid);if(!s)return `<div class="mcard"><b>Shared record</b></div>`;
  return `<div class="mcard"><div class="eyebrow">${r.kind?'Shared health file':'Shared learner'}</div><b>${esc(fullName(s))}</b> <span class="mono small">${s.lrn}</span><div class="small muted">${esc(secLabel(curSec(s)))}${r.kind?' · '+esc(r.kind)+' · '+esc(r.sy||''):''}</div>
@@ -117,9 +134,9 @@ function threadHtml(c){
  ms.forEach((m,i)=>{const d=mday(m.t);if(d!==day){day=d;out+=`<div class="mday">${esc(d)}</div>`}
   if(m.k==='event'){out+=`<div class="evt">${esc(m.b)} <span>${mtime(m.t)}</span></div>`;return}
   const me=m.s===S.user.id,prev=ms[i-1],showName=!me&&(!prev||prev.s!==m.s||prev.k==='event');
-  const body=m.k==='pass'?passCard(m):m.k==='record'?recCard(m):m.k==='file'?fileCard(m):`<div class="mtext">${esc(m.b).replace(/\n/g,'<br>')}</div>`;
+  const body=m.k==='pass'?passCard(m):m.k==='record'?recCard(m):m.k==='file'?fileCard(m):`<div class="mtext">${mtextHtml(m.b)}</div>`;
   const av=!me&&(!prev||prev.s!==m.s||prev.k==='event'||mday(prev.t)!==d)?profImg(m.s,'mav',avOf(m.s,m.sr)):'';
-  out+=`<div class="mrow ${me?'me':'them'}">${av}${showName&&!c.startsWith('dm:')?`<div class="mname">${esc(m.sn)} <span class="mrole">${esc(m.sr)}</span></div>`:''}<div class="bubble ${m.k!=='text'?'bwide':''}">${body}</div><div class="mtime">${mtime(m.t)}</div></div>`});
+  out+=`<div class="mrow ${me?'me':'them'}">${av}${showName&&!c.startsWith('dm:')?`<div class="mname">${esc(m.sn)} <span class="mrole">${esc(m.sr)}</span></div>`:''}<div class="bubble ${m.k!=='text'?'bwide':''} ${!me&&mentionsMe(m.b)?'mentioned':''}">${body}</div><div class="mtime">${mtime(m.t)}</div></div>`});
  return out}
 function listHtml(){
  return convList().map(c=>{const l=convMsgs(c).slice(-1)[0],u=unreadOf(c);
@@ -161,7 +178,7 @@ function chatView(){
  <div class="chat ${c||S.msg.panel==='new'?'has-active':''}"><aside class="chlist" id="chlist" aria-label="Conversations">${listHtml()}</aside>
  <section class="chmain" aria-label="Conversation">${c?`<div class="chhead"><button class="btn sm cback" data-act="cback" aria-label="Back to conversations">←</button>${chHead(c)}</div>
   <div class="chthread" id="chthread" role="log" aria-live="polite">${threadHtml(c)}</div><div id="chpanel">${panelHtml()}</div>
-  <form class="chcomp" id="chform"><button type="button" class="btn" data-act="cpanel" data-k="attach" title="Attach a learner or health file" aria-label="Attach">+</button>${canSend?'<button type="button" class="btn" data-act="cpanel" data-k="send">Send student to clinic</button>':''}<textarea id="chtext" rows="1" maxlength="2000" placeholder="Write a message" aria-label="Message">${esc(S.msg.draft[c]||'')}</textarea><button class="btn primary" type="submit">Send</button></form>`
+  <form class="chcomp" id="chform"><div class="mpop" id="mpop" hidden></div><button type="button" class="btn" data-act="cpanel" data-k="attach" title="Attach a learner or health file" aria-label="Attach">+</button>${canSend?'<button type="button" class="btn" data-act="cpanel" data-k="send">Send student to clinic</button>':''}<textarea id="chtext" rows="1" maxlength="2000" placeholder="Write a message" aria-label="Message">${esc(S.msg.draft[c]||'')}</textarea><button class="btn primary" type="submit">Send</button></form>`
   :`<div class="chempty"><p class="muted">Choose a conversation, or start a new chat.</p><div id="chpanel">${panelHtml()}</div></div>`}</section></div>`}
 function chatBadge(){
  const n=unreadAll();document.querySelectorAll('[data-v="chat"]').forEach(b=>{let e=b.querySelector('.badge');if(n){if(!e){e=document.createElement('span');e.className='badge';b.appendChild(e)}e.textContent=n}else if(e)e.remove()});
@@ -182,6 +199,7 @@ const CHAT_ACT={
  cdm:a=>{const c=dmId(S.user.id,a.dataset.id);S.msg.tmp[c]=1;chatOpen(c)},
  cfilepick:()=>{const i=$('#cfile');if(i)i.click()},
  cfdl:async a=>{try{const x=await rpc('app_file_get',{p_token:TOK,p_fid:+a.dataset.fid});browserSave(x.name,b64blob(x.b64,x.mime))}catch(e){toast(msgErr(e))}},
+ cmention:a=>mentionPick(+a.dataset.k),
  cpick:a=>{S.msg.pick=a.dataset.id;chatPanelRender()},
  cattach:async a=>{const s=stu(a.dataset.id),k=a.dataset.k,sy=k?(s.enr.map(e=>e.sy).sort().pop()):'';
   S.msg.panel='';S.msg.pick=null;chatPanelRender();
@@ -198,8 +216,14 @@ function chatSubmit(){
  const c=S.msg.active,i=$('#chtext');if(!c||!i)return;const t=i.value.trim();if(!t)return;
  i.value='';S.msg.draft[c]='';i.style.height='';msgSend(c,t,'text',null).then(m=>{if(!m){i.value=t;S.msg.draft[c]=t}})}
 document.addEventListener('submit',e=>{if(e.target.id==='chform'){e.preventDefault();e.stopImmediatePropagation();chatSubmit()}},true);
+document.addEventListener('keydown',e=>{const mp=S.msg.mp,pop=$('#mpop');
+ if(e.target.id==='chtext'&&mp&&mp.list.length&&pop&&!pop.hidden){
+  if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();e.stopImmediatePropagation();mp.i=(mp.i+(e.key==='ArrowDown'?1:mp.list.length-1))%mp.list.length;[...pop.children].forEach((b,k)=>b.classList.toggle('on',k===mp.i));return}
+  if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();e.stopImmediatePropagation();mentionPick(mp.i);return}
+  if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();pop.hidden=true;S.msg.mp=null;return}}
+},true);
 document.addEventListener('keydown',e=>{if(e.target.id==='chtext'&&e.key==='Enter'&&!e.shiftKey&&!e.isComposing){e.preventDefault();chatSubmit()}});
 document.addEventListener('change',e=>{if(e.target.id==='cfile'){const f=e.target.files[0];e.target.value='';fileUpload(f)}});
 document.addEventListener('dragover',e=>{if(e.target.closest&&e.target.closest('.chmain')&&e.dataTransfer&&[...e.dataTransfer.types].includes('Files'))e.preventDefault()});
 document.addEventListener('drop',e=>{if(e.target.closest&&e.target.closest('.chmain')&&e.dataTransfer&&e.dataTransfer.files.length){e.preventDefault();fileUpload(e.dataTransfer.files[0])}});
-document.addEventListener('input',e=>{if(e.target.id==='chtext'){S.msg.draft[S.msg.active]=e.target.value;e.target.style.height='auto';e.target.style.height=Math.min(140,e.target.scrollHeight)+'px'}});
+document.addEventListener('input',e=>{if(e.target.id==='chtext'){S.msg.draft[S.msg.active]=e.target.value;e.target.style.height='auto';e.target.style.height=Math.min(140,e.target.scrollHeight)+'px';mentionPop()}});
