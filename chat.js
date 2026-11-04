@@ -108,10 +108,25 @@ async function fileUpload(file){
   await msgSend(c,'','file',{fid:f.fid,name:f.name,mime:f.mime,size:f.size})}
  catch(e){if(e&&e.code==='SESSION_EXPIRED')cloudKick();else toast(msgErr(e))}}
 const mentionable=c=>{if(!c||c.startsWith('dm:'))return [];const t=c.startsWith('desk:')?c.slice(5):'';return S.msg.dir.filter(d=>d.id!==S.user.id&&(!t||d.role!=='Teacher'||d.id===t))};
+const whoIs=id=>id===S.user.id?{id:S.user.id,name:S.user.name,role:S.user.role,adv:S.user.adv,photo:S.user.photo}:S.msg.dir.find(d=>d.id===id);
+const whoByName=n=>n===S.user.name?whoIs(S.user.id):S.msg.dir.find(d=>d.name===n);
 const mentionRe=()=>{const n=[S.user.name,...S.msg.dir.map(d=>d.name)].filter(Boolean).sort((a,b)=>b.length-a.length).map(x=>esc(x).replace(/[.*+?^${}()|[\]\\]/g,'\\$&'));return n.length?new RegExp('@('+n.join('|')+')(?![\\w])','g'):null};
 const mentionsMe=b=>!!b&&b.includes('@'+S.user.name);
 function mtextHtml(b){let h=esc(b).replace(/\n/g,'<br>');const re=mentionRe();
- if(re)h=h.replace(re,(x,n)=>`<span class="mention ${n===esc(S.user.name)?'tome':''}">${x}</span>`);return h}
+ if(re)h=h.replace(re,(x,n)=>{const w=whoByName(n.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;|&#x27;/g,"'"));return `<button type="button" class="mention ${n===esc(S.user.name)?'tome':''}" ${w?`data-act="cprof" data-id="${esc(w.id)}" data-mh="${esc(w.id)}"`:''}>${x}</button>`})
+ return h}
+function mhShow(el){
+ const w=whoIs(el.dataset.mh);if(!w)return;let c=$('#mhover');if(!c){c=document.createElement('div');c.id='mhover';c.className='mhover';document.body.appendChild(c)}
+ const sec=w.role==='Teacher'&&w.adv?secOf(w.adv):null;
+ c.innerHTML=`<img class="role-ic lg" src="${esc(avOf(w.id,w.role))}" alt=""><div><b>${esc(w.name)}</b>${w.id===S.user.id?' <span class="small muted">(you)</span>':''}<div class="small muted">${esc(w.role)}</div>${w.role==='Teacher'?`<div class="small muted">${sec?'Adviser of '+esc(secLabel(sec)):'No advisory section'}</div>`:''}<div class="small muted" style="margin-top:2px">Click to open the profile</div></div>`;
+ c.style.display='flex';const r=el.getBoundingClientRect(),w2=c.offsetWidth,h2=c.offsetHeight;
+ let x=Math.min(Math.max(8,r.left),innerWidth-w2-8),y=r.top-h2-8;if(y<8)y=r.bottom+8;c.style.left=x+'px';c.style.top=y+'px'}
+const mhHide=()=>{const c=$('#mhover');if(c)c.style.display='none'};
+document.addEventListener('mouseover',e=>{const m=e.target.closest&&e.target.closest('.mention[data-mh]');if(m)mhShow(m)});
+document.addEventListener('mouseout',e=>{if(e.target.closest&&e.target.closest('.mention[data-mh]'))mhHide()});
+document.addEventListener('focusin',e=>{const m=e.target.closest&&e.target.closest('.mention[data-mh]');if(m)mhShow(m)});
+document.addEventListener('focusout',e=>{if(e.target.closest&&e.target.closest('.mention[data-mh]'))mhHide()});
+document.addEventListener('scroll',mhHide,true);
 function mentionPop(){
  const i=$('#chtext'),pop=$('#mpop');if(!i||!pop)return;
  const before=i.value.slice(0,i.selectionStart),m=/(^|\s)@([^@\n]{0,30})$/.exec(before);
@@ -144,9 +159,9 @@ function listHtml(){
 const canProf=id=>S.user.role!=='Teacher'&&(S.msg.dir.find(d=>d.id===id)||{}).role==='Teacher';
 const profImg=(id,cls,src)=>canProf(id)?`<button type="button" class="avbtn" data-act="cprof" data-id="${id}" title="View advisory" aria-label="View advisory class"><img class="${cls}" src="${esc(src)}" alt=""></button>`:`<img class="${cls}" src="${esc(src)}" alt="">`;
 function profHtml(close){
- const o=S.msg.dir.find(d=>d.id===S.msg.prof);if(!o)return '';
- const sec=o.adv?secOf(o.adv):null,list=sec?DB.students.filter(s=>{const e=enrOf(s,S.sy);return e&&e.section===o.adv}).sort((a,b)=>a.last.localeCompare(b.last)||a.first.localeCompare(b.first)):[];
- return `<div class="cpanel"><div class="head"><h3>Teacher profile</h3>${close}</div><div class="who-cell"><img class="role-ic lg" src="${esc(avOf(o.id))}" alt=""><div><b>${esc(o.name)}</b><div class="small muted">${o.role}${sec?' · Adviser of '+esc(secLabel(sec)):' · No advisory section'}</div></div></div>
+ const o=whoIs(S.msg.prof);if(!o)return '';
+ const showAdv=o.role==='Teacher'&&(S.user.role!=='Teacher'||o.id===S.user.id),sec=showAdv&&o.adv?secOf(o.adv):null,list=sec?DB.students.filter(s=>{const e=enrOf(s,S.sy);return e&&e.section===o.adv}).sort((a,b)=>a.last.localeCompare(b.last)||a.first.localeCompare(b.first)):[];
+ return `<div class="cpanel"><div class="head"><h3>${o.role==='Teacher'?'Teacher profile':'Profile'}</h3>${close}</div><div class="who-cell"><img class="role-ic lg" src="${esc(avOf(o.id,o.role))}" alt=""><div><b>${esc(o.name)}</b>${o.id===S.user.id?' <span class="small muted">(you)</span>':''}<div class="small muted">${o.role}${o.role==='Teacher'?(sec?' · Adviser of '+esc(secLabel(sec)):' · No advisory section'):''}</div></div></div>
  ${sec?`<div class="small muted">${list.length} student${list.length===1?'':'s'} in this advisory</div><div class="tw"><table class="wrapth"><thead><tr><th>Student</th><th>LRN</th><th>Today</th></tr></thead><tbody>${list.map(s=>{const st=statusOf(s);return `<tr class="click" data-act="open" data-id="${s.id}" data-tab="profile"><td><b>${esc(fullName(s))}</b></td><td class="mono small">${s.lrn}</td><td>${st.k==='none'?'<span class="small muted">In class</span>':pill(esc(st.t),st.c)}</td></tr>`}).join('')}</tbody></table></div>`:''}</div>`}
 function panelHtml(){
  const p=S.msg.panel,m=S.msg;if(!p)return '';

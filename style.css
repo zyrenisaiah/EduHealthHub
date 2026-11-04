@@ -380,3 +380,7 @@ button.chwho{cursor:pointer}button.chwho:hover,button.chwho:focus-visible{backgr
 .mopt.on,.mopt:hover{background:rgba(127,127,127,.16)}.mopt .cav{width:28px;height:28px;border-radius:50%;object-fit:cover}
 .mention{font-weight:700;color:#2563eb;background:rgba(37,99,235,.12);border-radius:4px;padding:0 3px}.me .mention{color:inherit;background:rgba(255,255,255,.25);text-decoration:underline}
 .mention.tome{background:rgba(245,158,11,.3);color:inherit}.bubble.mentioned{box-shadow:0 0 0 2px #f59e0b}
+
+button.mention{font:inherit;border:0;cursor:pointer}button.mention:hover{text-decoration:underline}
+.mhover{position:fixed;z-index:60;display:none;gap:12px;align-items:center;max-width:300px;padding:10px 14px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:14px;box-shadow:0 8px 28px rgba(0,0,0,.22);pointer-events:none}
+.mhover .role-ic.lg{width:52px;height:52px;border-radius:50%;object-fit:cover;flex:none}
