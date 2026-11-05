@@ -1472,3 +1472,104 @@ begin
   delete from public.backup_snapshots where at<now()-interval '7 days';
   return sid;
 end $$;
+
+-- =====================================================================
+-- EDIT AND UNSEND MESSAGES
+-- Each change gets a new "rev" number so other people's screens pick it up through app_msg_sync.
+-- =====================================================================
+create sequence if not exists public.messages_rev_seq;
+alter table public.messages add column if not exists edited_at timestamptz;
+alter table public.messages add column if not exists deleted boolean not null default false;
+alter table public.messages add column if not exists rev bigint not null default nextval('public.messages_rev_seq');
+create index if not exists messages_rev_idx on public.messages(rev);
+drop trigger if exists ehh_msg_ping on public.messages;
+create trigger ehh_msg_ping after insert or update on public.messages for each row execute function public.ehh_trg_msg();
+
+drop function if exists public.app_msg_sync(text,bigint);
+create or replace function public.app_msg_sync(p_token text, p_since bigint default 0, p_rev bigint default 0) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; ms jsonb; ch jsonb; rd jsonb;
+begin
+  a := public.ehh_auth(p_token);
+  select coalesce(jsonb_agg(x order by x.id),'[]'::jsonb) into ms from (
+    select m.id, m.conv, m.sender as s, m.sname as sn, m.srole as sr, m.body as b, m.kind as k, m.ref as r, m.at as t, m.rev as v, m.deleted as d, m.edited_at as e
+      from public.messages m
+     where m.id>p_since and public.ehh_conv_ok(a,m.conv)
+     order by m.id desc limit 500) x;
+  select coalesce(jsonb_agg(x order by x.v),'[]'::jsonb) into ch from (
+    select m.id, m.conv, m.sender as s, m.sname as sn, m.srole as sr, m.body as b, m.kind as k, m.ref as r, m.at as t, m.rev as v, m.deleted as d, m.edited_at as e
+      from public.messages m
+     where p_rev>0 and m.id<=p_since and m.rev>p_rev and public.ehh_conv_ok(a,m.conv)
+     order by m.rev limit 200) x;
+  select coalesce(jsonb_object_agg(conv,last_id),'{}'::jsonb) into rd from public.msg_reads where account_id=a.id;
+  return jsonb_build_object('messages',ms,'changes',ch,'reads',rd);
+end $$;
+revoke all on function public.app_msg_sync(text,bigint,bigint) from public;
+grant execute on function public.app_msg_sync(text,bigint,bigint) to anon, authenticated;
+
+create or replace function public.ehh_msg_json(m public.messages) returns jsonb
+language sql immutable as $$ select jsonb_build_object('id',m.id,'conv',m.conv,'s',m.sender,'sn',m.sname,'sr',m.srole,'b',m.body,'k',m.kind,'r',m.ref,'t',m.at,'v',m.rev,'d',m.deleted,'e',m.edited_at) $$;
+revoke all on function public.ehh_msg_json(public.messages) from public, anon, authenticated;
+
+create or replace function public.app_msg_edit(p_token text, p_id bigint, p_body text) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; m public.messages; b text := btrim(coalesce(p_body,''));
+begin
+  a := public.ehh_auth(p_token);
+  select * into m from public.messages where id=p_id;
+  if not found or m.sender<>a.id or not public.ehh_conv_ok(a,m.conv) then raise exception 'NOT_ALLOWED'; end if;
+  if m.deleted or m.kind<>'text' then raise exception 'NOT_ALLOWED'; end if;
+  if b='' then raise exception 'EMPTY'; end if;
+  if length(b)>2000 then raise exception 'TOO_LONG'; end if;
+  if (select count(*) from public.messages where sender=a.id and edited_at>now()-interval '1 minute')>=30 then raise exception 'SLOW_DOWN'; end if;
+  if b<>m.body then
+    update public.messages set body=b, edited_at=now(), rev=nextval('public.messages_rev_seq') where id=m.id returning * into m;
+    perform public.ehh_log(a,'message.edit',m.conv,jsonb_build_object('id',m.id));
+  end if;
+  return public.ehh_msg_json(m);
+end $$;
+revoke all on function public.app_msg_edit(text,bigint,text) from public;
+grant execute on function public.app_msg_edit(text,bigint,text) to anon, authenticated;
+
+create or replace function public.app_msg_unsend(p_token text, p_id bigint) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; m public.messages;
+begin
+  a := public.ehh_auth(p_token);
+  select * into m from public.messages where id=p_id;
+  if not found or m.sender<>a.id or not public.ehh_conv_ok(a,m.conv) then raise exception 'NOT_ALLOWED'; end if;
+  if m.kind not in ('text','file','record') then raise exception 'NOT_ALLOWED'; end if;
+  if not m.deleted then
+    if m.kind='file' and m.ref ? 'fid' then delete from public.message_files where id=(m.ref->>'fid')::bigint and sender=a.id; end if;
+    update public.messages set deleted=true, body='', ref=null, rev=nextval('public.messages_rev_seq') where id=m.id returning * into m;
+    perform public.ehh_log(a,'message.unsend',m.conv,jsonb_build_object('id',m.id));
+  end if;
+  return public.ehh_msg_json(m);
+end $$;
+revoke all on function public.app_msg_unsend(text,bigint) from public;
+grant execute on function public.app_msg_unsend(text,bigint) to anon, authenticated;
+
+-- app_msg_send returns the same shape (adds v, d, e)
+create or replace function public.app_msg_send(p_token text, p_conv text, p_body text, p_kind text default 'text', p_ref jsonb default null) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; o public.accounts; oid text; m public.messages;
+begin
+  a := public.ehh_auth(p_token);
+  if not public.ehh_conv_ok(a,p_conv) then raise exception 'NOT_ALLOWED'; end if;
+  if p_kind not in ('text','pass','record','event','file') then raise exception 'BAD_REQUEST'; end if;
+  if p_conv like 'dm:%' then
+    oid := case when split_part(p_conv,':',2)=a.id then split_part(p_conv,':',3) else split_part(p_conv,':',2) end;
+    select * into o from public.accounts where id=oid;
+    if not found then raise exception 'NOT_ALLOWED'; end if;
+    if a.role='Teacher' and o.role='Teacher' then raise exception 'NOT_ALLOWED'; end if;
+  end if;
+  p_body := btrim(coalesce(p_body,''));
+  if p_kind='text' and p_body='' then raise exception 'EMPTY'; end if;
+  if p_kind='file' and not exists (select 1 from public.message_files f where f.id=(p_ref->>'fid')::bigint and f.sender=a.id and f.conv=p_conv) then raise exception 'BAD_REQUEST'; end if;
+  if length(p_body)>2000 or length(coalesce(p_ref::text,''))>2000 then raise exception 'TOO_LONG'; end if;
+  if (select count(*) from public.messages where sender=a.id and at>now()-interval '1 minute')>=40 then raise exception 'SLOW_DOWN'; end if;
+  insert into public.messages(conv,sender,sname,srole,body,kind,ref) values (p_conv,a.id,a.name,a.role,p_body,p_kind,p_ref) returning * into m;
+  insert into public.msg_reads(account_id,conv,last_id) values (a.id,p_conv,m.id)
+    on conflict (account_id,conv) do update set last_id=greatest(public.msg_reads.last_id,excluded.last_id);
+  return public.ehh_msg_json(m);
+end $$;

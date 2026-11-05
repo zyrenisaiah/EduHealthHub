@@ -29,19 +29,21 @@ function convList(){
  return [...set].sort((a,b)=>lastId(b)-lastId(a)||convTitle(a).localeCompare(convTitle(b)))}
 const mtime=t=>{const d=new Date(t);return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})};
 const mday=t=>{const d=new Date(t),n=new Date(),y=new Date(Date.now()-864e5);return d.toDateString()===n.toDateString()?'Today':d.toDateString()===y.toDateString()?'Yesterday':d.toLocaleDateString([],{month:'short',day:'numeric',year:'numeric'})};
-const mprev=m=>m.k==='pass'?'Sent a student to the clinic':m.k==='record'?'Shared a record':m.k==='file'?'\u{1F4CE} '+((m.r&&m.r.name)||'File'):m.b;
+const mprev=m=>m.d?'Message unsent':m.k==='pass'?'Sent a student to the clinic':m.k==='record'?'Shared a record':m.k==='file'?'\u{1F4CE} '+((m.r&&m.r.name)||'File'):m.b;
 
 /* ---- network ---- */
 const msgErr=e=>({NOT_ALLOWED:'You cannot message that person.',SLOW_DOWN:'You are sending too fast. Wait a moment.',TOO_LONG:'That message is too long.',BAD_TYPE:'That file type is not allowed. Use PDF, JPG, PNG, WEBP, GIF, DOCX, XLSX or TXT.',TOO_BIG:'That file is too big. The limit is 2 MB.',EMPTY:'Type a message first.'}[e&&e.code])||cloudErr(e);
+function msgApply(m){if(m.v>(S.msg.rev||0))S.msg.rev=m.v;const i=S.msg.msgs.findIndex(x=>x.id===m.id);if(i>=0&&(m.v||0)>=(S.msg.msgs[i].v||0)){S.msg.msgs[i]=m;if(m.d&&S.msg.files&&m.r==null)S.msg.files=S.msg.files}if(S.msg.edit&&S.msg.edit.id===m.id&&m.d)S.msg.edit=null}
 function msgMerge(list){let add=0,others=[];
- list.forEach(m=>{if(S.msg.ids.has(m.id))return;S.msg.ids.add(m.id);S.msg.msgs.push(m);add++;if(m.id>S.msg.last)S.msg.last=m.id;if(m.s!==S.user.id&&m.k!=='event')others.push(m)});
+ list.forEach(m=>{if(m.v>(S.msg.rev||0))S.msg.rev=m.v;if(S.msg.ids.has(m.id)){msgApply(m);return}S.msg.ids.add(m.id);S.msg.msgs.push(m);add++;if(m.id>S.msg.last)S.msg.last=m.id;if(m.s!==S.user.id&&m.k!=='event')others.push(m)});
  if(add)S.msg.msgs.sort((a,b)=>a.id-b.id);return others}
 async function msgSync(){
  if(!CLOUD_ON||!TOK||!S.user||S.msg.busy)return;S.msg.busy=true;
  try{
   if(!S.msg.dirOk||Date.now()-(S.msg.dirT||0)>120000){S.msg.dir=await rpc('app_directory',{p_token:TOK});S.msg.dirOk=true;S.msg.dirT=Date.now()}
-  const first=S.msg.last===0&&!S.msg.msgs.length,r=await rpc('app_msg_sync',{p_token:TOK,p_since:S.msg.last});
+  const first=S.msg.last===0&&!S.msg.msgs.length,r=await rpc('app_msg_sync',{p_token:TOK,p_since:S.msg.last,p_rev:S.msg.rev||0});
   Object.keys(r.reads||{}).forEach(c=>{S.msg.reads[c]=Math.max(S.msg.reads[c]||0,r.reads[c])});
+  (r.changes||[]).forEach(msgApply);
   const others=msgMerge(r.messages||[]);S.msg.err='';
   if(!first&&others.length){const m=others[others.length-1];
    if(!(S.view==='chat'&&S.msg.active===m.conv&&!document.hidden))toast(m.sn+(mentionsMe(m.b)?' mentioned you: ':': ')+mprev(m).slice(0,60))}
@@ -149,9 +151,11 @@ function threadHtml(c){
  ms.forEach((m,i)=>{const d=mday(m.t);if(d!==day){day=d;out+=`<div class="mday">${esc(d)}</div>`}
   if(m.k==='event'){out+=`<div class="evt">${esc(m.b)} <span>${mtime(m.t)}</span></div>`;return}
   const me=m.s===S.user.id,prev=ms[i-1],showName=!me&&(!prev||prev.s!==m.s||prev.k==='event');
-  const body=m.k==='pass'?passCard(m):m.k==='record'?recCard(m):m.k==='file'?fileCard(m):`<div class="mtext">${mtextHtml(m.b)}</div>`;
+  if(m.d){out+=`<div class="mrow ${me?'me':'them'}"><div class="bubble unsent"><div class="mtext"><i>${me?'You unsent a message':esc(m.sn)+' unsent a message'}</i></div></div><div class="mtime">${mtime(m.t)}</div></div>`;return}
+  const ed=S.msg.edit&&S.msg.edit.id===m.id;
+  const body=ed?`<textarea class="inp" id="medtext" rows="2" maxlength="2000" aria-label="Edit message">${esc(S.msg.edit.text)}</textarea><div class="mact"><button type="button" class="btn sm primary" data-act="msave">Save</button> <button type="button" class="btn sm" data-act="mcancel">Cancel</button></div>`:m.k==='pass'?passCard(m):m.k==='record'?recCard(m):m.k==='file'?fileCard(m):`<div class="mtext">${mtextHtml(m.b)}</div>`;
   const av=!me&&(!prev||prev.s!==m.s||prev.k==='event'||mday(prev.t)!==d)?profImg(m.s,'mav',avOf(m.s,m.sr)):'';
-  out+=`<div class="mrow ${me?'me':'them'}">${av}${showName&&!c.startsWith('dm:')?`<div class="mname">${esc(m.sn)} <span class="mrole">${esc(m.sr)}</span></div>`:''}<div class="bubble ${m.k!=='text'?'bwide':''} ${!me&&mentionsMe(m.b)?'mentioned':''}">${body}</div><div class="mtime">${mtime(m.t)}</div></div>`});
+  out+=`<div class="mrow ${me?'me':'them'}">${av}${showName&&!c.startsWith('dm:')?`<div class="mname">${esc(m.sn)} <span class="mrole">${esc(m.sr)}</span></div>`:''}<div class="bubble ${m.k!=='text'?'bwide':''} ${!me&&mentionsMe(m.b)?'mentioned':''}">${body}</div><div class="mtime">${mtime(m.t)}${m.e?' &middot; edited':''}${me&&!ed&&['text','file','record'].includes(m.k)?` <span class="mact">${m.k==='text'?`<button type="button" class="linkb" data-act="medit" data-id="${m.id}">Edit</button>`:''}<button type="button" class="linkb" data-act="munsend" data-id="${m.id}">Unsend</button></span>`:''}</div></div>`});
  return out}
 function listHtml(){
  return convList().map(c=>{const l=convMsgs(c).slice(-1)[0],u=unreadOf(c);
@@ -201,7 +205,7 @@ function chatBadge(){
 function chatRefresh(scroll){
  chatBadge();if(S.view!=='chat')return;
  const l=$('#chlist');if(l)l.innerHTML=listHtml();
- const t=$('#chthread');if(t&&S.msg.active){const near=t.scrollHeight-t.scrollTop-t.clientHeight<140;t.innerHTML=threadHtml(S.msg.active);if(near||scroll)t.scrollTop=t.scrollHeight}
+ const editing=document.activeElement&&document.activeElement.id==='medtext',t=$('#chthread');if(t&&S.msg.active&&!editing){const near=t.scrollHeight-t.scrollTop-t.clientHeight<140;t.innerHTML=threadHtml(S.msg.active);if(near||scroll)t.scrollTop=t.scrollHeight}
  msgMarkRead();chatBadge()}
 function chatPanelRender(){const p=$('#chpanel');if(p)p.innerHTML=panelHtml()}
 function chatResults(){const live=$('#chpanel .cres');if(!live)return;const t=document.createElement('div');t.innerHTML=panelHtml();const n=t.querySelector('.cres');if(n&&live.innerHTML!==n.innerHTML)live.innerHTML=n.innerHTML}
@@ -214,6 +218,13 @@ const CHAT_ACT={
  cdm:a=>{const c=dmId(S.user.id,a.dataset.id);S.msg.tmp[c]=1;chatOpen(c)},
  cfilepick:()=>{const i=$('#cfile');if(i)i.click()},
  cfdl:async a=>{try{const x=await rpc('app_file_get',{p_token:TOK,p_fid:+a.dataset.fid});browserSave(x.name,b64blob(x.b64,x.mime))}catch(e){toast(msgErr(e))}},
+ medit:a=>{const m=S.msg.msgs.find(x=>x.id===+a.dataset.id);if(!m)return;S.msg.edit={id:m.id,text:m.b};chatRefresh();const t=$('#medtext');if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length)}},
+ mcancel:()=>{S.msg.edit=null;chatRefresh()},
+ msave:async()=>{const e=S.msg.edit,t=$('#medtext');if(!e||!t)return;const b=t.value.trim();if(!b)return toast('A message cannot be empty. Use Unsend to remove it.');
+  const m=S.msg.msgs.find(x=>x.id===e.id);if(m&&m.b===b){S.msg.edit=null;return chatRefresh()}
+  try{const r=await rpc('app_msg_edit',{p_token:TOK,p_id:e.id,p_body:b});S.msg.edit=null;msgApply(r)}catch(x){if(x&&x.code==='SESSION_EXPIRED')return cloudKick();return toast(msgErr(x))}chatRefresh()},
+ munsend:async a=>{const id=+a.dataset.id;if(!confirm('Unsend this message? It will be removed for everyone in the chat.'))return;
+  try{const r=await rpc('app_msg_unsend',{p_token:TOK,p_id:id});msgApply(r)}catch(x){if(x&&x.code==='SESSION_EXPIRED')return cloudKick();return toast(msgErr(x))}chatRefresh()},
  cmention:a=>mentionPick(+a.dataset.k),
  cpick:a=>{S.msg.pick=a.dataset.id;chatPanelRender()},
  cattach:async a=>{const s=stu(a.dataset.id),k=a.dataset.k,sy=k?(s.enr.map(e=>e.sy).sort().pop()):'';
@@ -241,4 +252,6 @@ document.addEventListener('keydown',e=>{if(e.target.id==='chtext'&&e.key==='Ente
 document.addEventListener('change',e=>{if(e.target.id==='cfile'){const f=e.target.files[0];e.target.value='';fileUpload(f)}});
 document.addEventListener('dragover',e=>{if(e.target.closest&&e.target.closest('.chmain')&&e.dataTransfer&&[...e.dataTransfer.types].includes('Files'))e.preventDefault()});
 document.addEventListener('drop',e=>{if(e.target.closest&&e.target.closest('.chmain')&&e.dataTransfer&&e.dataTransfer.files.length){e.preventDefault();fileUpload(e.dataTransfer.files[0])}});
+document.addEventListener('input',e=>{if(e.target.id==='medtext'&&S.msg.edit)S.msg.edit.text=e.target.value});
+document.addEventListener('keydown',e=>{if(e.target.id==='medtext'){if(e.key==='Escape'){e.preventDefault();CHAT_ACT.mcancel()}else if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();CHAT_ACT.msave()}}});
 document.addEventListener('input',e=>{if(e.target.id==='chtext'){S.msg.draft[S.msg.active]=e.target.value;e.target.style.height='auto';e.target.style.height=Math.min(140,e.target.scrollHeight)+'px';mentionPop()}});

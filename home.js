@@ -347,6 +347,8 @@ async function acctDo(id,fn){
  a.busy=false;await loadAccts();render()}
 function auditText(r){
  const d=r.detail||{};
+ if(r.action==='message.edit')return 'Edited a message';
+ if(r.action==='message.unsend')return 'Unsent a message';
  if(r.action==='account.reset')return 'Reset the password of '+(d.name||r.target);
  if(r.action==='account.deactivate')return 'Deactivated the account of '+(d.name||r.target);
  if(r.action==='account.activate')return 'Re-activated the account of '+(d.name||r.target);
