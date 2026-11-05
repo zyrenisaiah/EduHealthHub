@@ -219,7 +219,7 @@ function certificate(s,c){
 
 /* ---- actions ---- */
 const HOME_ACT={
- nav:a=>{S.view=a.dataset.v;if(S.view==='chat'&&!S.msg.active&&innerWidth>860)S.msg.active=convList()[0]||'';render();scrollTo(0,0);if(S.view==='activity')loadAudit();if(S.view==='chat'){msgSync();msgMarkRead()}},
+ nav:a=>{S.view=a.dataset.v;if(S.view==='chat'&&!S.msg.active&&innerWidth>860)S.msg.active=convList()[0]||'';render();scrollTo(0,0);if(S.view==='activity')loadAudit();if(S.view==='accounts')loadAccts();if(S.view==='chat'){msgSync();msgMarkRead()}},
  auditrefresh:()=>loadAudit(),
  auditkind:a=>{S.audit.kind=a.dataset.k;loadAudit()},
  backupdl:async()=>{if(!CLOUD_ON||S.audit.dl)return;S.audit.dl=true;render();try{const d=await rpc('app_backup',{p_token:TOK});browserSave('EduHealthHub-backup-'+localDate()+'.json',JSON.stringify(d))}catch(e){toast(cloudErr(e))}S.audit.dl=false;render();loadAudit()},
@@ -227,6 +227,13 @@ const HOME_ACT={
  hpick:a=>{logView(a.dataset.id);S.hm.sid=a.dataset.id;S.hm.q=stu(a.dataset.id).lrn;S.hm.msg='';S.hm.panel=a.dataset.k||'';render();const r=$('#hres');if(r)r.scrollIntoView({block:'start'})},
  sgok:a=>signupDecide(a.dataset.id,true),
  sgno:a=>signupDecide(a.dataset.id,false),
+ acreset:a=>{const r=(S.ac.rows||[]).find(x=>x.id===a.dataset.id);if(!r||!confirm('Reset the password of '+r.name+'? They will be signed out and must choose a new password.'))return;
+  const pw=tempPw();acctDo(r.id,async()=>{if(CLOUD_ON)await rpc('app_account_reset',{p_token:TOK,p_id:r.id,p_temp:pw});else{const x=DB.accounts.find(y=>y.id===r.id);x.pw=pwHash(x.id,pw);save()}S.ac.temp={name:r.name,pw}})},
+ actoggle:a=>{const r=(S.ac.rows||[]).find(x=>x.id===a.dataset.id);if(!r)return;if(r.active&&!confirm('Deactivate '+r.name+'? They will be signed out and cannot log in until re-activated.'))return;
+  acctDo(r.id,async()=>{if(CLOUD_ON)await rpc('app_account_set',{p_token:TOK,p_id:r.id,p_active:!r.active,p_adv:null,p_set_adv:false});else{const x=DB.accounts.find(y=>y.id===r.id);x.active=!r.active;save()}})},
+ acadvsave:a=>{const r=(S.ac.rows||[]).find(x=>x.id===a.dataset.id),sel=$('#acadv-'+a.dataset.id);if(!r||!sel)return;
+  acctDo(r.id,async()=>{if(CLOUD_ON)await rpc('app_account_set',{p_token:TOK,p_id:r.id,p_active:null,p_adv:sel.value,p_set_adv:true});else{const x=DB.accounts.find(y=>y.id===r.id);x.adv=sel.value||null;save()}toast('Advisory saved.')})},
+ actempdone:()=>{S.ac.temp=null;render()},
  hclear:()=>{S.hm={q:'',sid:null,panel:'',msg:''};render()},
  'qa-walk':()=>{S.hm.panel='walk';S.hm.msg=S.hm.sid?'':'Type the learner\'s LRN first.';render();S.hm.sid?0:homeFocusSearch()},
  'qa-refer':()=>{S.hm.panel='refer';S.hm.msg=S.hm.sid?'':'Type the learner\'s LRN first.';render();S.hm.sid?0:homeFocusSearch()},
@@ -313,8 +320,37 @@ async function loadAudit(){
  S.audit.busy=true;S.audit.err='';render();
  try{S.audit.rows=await rpc('app_audit',{p_token:TOK,p_limit:200,p_kind:S.audit.kind||null})}catch(e){S.audit.err=cloudErr(e)}
  S.audit.busy=false;if(S.view==='activity')render()}
+/* Doctor: manage accounts (reset password, deactivate, advisory) */
+S.ac={rows:null,err:'',busy:false,temp:null,q:''};
+async function loadAccts(){
+ if(!S.user||S.user.role!=='Doctor')return;S.ac.busy=true;
+ try{S.ac.rows=CLOUD_ON?await rpc('app_accounts',{p_token:TOK}):DB.accounts.map(a=>({id:a.id,role:a.role,name:a.name,username:a.username,email:a.email,adv:a.adv||null,active:a.active!==false,must_change:false}));S.ac.err=''}
+ catch(e){if(e&&e.code==='SESSION_EXPIRED')cloudKick();else S.ac.err=cloudErr(e)}
+ S.ac.busy=false;if(S.view==='accounts')render()}
+function tempPw(){const L='abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ',D='23456789',r=n=>{const u=new Uint32Array(n);crypto.getRandomValues(u);return u},a=[...r(9)].map(x=>L[x%L.length]),d=[...r(3)].map(x=>D[x%D.length]),all=a.concat(d),j=[...r(all.length)];
+ return all.map((c,i)=>[j[i],c]).sort((x,y)=>x[0]-y[0]).map(x=>x[1]).join('')}
+function accountsView(){
+ const a=S.ac,q=a.q.trim().toLowerCase(),rows=(a.rows||[]).filter(r=>!q||(r.name+' '+r.username+' '+r.role).toLowerCase().includes(q));
+ const adv=r=>r.role!=='Teacher'?'<span class="small muted">-</span>':`<select class="inp" id="acadv-${esc(r.id)}" aria-label="Advisory of ${esc(r.name)}"><option value="">No advisory</option>${SECTIONS.map(c=>`<option value="${esc(c.id)}" ${c.id===r.adv?'selected':''}>${esc(secLabel(c))}</option>`).join('')}</select> <button class="btn sm" data-act="acadvsave" data-id="${esc(r.id)}">Save</button>`;
+ return `<div class="head"><div><div class="eyebrow">Doctor</div><h2>Accounts</h2></div></div>
+ <section class="panel"><div class="small muted" style="margin-bottom:8px">Reset a forgotten password, deactivate someone who has left, or change a teacher's advisory. Everything here is recorded in the Activity log.</div>
+ <input class="inp" data-bind="acq" placeholder="Search a name, username or role" value="${esc(a.q)}" autocomplete="off" aria-label="Search accounts" style="max-width:360px">
+ ${a.err?`<div class="pill bad" role="alert" style="white-space:normal;margin-top:8px">${esc(a.err)}</div>`:''}
+ ${a.temp?`<div class="panel" style="border-color:var(--warn);margin-top:10px" role="status"><b>Temporary password for ${esc(a.temp.name)}</b><div class="mono" style="font-size:20px;margin:6px 0;user-select:all">${esc(a.temp.pw)}</div><div class="small muted">Give this to ${esc(a.temp.name)} in person. It is shown once. They must choose their own password at their next login.</div><div class="trow"><button class="btn sm" data-act="actempdone">Done</button></div></div>`:''}
+ <div class="tw" style="margin-top:10px"><table class="wrapth"><thead><tr><th>Name</th><th>Role</th><th>Advisory</th><th>Status</th><th></th></tr></thead><tbody>
+ ${a.rows?rows.map(r=>`<tr><td><b>${esc(r.name)}</b><div class="small muted">${esc(r.username)} &middot; ${esc(r.email)}</div></td><td>${esc(r.role)}</td><td>${adv(r)}</td><td>${r.active?(r.must_change?pill('Must change password','warn'):pill('Active','good')):pill('Deactivated','bad')}</td>
+ <td style="white-space:nowrap">${r.id===S.user.id?'<span class="small muted">You</span>':`<button class="btn sm" data-act="acreset" data-id="${esc(r.id)}">Reset password</button> <button class="btn sm ${r.active?'':'primary'}" data-act="actoggle" data-id="${esc(r.id)}">${r.active?'Deactivate':'Activate'}</button>`}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">No account matches.</td></tr>':'<tr><td colspan="5"><div class="sk sk-row" style="margin:0"></div></td></tr>'}
+ </tbody></table></div></section>`}
+async function acctDo(id,fn){
+ const a=S.ac;if(a.busy)return;a.busy=true;a.err='';
+ try{await fn()}catch(e){if(e&&e.code==='SESSION_EXPIRED')return cloudKick();a.err=cloudErr(e)}
+ a.busy=false;await loadAccts();render()}
 function auditText(r){
  const d=r.detail||{};
+ if(r.action==='account.reset')return 'Reset the password of '+(d.name||r.target);
+ if(r.action==='account.deactivate')return 'Deactivated the account of '+(d.name||r.target);
+ if(r.action==='account.activate')return 'Re-activated the account of '+(d.name||r.target);
+ if(r.action==='account.advisory')return 'Changed the advisory of '+r.target+(d.adv?' to '+d.adv:' (none)');
  if(r.action==='student.update')return 'Updated '+(d.fields||[]).map(k=>FIELD_LABEL[k]||k).filter((v,i,a)=>a.indexOf(v)===i).join(', ');
  if(r.action==='account.approve')return 'Approved the account of '+(d.name||r.target)+' ('+(d.role||'')+')';
  if(r.action==='account.reject')return 'Rejected the sign-up of '+(d.name||r.target);

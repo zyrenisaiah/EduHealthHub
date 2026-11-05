@@ -604,6 +604,7 @@ function onBind(e){
  const el=e.target.closest('[data-bind]'); if(!el)return; const b=el.dataset.bind, ch=e.type==='change', v=el.value;
  const st=S.sid?stu(S.sid):null;
  if(b==='hq'){if(!ch)homeSearch(el);return}
+ if(b==='acq'){if(ch)return;S.ac.q=v;const pos=el.selectionStart;render();const i=$('[data-bind=acq]');if(i){i.focus();i.setSelectionRange(pos,pos)}return}
  if(b==='docup'){if(ch)docUpload(el);return}
  if(b==='cq'){if(!ch){S.msg.q=el.value;chatResults()}return}
  if(b==='filter'){S.f[el.dataset.f]=v; if(ch||el.dataset.f==='q'){const pos=el.selectionStart;render();if(el.dataset.f==='q'){const q=$('#q');q.focus();q.setSelectionRange(pos,pos)}}return}
@@ -638,7 +639,7 @@ document.addEventListener('submit',e=>{
   const typed=$('#lu').value.trim(),id=typed.toLowerCase(),pw=$('#pw').value,L=S.login,f=S.fails[id]||{n:0,t:0};
   if(f.n>=5&&Date.now()-f.t<300000){L.err='Too many attempts. Wait 5 minutes and try again.';render();return}
   const acc=DB.accounts.find(x=>x.username===typed||x.email.toLowerCase()===id);   /* username and password are case-sensitive */
-  if(!acc||acc.pw!==pwHash(acc.id,pw)){S.fails[id]={n:f.n+1,t:Date.now()};L.err='Username or password is incorrect.';render();$('#lu').value=typed;return}
+  if(!acc||acc.active===false||acc.pw!==pwHash(acc.id,pw)){S.fails[id]={n:f.n+1,t:Date.now()};L.err='Username or password is incorrect.';render();$('#lu').value=typed;return}
   delete S.fails[id];L.err='';
   ss.set('ehh_uid',acc.id);ss.set('ehh_role',acc.role);location.href=ROLE_PAGE[acc.role];return}
  if(e.target.id==='signupform'){const L=S.login,v=id=>($('#'+id)||{}).value||'';

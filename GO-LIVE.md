@@ -5,7 +5,7 @@ Health records are sensitive personal information (in the Philippines, covered b
 ## 1. Accounts and passwords
 - [ ] **You** Replace the demo accounts. Each real person gets their own account; shared logins ("Dummy Nurse1") must not be used for real data.
 - [ ] **You** Force a new password for everyone: in the Supabase SQL editor run `select ehh_require_password_change();`. Each person then chooses their own password (10+ characters, a letter and a number) at next login, and cannot open any record before that.
-- [ ] **You** Delete `accounts.txt` from the repository (it lists the demo passwords and the repository is public).
+- [x] `accounts.txt` was removed from the repository. Its old contents stay in the git history, and the demo passwords are also visible in `supabase-setup.sql`, so still run the forced password change.
 - [x] **Code** Case-sensitive logins, lockouts after 5 and 10 wrong tries, 8-hour sessions, automatic logout after 15 idle minutes, one-account-one-person.
 
 ## 2. Who may see what (decide, then check it matches)

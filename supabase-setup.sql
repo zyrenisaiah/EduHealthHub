@@ -1319,3 +1319,156 @@ begin
 end $$;
 revoke all on function public.app_signup_decide(text,bigint,boolean,text,text) from public;
 grant execute on function public.app_signup_decide(text,bigint,boolean,text,text) to anon, authenticated;
+
+-- =====================================================================
+-- ACCOUNT TOOLS FOR DOCTORS + FULLER BACKUPS
+-- =====================================================================
+alter table public.accounts add column if not exists active boolean not null default true;
+
+-- sessions of a deactivated account stop working
+create or replace function public.ehh_auth_any(p_token text) returns public.accounts
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; c int;
+begin
+  select ac.* into a from public.sessions s join public.accounts ac on ac.id=s.account_id
+   where s.token=p_token and s.expires>now() and s.stage='ok' and s.last_seen>now()-interval '10 minutes' and ac.active;
+  if not found then raise exception 'SESSION_EXPIRED'; end if;
+  update public.sessions set last_seen=now() where token=p_token and last_seen<now()-interval '20 seconds';
+  insert into public.rate_limit as r(account_id,win,n) values (a.id,now(),1)
+  on conflict (account_id) do update set
+    win = case when r.win < now()-interval '1 minute' then now() else r.win end,
+    n   = case when r.win < now()-interval '1 minute' then 1 else r.n+1 end
+  returning n into c;
+  if c>300 then raise exception 'SLOW_DOWN'; end if;
+  return a;
+end $$;
+revoke all on function public.ehh_auth_any(text) from public, anon, authenticated;
+
+-- app_login: a deactivated account cannot log in (same BAD_LOGIN answer, so nothing is revealed)
+create or replace function public.app_login(p_user text, p_pw text) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; u text := btrim(coalesce(p_user,'')); nk text := lower(btrim(coalesce(p_user,''))); f public.login_fails; tok text; hit boolean; okpw boolean := false;
+begin
+  if length(u)=0 or length(u)>120 or length(coalesce(p_pw,''))>200 then return jsonb_build_object('error','BAD_LOGIN'); end if;
+  if (select coalesce(sum(n),0) from public.login_fails where t>now()-interval '1 minute')>=100 then
+    return jsonb_build_object('error','TOO_MANY_ATTEMPTS'); end if;
+  select * into f from public.login_fails where login_fails.k=nk;
+  if found and ((f.n>=10 and f.t>now()-interval '15 minutes') or (f.n>=5 and f.t>now()-interval '5 minutes')) then
+    return jsonb_build_object('error','TOO_MANY_ATTEMPTS'); end if;
+  select * into a from public.accounts
+   where username=u or lower(email)=nk or (gmail_ok and lower(gmail)=nk) limit 1;
+  hit := found;
+  if hit then okpw := (a.pw = crypt(coalesce(p_pw,''), a.pw)) and a.active;
+  else okpw := (crypt(coalesce(p_pw,''), gen_salt('bf')) is null); end if;
+  if not hit or not okpw then
+    insert into public.login_fails(k,n,t) values (nk,1,now())
+      on conflict (k) do update set n = case when public.login_fails.t>now()-interval '15 minutes' then public.login_fails.n+1 else 1 end, t=now();
+    return jsonb_build_object('error','BAD_LOGIN');
+  end if;
+  delete from public.login_fails where login_fails.k=nk;
+  delete from public.sessions where expires<now();
+  delete from public.sessions where account_id=a.id and token in (
+    select token from public.sessions where account_id=a.id order by expires desc offset 4);
+  tok := encode(gen_random_bytes(24),'hex');
+  if a.gmail_ok then
+    insert into public.sessions(token,account_id,expires,stage) values (tok,a.id,now()+interval '15 minutes','pending');
+    return jsonb_build_object('pending',tok,'hint',public.ehh_mask(a.gmail));
+  end if;
+  insert into public.sessions(token,account_id,expires) values (tok,a.id,now()+interval '8 hours');
+  return jsonb_build_object('token',tok,'account',public.ehh_acct_json(a));
+end $$;
+
+create or replace function public.app_accounts(p_token text) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_auth(p_token);
+  if a.role<>'Doctor' then raise exception 'NOT_ALLOWED'; end if;
+  return coalesce((select jsonb_agg(jsonb_build_object('id',id,'role',role,'name',name,'username',username,'email',email,'adv',adv,'active',active,'must_change',must_change) order by role,name) from public.accounts),'[]'::jsonb);
+end $$;
+revoke all on function public.app_accounts(text) from public;
+grant execute on function public.app_accounts(text) to anon, authenticated;
+
+create or replace function public.app_account_set(p_token text, p_id text, p_active boolean default null, p_adv text default null, p_set_adv boolean default false) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; t public.accounts;
+begin
+  a := public.ehh_auth(p_token);
+  if a.role<>'Doctor' then raise exception 'NOT_ALLOWED'; end if;
+  select * into t from public.accounts where id=p_id;
+  if not found then raise exception 'NOT_FOUND'; end if;
+  if p_active is not null and p_active=false then
+    if t.id=a.id then raise exception 'SELF'; end if;
+    if t.role='Doctor' and t.active and (select count(*) from public.accounts where role='Doctor' and active)<=1 then raise exception 'LAST_DOCTOR'; end if;
+  end if;
+  if p_set_adv then
+    if t.role<>'Teacher' or length(coalesce(p_adv,''))>30 then raise exception 'BAD_REQUEST'; end if;
+    update public.accounts set adv=nullif(btrim(coalesce(p_adv,'')),'') where id=t.id;
+    perform public.ehh_log(a,'account.advisory',t.username,jsonb_build_object('adv',nullif(btrim(coalesce(p_adv,'')),'')));
+  end if;
+  if p_active is not null then
+    update public.accounts set active=p_active where id=t.id;
+    if not p_active then delete from public.sessions where account_id=t.id; end if;
+    perform public.ehh_log(a,case when p_active then 'account.activate' else 'account.deactivate' end,t.username,jsonb_build_object('name',t.name));
+  end if;
+end $$;
+revoke all on function public.app_account_set(text,text,boolean,text,boolean) from public;
+grant execute on function public.app_account_set(text,text,boolean,text,boolean) to anon, authenticated;
+
+create or replace function public.app_account_reset(p_token text, p_id text, p_temp text) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; t public.accounts; n text := coalesce(p_temp,'');
+begin
+  a := public.ehh_auth(p_token);
+  if a.role<>'Doctor' then raise exception 'NOT_ALLOWED'; end if;
+  select * into t from public.accounts where id=p_id;
+  if not found then raise exception 'NOT_FOUND'; end if;
+  if t.id=a.id then raise exception 'SELF'; end if;
+  if length(n)<10 or length(n)>200 or n !~ '[A-Za-z]' or n !~ '[0-9]' or lower(n)=lower(t.username) then raise exception 'WEAK_PASSWORD'; end if;
+  update public.accounts set pw=crypt(n,gen_salt('bf')), must_change=true where id=t.id;
+  delete from public.sessions where account_id=t.id;
+  delete from public.login_fails where k=lower(btrim(t.username)) or k=lower(btrim(t.email));
+  perform public.ehh_log(a,'account.reset',t.username,jsonb_build_object('name',t.name));
+end $$;
+revoke all on function public.app_account_reset(text,text,text) from public;
+grant execute on function public.app_account_reset(text,text,text) to anon, authenticated;
+
+-- Doctor download: now also accounts (no passwords), messages, file list and the activity log
+create or replace function public.app_backup(p_token text) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_auth(p_token);
+  if a.role<>'Doctor' then raise exception 'NOT_ALLOWED'; end if;
+  perform public.ehh_log(a,'backup.download',null,'{}'::jsonb);
+  return jsonb_build_object('app','EduHealthHub','version',2,'at',now(),'by',a.name,
+    'students',(select coalesce(jsonb_agg(jsonb_build_object('id',id,'data',data) order by id),'[]'::jsonb) from public.students),
+    'stock',(select data from public.stock where id=1),
+    'clinic_notes',(select data from public.clinic_notes where id=1),
+    'transfers',(select coalesce(jsonb_agg(data order by id),'[]'::jsonb) from public.transfers),
+    'accounts',(select coalesce(jsonb_agg(jsonb_build_object('id',id,'role',role,'name',name,'username',username,'email',email,'adv',adv,'active',active) order by id),'[]'::jsonb) from public.accounts),
+    'messages',(select coalesce(jsonb_agg(to_jsonb(m) order by m.id),'[]'::jsonb) from public.messages m),
+    'file_list',(select coalesce(jsonb_agg(jsonb_build_object('id',id,'conv',conv,'sender',sender,'name',name,'mime',mime,'size',size,'at',at) order by id),'[]'::jsonb) from public.message_files),
+    'activity_log',(select coalesce(jsonb_agg(to_jsonb(l) order by l.id),'[]'::jsonb) from (select * from public.audit_log order by id desc limit 5000) l),
+    'note','Passwords are never exported. Uploaded file contents are not included (only their list).');
+end $$;
+
+-- Nightly snapshot: also accounts (with password hashes, server-side only), messages and the activity log
+create or replace function public.ehh_backup(p_note text default 'nightly') returns bigint
+language plpgsql security definer set search_path = public, extensions as $$
+declare sid bigint; n int;
+begin
+  insert into public.backup_snapshots(note) values (p_note) returning id into sid;
+  insert into public.backup_students(snap,id,data) select sid,id,data from public.students;
+  get diagnostics n = row_count;
+  update public.backup_snapshots set students=n where id=sid;
+  insert into public.backup_extra(snap,tbl,data)
+    select sid,'stock',coalesce((select data from public.stock where id=1),'{}'::jsonb)
+    union all select sid,'clinic_notes',coalesce((select data from public.clinic_notes where id=1),'[]'::jsonb)
+    union all select sid,'transfers',coalesce((select jsonb_agg(data order by id) from public.transfers),'[]'::jsonb)
+    union all select sid,'accounts',coalesce((select jsonb_agg(jsonb_build_object('id',id,'role',role,'name',name,'username',username,'email',email,'adv',adv,'active',active,'pw',pw) order by id) from public.accounts),'[]'::jsonb)
+    union all select sid,'messages',coalesce((select jsonb_agg(to_jsonb(m) order by m.id) from public.messages m),'[]'::jsonb)
+    union all select sid,'activity_log',coalesce((select jsonb_agg(to_jsonb(l) order by l.id) from (select * from public.audit_log order by id desc limit 5000) l),'[]'::jsonb);
+  delete from public.backup_snapshots where at<now()-interval '7 days';
+  return sid;
+end $$;

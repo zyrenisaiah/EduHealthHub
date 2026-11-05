@@ -1,7 +1,7 @@
 # EduHealthHub: files to upload
 
 Upload ALL files in this folder to the TOP LEVEL of your GitHub repository (no folders). 14 files:
-index.html, doctor.html, nurse.html, dentist.html, teacher.html, style.css, config.js, logo.js, data.js, core.js, cloud.js, app.js, supabase-setup.sql, accounts.txt (README.md optional).
+index.html, doctor.html, nurse.html, dentist.html, teacher.html, style.css, config.js, logo.js, data.js, core.js, cloud.js, app.js, supabase-setup.sql (README.md optional).
 
 ## Connect the shared database
 1. Create a free project at supabase.com. In SQL Editor run all of `supabase-setup.sql`.
@@ -39,6 +39,6 @@ People can link their Google account under **My account**. After that, every log
 - *Take a backup right now:* `select ehh_backup('before big change');`
 - These in-database copies protect against bad edits and deletions. They do not protect if the whole Supabase project is lost, which is why the downloaded file matters. Do it weekly, and on a paid Supabase plan turn on its own daily backups too.
 
-**Login rules.** Usernames and passwords are case-sensitive (`Dummy Doctor1` is not `dummy doctor1`; spaces count). Email addresses are not. 5 wrong tries lock that name for 5 minutes, 10 wrong tries for 15 minutes (changing capitals does not get around the lock), and a site-wide brake stops guessing across many names. Sessions last 8 hours, at most 5 per account, end after 15 idle minutes, and end when the browser or tab is closed (the next visit revokes it on the server; a session with no sign of life for 10 minutes is dead anyway). New passwords need 10+ characters with a letter and a number, and changing a password signs out the account's other sessions. The demo accounts in `accounts.txt` use short demo passwords. See **GO-LIVE.md** for everything to do before real student data goes in (including `select ehh_require_password_change();`).
+**Login rules.** Usernames and passwords are case-sensitive (`Dummy Doctor1` is not `dummy doctor1`; spaces count). Email addresses are not. 5 wrong tries lock that name for 5 minutes, 10 wrong tries for 15 minutes (changing capitals does not get around the lock), and a site-wide brake stops guessing across many names. Sessions last 8 hours, at most 5 per account, end after 15 idle minutes, and end when the browser or tab is closed (the next visit revokes it on the server; a session with no sign of life for 10 minutes is dead anyway). New passwords need 10+ characters with a letter and a number, and changing a password signs out the account's other sessions. The demo accounts use short demo passwords (see the account list in `supabase-setup.sql`); a Doctor can reset any password from the Accounts screen. See **GO-LIVE.md** for everything to do before real student data goes in (including `select ehh_require_password_change();`).
 
 **Live updates.** Messages and record changes appear within a moment, with no refresh. The database sends each signed-in browser an empty "something changed" ping (Supabase Realtime, on a secret per-session channel name); the browser then fetches what it is allowed to see through the normal checked calls. No health data travels over the live channel. If the live connection is down, pages quietly go back to checking every few seconds.

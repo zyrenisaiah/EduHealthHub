@@ -46,7 +46,7 @@ const P={
  Teacher:{exam:'view',dental:'view',prof:'view',stock:null}
 };
 const NAV={
- Doctor:[['home','Home'],['chat','Messages'],['overview','Overview'],['students','Students'],['stock','Supply stock'],['activity','Activity log'],['account','My account']],
+ Doctor:[['home','Home'],['chat','Messages'],['overview','Overview'],['students','Students'],['stock','Supply stock'],['accounts','Accounts'],['activity','Activity log'],['account','My account']],
  Nurse:[['home','Home'],['chat','Messages'],['students','Students'],['stock','Supply stock'],['account','My account']],
  Dentist:[['home','Home'],['chat','Messages'],['students','Students'],['account','My account']],
  Teacher:[['home','Home'],['chat','Messages'],['dash','My advisory'],['files','Record of files'],['account','My account']]
@@ -128,7 +128,7 @@ ${L.signup?` <form class="login-card" id="signupform" autocomplete="off">
 /* ---------- shell ---------- */
 function shell(){
  const u=S.user, nav=NAV[u.role];
- const body={chat:chatView,doc:docView,activity:activityView,home:()=>S.user.role==='Teacher'?teacherHome():homeView(),overview:overviewView,students:studentsView,stock:stockView,dash:teacherView,student:studentView,account:accountView,files:filesView}[S.view]();
+ const body={chat:chatView,doc:docView,activity:activityView,accounts:accountsView,home:()=>S.user.role==='Teacher'?teacherHome():homeView(),overview:overviewView,students:studentsView,stock:stockView,dash:teacherView,student:studentView,account:accountView,files:filesView}[S.view]();
  const navKey=(S.view==='student'||S.view==='doc')?S.back:S.view;
  return `<div class="shell"><header class="topbar"><button class="name homebtn" data-act="nav" data-v="${nav[0][0]}" title="Go to Home" aria-label="EduHealthHub, go to Home"><span class="logo-chip"><img src="${LOGO_EMBLEM}" alt="" height="34"></span>EduHealthHub</button><div class="spacer"></div>
   <img class="role-ic" style="object-fit:cover" src="${u.photo||ROLE_ICON[u.role]}" alt="${u.role}">

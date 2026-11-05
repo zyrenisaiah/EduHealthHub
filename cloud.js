@@ -37,6 +37,8 @@ function cloudErr(e){
  if(c==='TOO_MANY_CODES')return 'Too many codes were requested. Try again in an hour.';
  if(c==='BAD_EMAIL')return 'Enter a Gmail address, like name@gmail.com.';
  if(c==='EMAIL_TAKEN')return 'That Gmail is already linked to another account.';
+ if(c==='SELF')return 'You cannot do that to your own account.';
+ if(c==='LAST_DOCTOR')return 'At least one Doctor account must stay active.';
  if(c==='DUPLICATE')return 'That username or email is already used or waiting for approval.';
  if(c==='BAD_REQUEST')return 'Please check the form. Some details are not valid.';
  if(c==='NOT_FOUND')return 'That request was already handled.';
