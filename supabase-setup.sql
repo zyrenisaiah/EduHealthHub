@@ -1309,7 +1309,7 @@ begin
     rl := coalesce(p_role,r.role);
     if rl not in ('Doctor','Nurse','Dentist','Teacher') then raise exception 'BAD_REQUEST'; end if;
     ad := case when rl='Teacher' then nullif(btrim(coalesce(p_adv,r.adv,'')),'') end;
-    if rl='Teacher' and (ad is null or length(ad)>30) then raise exception 'BAD_REQUEST'; end if;
+    if ad is not null and length(ad)>30 then raise exception 'BAD_REQUEST'; end if;
     if exists (select 1 from public.accounts where regexp_replace(lower(username),'\s+','','g')=regexp_replace(lower(r.username),'\s+','','g')
                or regexp_replace(lower(email),'\s+','','g')=regexp_replace(lower(r.email),'\s+','','g')) then raise exception 'DUPLICATE'; end if;
     insert into public.accounts(id,role,name,username,email,adv,pw) values ('U'||r.id,rl,r.name,r.username,r.email,ad,r.pw);

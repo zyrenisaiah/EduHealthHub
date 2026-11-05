@@ -628,7 +628,8 @@ function onBind(e){
   ['tt','ts'].forEach(m=>{const c=$(`#${m}-${k}-${i}`);if(c)c.textContent=visitTotal(d,k,i,m)});save();return}
 }
 document.addEventListener('input',onBind);document.addEventListener('change',onBind);
-document.addEventListener('change',e=>{if(e.target.id==='su-role'){const f=$('#su-advf');if(f)f.hidden=e.target.value!=='Teacher'}});
+document.addEventListener('change',e=>{if(e.target.id==='su-role'){const f=$('#su-advf');if(f)f.hidden=e.target.value!=='Teacher'}
+ if(e.target.id==='su-adv'){const t=$('#su-adv2');if(t){t.hidden=e.target.value!=='__other';if(!t.hidden)t.focus()}}});
 document.addEventListener('submit',e=>{
  e.preventDefault();
  if(S.user&&homeSubmit(e))return;
@@ -641,10 +642,11 @@ document.addEventListener('submit',e=>{
   delete S.fails[id];L.err='';
   ss.set('ehh_uid',acc.id);ss.set('ehh_role',acc.role);location.href=ROLE_PAGE[acc.role];return}
  if(e.target.id==='signupform'){const L=S.login,v=id=>($('#'+id)||{}).value||'';
-  const name=v('su-name').trim(),role=v('su-role'),adv=v('su-adv'),email=v('su-email').trim(),user=v('su-user'),pw=v('su-pw');
-  const bad=name.length<2?'Enter your full name.':user.length<3||user!==user.trim()?'Username needs 3 or more characters, with no space at the start or end.':!/^\S+@\S+\.\S+$/.test(email)?'Enter a valid email address.':pwWeak(pw,user,'')||(pw!==v('su-pw2')?'The passwords do not match.':'');
-  if(bad){L.err=bad;render();['su-name','su-role','su-email','su-user'].forEach(k=>{});return}
-  const fin=()=>{L.done=true;L.err='';render()},fail=x=>{L.err=cloudErr(x);render()};
+  const name=v('su-name').trim(),role=v('su-role'),adv=v('su-adv')==='__other'?v('su-adv2').trim():v('su-adv'),email=v('su-email').trim(),user=v('su-user'),pw=v('su-pw');
+  const bad=name.length<2?'Enter your full name.':role==='Teacher'&&adv.length<2?'Write your advisory section.':user.length<3||user!==user.trim()?'Username needs 3 or more characters, with no space at the start or end.':!/^\S+@\S+\.\S+$/.test(email)?'Enter a valid email address.':pwWeak(pw,user,'')||(pw!==v('su-pw2')?'The passwords do not match.':'');
+  const showErr=m=>{L.err=m;const e=$('#su-err');if(e)e.innerHTML=m?`<div class="pill bad" style="white-space:normal">${esc(m)}</div>`:'';const b=$('#signupform button[type=submit]');if(b){b.disabled=false;b.textContent='Send request'}};
+  if(bad){showErr(bad);return}
+  const fin=()=>{L.done=true;L.err='';render()},fail=x=>showErr(cloudErr(x));
   if(CLOUD_ON){const b=$('#signupform button[type=submit]');if(b){b.disabled=true;b.textContent='Sending...'}
    rpc('app_signup',{p_name:name,p_role:role,p_email:email,p_username:user,p_pw:pw,p_adv:role==='Teacher'?adv:null}).then(fin).catch(fail);return}
   if(DB.accounts.some(x=>normU(x.username)===normU(user)||normU(x.email)===normU(email))||(DB.signups||[]).some(x=>normU(x.username)===normU(user)||normU(x.email)===normU(email)))return fail({code:'DUPLICATE'});

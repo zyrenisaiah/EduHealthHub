@@ -125,15 +125,15 @@ function signupPanel(){
  return `<section class="panel" id="signq" style="border-color:var(--warn)"><div class="head"><h3>Account requests</h3><span class="small muted">${rows.length} waiting</span></div>
  ${S.sg.err?`<div class="small" style="color:var(--bad)" role="alert">${esc(S.sg.err)}</div>`:''}
  <div class="tw"><table class="wrapth"><tbody>${rows.map(x=>`<tr><td><b>${esc(x.name)}</b> ${pill(esc(x.role),'mute')}<div class="small muted">${esc(x.username)} &middot; ${esc(x.email)}</div></td>
- <td>${x.role==='Teacher'?`<label class="small muted" for="sga-${x.id}">Advisory section</label><select class="inp" id="sga-${x.id}">${SECTIONS.map(c=>`<option value="${esc(c.id)}" ${c.id===x.adv?'selected':''}>${esc(secLabel(c))}</option>`).join('')}</select>`:'<span class="small muted">No advisory</span>'}</td>
+ <td>${x.role==='Teacher'?`<label class="small muted" for="sga-${x.id}">Advisory section</label>${x.adv&&!SECTIONS.some(c=>c.id===x.adv)?`<div class="small">Asked for: <b>${esc(x.adv)}</b></div>`:''}<select class="inp" id="sga-${x.id}"><option value="">No advisory yet</option>${SECTIONS.map(c=>`<option value="${esc(c.id)}" ${c.id===x.adv?'selected':''}>${esc(secLabel(c))}</option>`).join('')}</select>`:'<span class="small muted">No advisory</span>'}</td>
  <td style="white-space:nowrap"><button class="btn sm primary" data-act="sgok" data-id="${x.id}">Approve</button> <button class="btn sm" data-act="sgno" data-id="${x.id}">Reject</button></td></tr>`).join('')}</tbody></table></div>
  <div class="small muted" style="margin-top:6px">Only approve people you know. An approved account can open learner records for its role.</div></section>`}
 async function signupDecide(id,ok){
  if(S.sg.busy)return;const r=(S.sg.rows||[]).find(x=>String(x.id)===String(id));if(!r)return;
- const adv=r.role==='Teacher'?(($('#sga-'+id)||{}).value||r.adv):null;S.sg.busy=true;
+ const sel=$('#sga-'+id),adv=r.role==='Teacher'?(sel?sel.value:''):null;S.sg.busy=true;
  try{
   if(CLOUD_ON)await rpc('app_signup_decide',{p_token:TOK,p_id:+id,p_ok:ok,p_role:null,p_adv:adv});
-  else{DB.signups=(DB.signups||[]).filter(x=>String(x.id)!==String(id));if(ok){const aid='U'+id;DB.accounts.push({id:aid,role:r.role,adv,name:r.name,username:r.username,email:r.email,pw:pwHash(aid,r.pw)})}save()}
+  else{DB.signups=(DB.signups||[]).filter(x=>String(x.id)!==String(id));if(ok){const aid='U'+id;DB.accounts.push({id:aid,role:r.role,adv:adv||null,name:r.name,username:r.username,email:r.email,pw:pwHash(aid,r.pw)})}save()}
   toast(ok?r.name+' can now log in.':'Request rejected.')}
  catch(e){toast(cloudErr(e))}
  finally{S.sg.busy=false}S.sg.rows=[];S.sg.t=0;loadSignups()}
