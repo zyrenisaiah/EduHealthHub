@@ -1250,3 +1250,72 @@ begin
 end $$;
 revoke all on function public.app_file_get(text,bigint) from public;
 grant execute on function public.app_file_get(text,bigint) to anon, authenticated;
+
+-- =====================================================================
+-- SIGN-UP REQUESTS (a Doctor must approve before the account exists)
+-- =====================================================================
+create table if not exists public.signup_requests(
+  id bigserial primary key,
+  name text not null, username text not null, email text not null,
+  role text not null check (role in ('Doctor','Nurse','Dentist','Teacher')),
+  adv text, pw text not null,
+  status text not null default 'pending' check (status in ('pending','approved','rejected')),
+  at timestamptz not null default now(), decided_by text, decided_at timestamptz);
+alter table public.signup_requests enable row level security;
+revoke all on public.signup_requests from anon, authenticated;
+create index if not exists signup_requests_status_idx on public.signup_requests(status, at);
+
+create or replace function public.app_signup(p_name text, p_role text, p_email text, p_username text, p_pw text, p_adv text default null) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare nm text := btrim(coalesce(p_name,'')); un text := coalesce(p_username,''); em text := btrim(coalesce(p_email,'')); pw text := coalesce(p_pw,'');
+        nu text; ne text;
+begin
+  if length(nm) not between 2 and 80 or p_role not in ('Doctor','Nurse','Dentist','Teacher') then raise exception 'BAD_REQUEST'; end if;
+  if length(un) not between 3 and 40 or un<>btrim(un) then raise exception 'BAD_REQUEST'; end if;
+  if length(em)>120 or em !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then raise exception 'BAD_REQUEST'; end if;
+  if p_adv is not null and length(p_adv)>30 then raise exception 'BAD_REQUEST'; end if;
+  if length(pw)<10 or length(pw)>200 or pw !~ '[A-Za-z]' or pw !~ '[0-9]' or lower(pw)=lower(un) then raise exception 'WEAK_PASSWORD'; end if;
+  if (select count(*) from public.signup_requests where at>now()-interval '1 hour')>=30
+     or (select count(*) from public.signup_requests where status='pending')>=100 then raise exception 'SLOW_DOWN'; end if;
+  nu := regexp_replace(lower(un),'\s+','','g'); ne := regexp_replace(lower(em),'\s+','','g');
+  if exists (select 1 from public.accounts where regexp_replace(lower(username),'\s+','','g')=nu or regexp_replace(lower(email),'\s+','','g')=ne)
+     or exists (select 1 from public.signup_requests where status='pending' and (regexp_replace(lower(username),'\s+','','g')=nu or regexp_replace(lower(email),'\s+','','g')=ne))
+  then raise exception 'DUPLICATE'; end if;
+  insert into public.signup_requests(name,username,email,role,adv,pw) values (nm,un,em,p_role,case when p_role='Teacher' then nullif(btrim(p_adv),'') end,crypt(pw,gen_salt('bf')));
+end $$;
+revoke all on function public.app_signup(text,text,text,text,text,text) from public;
+grant execute on function public.app_signup(text,text,text,text,text,text) to anon, authenticated;
+
+create or replace function public.app_signups(p_token text) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_auth(p_token);
+  if a.role<>'Doctor' then raise exception 'NOT_ALLOWED'; end if;
+  return coalesce((select jsonb_agg(jsonb_build_object('id',id,'name',name,'username',username,'email',email,'role',role,'adv',adv,'at',at) order by id) from public.signup_requests where status='pending'),'[]'::jsonb);
+end $$;
+revoke all on function public.app_signups(text) from public;
+grant execute on function public.app_signups(text) to anon, authenticated;
+
+create or replace function public.app_signup_decide(p_token text, p_id bigint, p_ok boolean, p_role text default null, p_adv text default null) returns void
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; r public.signup_requests; rl text; ad text;
+begin
+  a := public.ehh_auth(p_token);
+  if a.role<>'Doctor' then raise exception 'NOT_ALLOWED'; end if;
+  select * into r from public.signup_requests where id=p_id and status='pending' for update;
+  if not found then raise exception 'NOT_FOUND'; end if;
+  if p_ok then
+    rl := coalesce(p_role,r.role);
+    if rl not in ('Doctor','Nurse','Dentist','Teacher') then raise exception 'BAD_REQUEST'; end if;
+    ad := case when rl='Teacher' then nullif(btrim(coalesce(p_adv,r.adv,'')),'') end;
+    if rl='Teacher' and (ad is null or length(ad)>30) then raise exception 'BAD_REQUEST'; end if;
+    if exists (select 1 from public.accounts where regexp_replace(lower(username),'\s+','','g')=regexp_replace(lower(r.username),'\s+','','g')
+               or regexp_replace(lower(email),'\s+','','g')=regexp_replace(lower(r.email),'\s+','','g')) then raise exception 'DUPLICATE'; end if;
+    insert into public.accounts(id,role,name,username,email,adv,pw) values ('U'||r.id,rl,r.name,r.username,r.email,ad,r.pw);
+  end if;
+  update public.signup_requests set status=case when p_ok then 'approved' else 'rejected' end, pw='', decided_by=a.name, decided_at=now() where id=r.id;
+  perform public.ehh_log(a,case when p_ok then 'account.approve' else 'account.reject' end,r.username,jsonb_build_object('role',coalesce(p_role,r.role),'name',r.name));
+end $$;
+revoke all on function public.app_signup_decide(text,bigint,boolean,text,text) from public;
+grant execute on function public.app_signup_decide(text,bigint,boolean,text,text) to anon, authenticated;

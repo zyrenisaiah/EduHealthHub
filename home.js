@@ -1,6 +1,7 @@
 /* ---------- Home tab for clinic staff (Doctor, Nurse, Dentist) ---------- */
 DB.notes=DB.notes||[];
 S.hm={q:'',sid:null,panel:'',msg:''};
+S.sg={rows:[],t:0,busy:false,err:''};
 const AILMENTS=['Headache','Fever','Stomach ache','Dysmenorrhea','Dizziness / fainting','Cough / colds','Minor wound / injury','Sprain / strain','Nosebleed','Asthma attack','Allergic reaction','Toothache','Other'];
 const CLEAR_TYPES=['Fit for PE / Intramurals','Fit to return to class after illness','Fit for sports competition','Other'];
 const PLAN_TYPES=['Asthma Action Plan','Heart Condition Protocol','Exemption from Strenuous Activity','Allergy / Anaphylaxis Plan','Diabetes Care Plan','Other'];
@@ -111,6 +112,31 @@ function searchMatches(q){
  q=q.trim().toLowerCase();if(q.length<2||/^\d+$/.test(q))return /^\d{3,}$/.test(q)?pool().filter(s=>s.lrn.startsWith(q)).slice(0,6):[];
  return pool().filter(s=>fullName(s).toLowerCase().includes(q)).slice(0,6)}
 
+/* Account requests (sign-up). Doctors approve or reject; nothing works until approved. */
+async function loadSignups(){
+ if(!S.user||S.user.role!=='Doctor'||S.sg.busy)return;S.sg.busy=true;S.sg.t=Date.now();
+ try{S.sg.rows=CLOUD_ON?await rpc('app_signups',{p_token:TOK}):(DB.signups||[]);S.sg.err=''}catch(e){if(e&&e.code==='SESSION_EXPIRED')cloudKick();else S.sg.err=cloudErr(e)}
+ finally{S.sg.busy=false}if(S.view==='home')render()}
+setInterval(()=>{if(S.user&&S.user.role==='Doctor'&&S.view==='home'&&!document.hidden)loadSignups()},60000);
+function signupPanel(){
+ if(S.user.role!=='Doctor')return '';
+ if(!S.sg.t&&!S.sg.busy)setTimeout(loadSignups,0);
+ const rows=S.sg.rows||[];if(!rows.length&&!S.sg.err)return '';
+ return `<section class="panel" id="signq" style="border-color:var(--warn)"><div class="head"><h3>Account requests</h3><span class="small muted">${rows.length} waiting</span></div>
+ ${S.sg.err?`<div class="small" style="color:var(--bad)" role="alert">${esc(S.sg.err)}</div>`:''}
+ <div class="tw"><table class="wrapth"><tbody>${rows.map(x=>`<tr><td><b>${esc(x.name)}</b> ${pill(esc(x.role),'mute')}<div class="small muted">${esc(x.username)} &middot; ${esc(x.email)}</div></td>
+ <td>${x.role==='Teacher'?`<label class="small muted" for="sga-${x.id}">Advisory section</label><select class="inp" id="sga-${x.id}">${SECTIONS.map(c=>`<option value="${esc(c.id)}" ${c.id===x.adv?'selected':''}>${esc(secLabel(c))}</option>`).join('')}</select>`:'<span class="small muted">No advisory</span>'}</td>
+ <td style="white-space:nowrap"><button class="btn sm primary" data-act="sgok" data-id="${x.id}">Approve</button> <button class="btn sm" data-act="sgno" data-id="${x.id}">Reject</button></td></tr>`).join('')}</tbody></table></div>
+ <div class="small muted" style="margin-top:6px">Only approve people you know. An approved account can open learner records for its role.</div></section>`}
+async function signupDecide(id,ok){
+ if(S.sg.busy)return;const r=(S.sg.rows||[]).find(x=>String(x.id)===String(id));if(!r)return;
+ const adv=r.role==='Teacher'?(($('#sga-'+id)||{}).value||r.adv):null;S.sg.busy=true;
+ try{
+  if(CLOUD_ON)await rpc('app_signup_decide',{p_token:TOK,p_id:+id,p_ok:ok,p_role:null,p_adv:adv});
+  else{DB.signups=(DB.signups||[]).filter(x=>String(x.id)!==String(id));if(ok){const aid='U'+id;DB.accounts.push({id:aid,role:r.role,adv,name:r.name,username:r.username,email:r.email,pw:pwHash(aid,r.pw)})}save()}
+  toast(ok?r.name+' can now log in.':'Request rejected.')}
+ catch(e){toast(cloudErr(e))}
+ finally{S.sg.busy=false}S.sg.rows=[];S.sg.t=0;loadSignups()}
 function homeView(){
  const r=S.user.role,h=S.hm,t=localDate();
  const s=h.sid?stu(h.sid):null;
@@ -126,6 +152,7 @@ function homeView(){
   <div class="trow" style="margin-top:12px">${quickActions()}</div></section>
  ${homeStats()}
  ${s?resultCard(s):''}
+ ${signupPanel()}
  ${inc.length?`<section class="panel" id="incq" style="border-color:var(--warn)"><div class="head"><h3>Incoming from teachers</h3><span class="small muted">${inc.length} on the way</span></div><div class="tw"><table class="wrapth"><tbody>${inc.map(({s:x,x:ps})=>`<tr><td><b>${esc(fullName(x))}</b><div class="small muted mono">${x.lrn}</div></td><td>${esc(secLabel(curSec(x)))}<div class="small muted">Sent ${esc(ps.time)} by ${esc(ps.by)}${ps.note?' · '+esc(ps.note):''}</div></td><td style="white-space:nowrap">${canSlip()?`<button class="btn sm primary" data-act="hrecv" data-id="${x.id}" data-v="${ps.id}">Receive</button>`:''}</td></tr>`).join('')}</tbody></table></div></section>`:''}
  <div class="grid2">
  ${r!=='Dentist'?`<section class="panel" id="refq"><div class="head"><h3>Doctor referral queue</h3><span class="small muted">${q.length} waiting</span></div>
@@ -198,6 +225,8 @@ const HOME_ACT={
  backupdl:async()=>{if(!CLOUD_ON||S.audit.dl)return;S.audit.dl=true;render();try{const d=await rpc('app_backup',{p_token:TOK});browserSave('EduHealthHub-backup-'+localDate()+'.json',JSON.stringify(d))}catch(e){toast(cloudErr(e))}S.audit.dl=false;render();loadAudit()},
  hpanel:a=>{S.hm.panel=a.dataset.k;render();const f=$('.hform');if(f)f.scrollIntoView({block:'nearest'})},
  hpick:a=>{logView(a.dataset.id);S.hm.sid=a.dataset.id;S.hm.q=stu(a.dataset.id).lrn;S.hm.msg='';S.hm.panel=a.dataset.k||'';render();const r=$('#hres');if(r)r.scrollIntoView({block:'start'})},
+ sgok:a=>signupDecide(a.dataset.id,true),
+ sgno:a=>signupDecide(a.dataset.id,false),
  hclear:()=>{S.hm={q:'',sid:null,panel:'',msg:''};render()},
  'qa-walk':()=>{S.hm.panel='walk';S.hm.msg=S.hm.sid?'':'Type the learner\'s LRN first.';render();S.hm.sid?0:homeFocusSearch()},
  'qa-refer':()=>{S.hm.panel='refer';S.hm.msg=S.hm.sid?'':'Type the learner\'s LRN first.';render();S.hm.sid?0:homeFocusSearch()},
@@ -287,6 +316,8 @@ async function loadAudit(){
 function auditText(r){
  const d=r.detail||{};
  if(r.action==='student.update')return 'Updated '+(d.fields||[]).map(k=>FIELD_LABEL[k]||k).filter((v,i,a)=>a.indexOf(v)===i).join(', ');
+ if(r.action==='account.approve')return 'Approved the account of '+(d.name||r.target)+' ('+(d.role||'')+')';
+ if(r.action==='account.reject')return 'Rejected the sign-up of '+(d.name||r.target);
  if(r.action==='stock.update')return 'Updated supply stock ('+(d.items||0)+' items)';
  if(r.action==='student.view')return 'Opened the record';
  if(r.action==='password.change')return 'Changed their password';

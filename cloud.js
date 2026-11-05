@@ -37,6 +37,9 @@ function cloudErr(e){
  if(c==='TOO_MANY_CODES')return 'Too many codes were requested. Try again in an hour.';
  if(c==='BAD_EMAIL')return 'Enter a Gmail address, like name@gmail.com.';
  if(c==='EMAIL_TAKEN')return 'That Gmail is already linked to another account.';
+ if(c==='DUPLICATE')return 'That username or email is already used or waiting for approval.';
+ if(c==='BAD_REQUEST')return 'Please check the form. Some details are not valid.';
+ if(c==='NOT_FOUND')return 'That request was already handled.';
  if(c==='WEAK_PASSWORD')return 'New password needs 10+ characters with a letter and a number, and must differ from your username and old password.';
  if(c==='BAD_PASSWORD')return 'Password is incorrect.';
  if(c==='MAIL_NOT_SET_UP'||c==='MAIL_FAILED')return 'The email could not be sent. '+((e&&e.detail)?'('+e.detail+') ':'')+'The site owner still needs to finish the email setup.';

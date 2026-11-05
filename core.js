@@ -6,11 +6,11 @@ const SEEDLRN={};SEED.students.forEach(s=>SEEDLRN[s.id]=s.lrn);
 let DB=SEED;
 if(!CLOUD_ON)try{const j=localStorage.getItem('ehh3');
  if(j){const sv=JSON.parse(j),ov={};(sv.students||[]).forEach(s=>ov[s.id]=s);DB.students=SEED.students.map(s=>ov[s.id]||s);
-  if(sv.stock)DB.stock=sv.stock;if(sv.accounts)DB.accounts=sv.accounts;if(sv.transfers)DB.transfers=sv.transfers;if(sv.notes)DB.notes=sv.notes}
+  if(sv.stock)DB.stock=sv.stock;if(sv.accounts)DB.accounts=sv.accounts;if(sv.transfers)DB.transfers=sv.transfers;if(sv.notes)DB.notes=sv.notes;if(sv.signups)DB.signups=sv.signups}
  else{const o=localStorage.getItem('ehh2');if(o){const sv=JSON.parse(o);if(sv.stock)DB.stock=sv.stock;if(sv.accounts)DB.accounts=sv.accounts}}}catch(e){}
 if(!CLOUD_ON)DB.students.forEach(s=>{if(SEEDLRN[s.id])s.lrn=SEEDLRN[s.id]});
 let _t=null;
-function doSave(){_t=null;if(CLOUD_ON){return cloudPush()}try{const ch=DB.students.filter(s=>JSON.stringify(s)!==SEEDJ[s.id]);localStorage.setItem('ehh3',JSON.stringify({students:ch,stock:DB.stock,accounts:DB.accounts,transfers:DB.transfers,notes:DB.notes}))}catch(e){}}
+function doSave(){_t=null;if(CLOUD_ON){return cloudPush()}try{const ch=DB.students.filter(s=>JSON.stringify(s)!==SEEDJ[s.id]);localStorage.setItem('ehh3',JSON.stringify({students:ch,stock:DB.stock,accounts:DB.accounts,transfers:DB.transfers,notes:DB.notes,signups:DB.signups}))}catch(e){}}
 const save=()=>{clearTimeout(_t);_t=setTimeout(doSave,350)};
 addEventListener('pagehide',()=>{if(_t){clearTimeout(_t);doSave()}});
 function h53(s){let a=0xdeadbeef,b=0x41c6ce57;for(let i=0;i<s.length;i++){const c=s.charCodeAt(i);a=Math.imul(a^c,2654435761);b=Math.imul(b^c,1597334677)}
@@ -91,7 +91,19 @@ function loginView(){
   <div class="chart-strip" aria-hidden="true"><span>SY ${CUR_SY}</span><span>Private &amp; role-based</span><span>Synced online</span></div>
  </div>
  <div style="display:grid;gap:14px;min-width:0">
-${L.must?` <form class="login-card" id="mustform" autocomplete="off">
+${L.signup?` <form class="login-card" id="signupform" autocomplete="off">
+  ${L.done?`<div><h2>Request sent</h2><div class="small muted">Thank you. A Doctor has to approve your account before you can log in. You can come back to this page and log in once it is approved.</div></div><div class="trow"><button type="button" class="btn primary" data-act="signupback">Back to log in</button></div>`:`<div><h2>Create an account</h2><div class="small muted">For clinic staff and teachers only. A Doctor reviews every request before the account works. Learners do not have accounts.</div></div>
+  <div class="field"><label for="su-name">Full name</label><input class="inp" id="su-name" maxlength="80" autocomplete="name" required></div>
+  <div class="field"><label for="su-role">I am a</label><select class="inp" id="su-role">${['Teacher','Nurse','Dentist','Doctor'].map(r=>`<option ${WANT===r?'selected':''}>${r}</option>`).join('')}</select></div>
+  <div class="field" id="su-advf"><label for="su-adv">Advisory section</label><select class="inp" id="su-adv">${SECTIONS.map(x=>`<option value="${esc(x.id)}">${esc(secLabel(x))}</option>`).join('')}</select></div>
+  <div class="field"><label for="su-email">Email</label><input class="inp" id="su-email" type="email" maxlength="120" autocomplete="email" required></div>
+  <div class="field"><label for="su-user">Username</label><input class="inp" id="su-user" minlength="3" maxlength="40" autocomplete="username" autocapitalize="off" spellcheck="false" required><div class="small muted">3 or more characters. Capitals and small letters count when you log in.</div></div>
+  <div class="field"><label for="su-pw">Password</label><input class="inp" id="su-pw" type="password" minlength="10" autocomplete="new-password" autocapitalize="off" required><div class="small muted">At least 10 characters with a letter and a number.</div></div>
+  <div class="field"><label for="su-pw2">Repeat password</label><input class="inp" id="su-pw2" type="password" autocomplete="new-password" autocapitalize="off" required></div>
+  ${L.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.err)}</div>`:''}
+  <button class="btn primary" type="submit">Send request</button>
+  <div class="trow"><button type="button" class="btn sm" data-act="signupback">Back to log in</button></div>`}
+ </form>`:L.must?` <form class="login-card" id="mustform" autocomplete="off">
   <div><h2>Choose a new password</h2><div class="small muted">For privacy, this account must set its own password before opening any records. Capitals and small letters count.</div></div>
   <div class="field"><label for="mu-n">New password</label><input class="inp" id="mu-n" type="password" autocomplete="new-password" autocapitalize="off" minlength="10" required><div class="small muted">At least 10 characters with a letter and a number.</div></div>
   <div class="field"><label for="mu-r">Repeat new password</label><input class="inp" id="mu-r" type="password" autocomplete="new-password" autocapitalize="off" required></div>
@@ -108,6 +120,7 @@ ${L.must?` <form class="login-card" id="mustform" autocomplete="off">
   <div class="field"><label for="pw">Password</label><div class="who-cell"><input class="inp" id="pw" name="password" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required><button type="button" class="btn sm" data-act="showpw" aria-pressed="false">Show</button></div><div class="caps" id="caps" hidden>Caps Lock is on</div><div class="small muted" style="margin-top:4px">Username and password are case-sensitive: capitals and small letters must match exactly.</div></div>
   ${L.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.err)}</div>`:''}
   <button class="btn primary" type="submit">Log in</button>
+ <div class="trow" style="justify-content:center"><span class="small muted">New here?</span> <button type="button" class="btn sm" data-act="signupopen">Create an account</button></div>
  </form>`}
 </div></div></div>`;
 }
