@@ -145,6 +145,28 @@ function recCard(m){
  const r=m.r||{},s=stu(r.sid);if(!s)return `<div class="mcard"><b>Shared record</b></div>`;
  return `<div class="mcard"><div class="eyebrow">${r.kind?'Shared health file':'Shared learner'}</div><b>${esc(fullName(s))}</b> <span class="mono small">${s.lrn}</span><div class="small muted">${esc(secLabel(curSec(s)))}${r.kind?' · '+esc(r.kind)+' · '+esc(r.sy||''):''}</div>
  <div class="trow"><button class="btn sm primary" data-act="copen" data-id="${s.id}" data-sy="${esc(r.sy||'')}" data-k="${esc(r.kind||'')}">Open${r.kind?' file':' record'}</button></div></div>`}
+function quoteHtml(id){const o=S.msg.msgs.find(x=>x.id===id);
+ return `<button type="button" class="rquote" data-act="mjump" data-id="${id}"><b>${o?esc(o.s===S.user.id?'You':o.sn):'Original message'}</b><span>${o?esc(o.d?'Message unsent':mprev(o).slice(0,90)):'Open the chat history to see it'}</span></button>`}
+function menuClose(){const m=$('#mmenu');if(m)m.remove();document.querySelectorAll('.mdots.on').forEach(b=>b.classList.remove('on'))}
+function menuOpen(btn){
+ const m=S.msg.msgs.find(x=>x.id===+btn.dataset.id);if(!m||m.d)return;menuClose();btn.classList.add('on');
+ const me=m.s===S.user.id,it=(act,label,ic)=>`<button type="button" role="menuitem" class="mitem" data-act="${act}" data-id="${m.id}"><span aria-hidden="true">${ic}</span>${label}</button>`;
+ const items=[it('mmreply','Reply','&#8617;'),m.k==='text'?it('mmfwd','Forward','&#10150;'):'',m.k==='text'?it('mmcopy','Copy','&#128203;'):'',me&&m.k==='text'?it('medit','Edit','&#9998;'):'',me&&['text','file','record'].includes(m.k)?it('munsend','Unsend','&#128465;'):''].join('');
+ const d=document.createElement('div');d.id='mmenu';d.className='mmenu';d.setAttribute('role','menu');d.innerHTML=items;document.body.appendChild(d);
+ const r=btn.getBoundingClientRect(),w=d.offsetWidth,h=d.offsetHeight;
+ d.style.left=Math.min(Math.max(8,me?r.right-w:r.left),innerWidth-w-8)+'px';d.style.top=(r.bottom+h+8>innerHeight?Math.max(8,r.top-h-4):r.bottom+4)+'px';
+ const f=d.querySelector('button');if(f)f.focus()}
+function replyBarRender(){
+ const b=$('#replybar');if(!b)return;const r=S.msg.reply,m=r&&r.conv===S.msg.active?S.msg.msgs.find(x=>x.id===r.id):null;
+ if(!m){b.hidden=true;b.innerHTML='';return}
+ b.hidden=false;b.innerHTML=`<span class="rb">Replying to <b>${esc(m.s===S.user.id?'yourself':m.sn)}</b><span>${esc(mprev(m).slice(0,80))}</span></span><button type="button" class="btn sm" data-act="mrcancel" aria-label="Cancel reply">&#10005;</button>`}
+function fwdOpen(id){const m=S.msg.msgs.find(x=>x.id===id);if(!m)return;S.msg.fwd=id;fwdRender()}
+function fwdRender(){
+ let o=$('#fwdm');if(S.msg.fwd==null){if(o)o.remove();return}
+ const m=S.msg.msgs.find(x=>x.id===S.msg.fwd);if(!m){S.msg.fwd=null;if(o)o.remove();return}
+ if(!o){o=document.createElement('div');o.id='fwdm';o.className='fwdm';o.setAttribute('role','dialog');o.setAttribute('aria-label','Forward message');document.body.appendChild(o)}
+ o.innerHTML=`<div class="fwdcard"><div class="head"><h3>Forward to</h3><button type="button" class="btn sm" data-act="fwdclose">Close</button></div><div class="small muted" style="margin:4px 0 8px">Everyone in the chat you choose will see this message.</div><div class="fwdprev small">${esc(m.b.slice(0,140))}</div><div class="fwdlist">${convList().map(c=>`<button type="button" class="citem" data-act="fwdto" data-c="${esc(c)}"><img class="role-ic" src="${esc(convIcon(c))}" alt=""><span class="cmid"><b>${esc(convTitle(c))}</b><span class="small muted">${esc(convSub(c))}</span></span></button>`).join('')}</div></div>`;
+ const f=o.querySelector('.citem');if(f)f.focus()}
 function threadHtml(c){
  const ms=convMsgs(c);let out='',day='';
  if(!ms.length)return `<div class="small muted" style="text-align:center;margin:30px 0">No messages yet. Say hello${S.user.role==='Teacher'&&c==='desk:'+S.user.id?' or send a student to the clinic':''}.</div>`;
@@ -155,7 +177,7 @@ function threadHtml(c){
   const ed=S.msg.edit&&S.msg.edit.id===m.id;
   const body=ed?`<textarea class="inp" id="medtext" rows="2" maxlength="2000" aria-label="Edit message">${esc(S.msg.edit.text)}</textarea><div class="mact"><button type="button" class="btn sm primary" data-act="msave">Save</button> <button type="button" class="btn sm" data-act="mcancel">Cancel</button></div>`:m.k==='pass'?passCard(m):m.k==='record'?recCard(m):m.k==='file'?fileCard(m):`<div class="mtext">${mtextHtml(m.b)}</div>`;
   const av=!me&&(!prev||prev.s!==m.s||prev.k==='event'||mday(prev.t)!==d)?profImg(m.s,'mav',avOf(m.s,m.sr)):'';
-  out+=`<div class="mrow ${me?'me':'them'}">${av}${showName&&!c.startsWith('dm:')?`<div class="mname">${esc(m.sn)} <span class="mrole">${esc(m.sr)}</span></div>`:''}<div class="bubble ${m.k!=='text'?'bwide':''} ${!me&&mentionsMe(m.b)?'mentioned':''}">${body}</div><div class="mtime">${mtime(m.t)}${m.e?' &middot; edited':''}${me&&!ed&&['text','file','record'].includes(m.k)?` <span class="mact">${m.k==='text'?`<button type="button" class="linkb" data-act="medit" data-id="${m.id}">Edit</button>`:''}<button type="button" class="linkb" data-act="munsend" data-id="${m.id}">Unsend</button></span>`:''}</div></div>`});
+  out+=`<div class="mrow ${me?'me':'them'}" id="m-${m.id}">${av}${showName&&!c.startsWith('dm:')?`<div class="mname">${esc(m.sn)} <span class="mrole">${esc(m.sr)}</span></div>`:''}<div class="bwrap"><div class="bubble ${m.k!=='text'?'bwide':''} ${!me&&mentionsMe(m.b)?'mentioned':''}">${m.k==='text'&&m.r&&m.r.fw?`<div class="small fwdl">Forwarded from ${esc(m.r.fw)}</div>`:''}${m.k==='text'&&m.r&&m.r.re?quoteHtml(m.r.re):''}${body}</div>${ed?'':`<button type="button" class="mdots" data-act="mmenu" data-id="${m.id}" aria-label="Message options" aria-haspopup="menu" title="More">&#8943;</button>`}</div><div class="mtime">${mtime(m.t)}${m.e?' &middot; edited':''}</div></div>`});
  return out}
 function listHtml(){
  return convList().map(c=>{const l=convMsgs(c).slice(-1)[0],u=unreadOf(c);
@@ -197,12 +219,13 @@ function chatView(){
  <div class="chat ${c||S.msg.panel==='new'?'has-active':''}"><aside class="chlist" id="chlist" aria-label="Conversations">${listHtml()}</aside>
  <section class="chmain" aria-label="Conversation">${c?`<div class="chhead"><button class="btn sm cback" data-act="cback" aria-label="Back to conversations">←</button>${chHead(c)}</div>
   <div class="chthread" id="chthread" role="log" aria-live="polite">${threadHtml(c)}</div><div id="chpanel">${panelHtml()}</div>
-  <form class="chcomp" id="chform"><div class="mpop" id="mpop" hidden></div><button type="button" class="btn" data-act="cpanel" data-k="attach" title="Attach a learner or health file" aria-label="Attach">+</button>${canSend?'<button type="button" class="btn" data-act="cpanel" data-k="send">Send student to clinic</button>':''}<textarea id="chtext" rows="1" maxlength="2000" placeholder="Write a message" aria-label="Message">${esc(S.msg.draft[c]||'')}</textarea><button class="btn primary" type="submit">Send</button></form>`
+  <form class="chcomp" id="chform"><div class="replybar" id="replybar" hidden></div><div class="mpop" id="mpop" hidden></div><button type="button" class="btn" data-act="cpanel" data-k="attach" title="Attach a learner or health file" aria-label="Attach">+</button>${canSend?'<button type="button" class="btn" data-act="cpanel" data-k="send">Send student to clinic</button>':''}<textarea id="chtext" rows="1" maxlength="2000" placeholder="Write a message" aria-label="Message">${esc(S.msg.draft[c]||'')}</textarea><button class="btn primary" type="submit">Send</button></form>`
   :`<div class="chempty"><p class="muted">Choose a conversation, or start a new chat.</p><div id="chpanel">${panelHtml()}</div></div>`}</section></div>`}
 function chatBadge(){
  const n=unreadAll();document.querySelectorAll('[data-v="chat"]').forEach(b=>{let e=b.querySelector('.badge');if(n){if(!e){e=document.createElement('span');e.className='badge';b.appendChild(e)}e.textContent=n}else if(e)e.remove()});
  if(_baseTitle)document.title=(n?'('+n+') ':'')+_baseTitle}
 function chatRefresh(scroll){
+ replyBarRender();
  chatBadge();if(S.view!=='chat')return;
  const l=$('#chlist');if(l)l.innerHTML=listHtml();
  const editing=document.activeElement&&document.activeElement.id==='medtext',t=$('#chthread');if(t&&S.msg.active&&!editing){const near=t.scrollHeight-t.scrollTop-t.clientHeight<140;t.innerHTML=threadHtml(S.msg.active);if(near||scroll)t.scrollTop=t.scrollHeight}
@@ -218,12 +241,21 @@ const CHAT_ACT={
  cdm:a=>{const c=dmId(S.user.id,a.dataset.id);S.msg.tmp[c]=1;chatOpen(c)},
  cfilepick:()=>{const i=$('#cfile');if(i)i.click()},
  cfdl:async a=>{try{const x=await rpc('app_file_get',{p_token:TOK,p_fid:+a.dataset.fid});browserSave(x.name,b64blob(x.b64,x.mime))}catch(e){toast(msgErr(e))}},
- medit:a=>{const m=S.msg.msgs.find(x=>x.id===+a.dataset.id);if(!m)return;S.msg.edit={id:m.id,text:m.b};chatRefresh();const t=$('#medtext');if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length)}},
+ mmenu:a=>{if($('#mmenu')&&a.classList.contains('on'))return menuClose();menuOpen(a)},
+ mmreply:a=>{menuClose();S.msg.reply={conv:S.msg.active,id:+a.dataset.id};replyBarRender();const i=$('#chtext');if(i)i.focus()},
+ mrcancel:()=>{S.msg.reply=null;replyBarRender()},
+ mmfwd:a=>{menuClose();fwdOpen(+a.dataset.id)},
+ fwdclose:()=>{S.msg.fwd=null;fwdRender()},
+ fwdto:async a=>{const m=S.msg.msgs.find(x=>x.id===S.msg.fwd);if(!m)return;const c=a.dataset.c;S.msg.fwd=null;fwdRender();
+  const r=await msgSend(c,m.b,'text',{fw:m.sn});if(r){toast('Forwarded to '+convTitle(c)+'.');if(c===S.msg.active)chatRefresh(true)}},
+ mmcopy:async a=>{menuClose();const m=S.msg.msgs.find(x=>x.id===+a.dataset.id);try{await navigator.clipboard.writeText(m.b);toast('Copied.')}catch(e){toast('Could not copy. Select the text and copy it.')}},
+ mjump:a=>{const e=$('#m-'+a.dataset.id);if(!e)return toast('That message is not loaded.');e.scrollIntoView({block:'center',behavior:'smooth'});e.classList.add('flash');setTimeout(()=>e.classList.remove('flash'),1400)},
+ medit:a=>{menuClose();const m=S.msg.msgs.find(x=>x.id===+a.dataset.id);if(!m)return;S.msg.edit={id:m.id,text:m.b};chatRefresh();const t=$('#medtext');if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length)}},
  mcancel:()=>{S.msg.edit=null;chatRefresh()},
  msave:async()=>{const e=S.msg.edit,t=$('#medtext');if(!e||!t)return;const b=t.value.trim();if(!b)return toast('A message cannot be empty. Use Unsend to remove it.');
   const m=S.msg.msgs.find(x=>x.id===e.id);if(m&&m.b===b){S.msg.edit=null;return chatRefresh()}
   try{const r=await rpc('app_msg_edit',{p_token:TOK,p_id:e.id,p_body:b});S.msg.edit=null;msgApply(r)}catch(x){if(x&&x.code==='SESSION_EXPIRED')return cloudKick();return toast(msgErr(x))}chatRefresh()},
- munsend:async a=>{const id=+a.dataset.id;if(!confirm('Unsend this message? It will be removed for everyone in the chat.'))return;
+ munsend:async a=>{menuClose();const id=+a.dataset.id;if(!confirm('Unsend this message? It will be removed for everyone in the chat.'))return;
   try{const r=await rpc('app_msg_unsend',{p_token:TOK,p_id:id});msgApply(r)}catch(x){if(x&&x.code==='SESSION_EXPIRED')return cloudKick();return toast(msgErr(x))}chatRefresh()},
  cmention:a=>mentionPick(+a.dataset.k),
  cpick:a=>{S.msg.pick=a.dataset.id;chatPanelRender()},
@@ -240,7 +272,11 @@ const CHAT_ACT={
 };
 function chatSubmit(){
  const c=S.msg.active,i=$('#chtext');if(!c||!i)return;const t=i.value.trim();if(!t)return;
- i.value='';S.msg.draft[c]='';i.style.height='';msgSend(c,t,'text',null).then(m=>{if(!m){i.value=t;S.msg.draft[c]=t}})}
+ const rp=S.msg.reply&&S.msg.reply.conv===c?S.msg.reply.id:null;
+ i.value='';S.msg.draft[c]='';i.style.height='';S.msg.reply=null;replyBarRender();msgSend(c,t,'text',rp?{re:rp}:null).then(m=>{if(!m){i.value=t;S.msg.draft[c]=t;if(rp){S.msg.reply={conv:c,id:rp};replyBarRender()}}})}
+document.addEventListener('click',e=>{if($('#mmenu')&&!e.target.closest('#mmenu,.mdots'))menuClose()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if($('#mmenu')){menuClose();return}if(S.msg.fwd!=null){S.msg.fwd=null;fwdRender()}}});
+document.addEventListener('scroll',e=>{if(e.target.id==='chthread')menuClose()},true);
 document.addEventListener('submit',e=>{if(e.target.id==='chform'){e.preventDefault();e.stopImmediatePropagation();chatSubmit()}},true);
 document.addEventListener('keydown',e=>{const mp=S.msg.mp,pop=$('#mpop');
  if(e.target.id==='chtext'&&mp&&mp.list.length&&pop&&!pop.hidden){
