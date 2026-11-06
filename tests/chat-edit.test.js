@@ -1,7 +1,7 @@
 // Edit and unsend: own messages only, edits/unsends from other people arrive through sync "changes".
 const assert = require('assert'), { start } = require('./helpers');
 (async () => {
-  const h = await start({ width: 1100, height: 760 }), p = await h.ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('dialog', d => d.accept());
+  const h = await start({ width: 1100, height: 760 }), p = await h.ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('dialog', d => { errs.push('native dialog used: ' + d.message()); d.dismiss(); });
   await p.route(/fonts\./, r => r.abort());
   await p.route('**/config.js*', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:""').replace('const CLOUD_ON', 'var CLOUD_ON') }); });
   await p.goto(h.base + 'nurse.html'); await p.waitForSelector('#loginform');
@@ -41,7 +41,9 @@ const assert = require('assert'), { start } = require('./helpers');
   // someone else edits their message: arrives as a change
   await p.evaluate(() => msgApply({ id: 2, conv: 'clinic', s: 'D1', sn: 'Dummy Doctor', sr: 'Doctor', k: 'text', b: 'doctor fixed it', t: Date.now(), v: 50, d: false, e: new Date().toISOString() }) || chatRefresh());
   assert((await p.textContent('#chthread')).includes('doctor fixed it'), 'other person edit shows up');
-  await menu(1); await p.click('#mmenu [data-act=munsend]'); await p.waitForFunction(() => document.querySelector('#chthread').textContent.includes('You unsent a message'));
+  await menu(1); await p.click('#mmenu [data-act=munsend]'); await p.waitForSelector('#cfm [data-cfm=yes]'); assert(!(await p.evaluate(() => !!window.__nativeDialog)), 'no browser dialog'); assert((await p.textContent('#cfm')).includes('Unsend this message?'));
+  await p.keyboard.press('Escape'); assert(!(await p.$('#cfm')), 'Esc cancels the pop-up'); assert(!(await p.evaluate(() => calls.some(c => c[0] === 'app_msg_unsend'))), 'cancel does not unsend');
+  await menu(1); await p.click('#mmenu [data-act=munsend]'); await p.waitForSelector('#cfm [data-cfm=yes]'); await p.click('#cfm [data-cfm=yes]'); await p.waitForFunction(() => document.querySelector('#chthread').textContent.includes('You unsent a message'));
   assert(!(await p.textContent('#chthread')).includes('my fixed note'), 'unsent text is gone');
   await p.evaluate(() => { msgApply({ id: 2, conv: 'clinic', s: 'D1', sn: 'Dummy Doctor', sr: 'Doctor', k: 'text', b: '', t: Date.now(), v: 60, d: true, e: null }); chatRefresh(); });
   assert((await p.textContent('#chthread')).includes('Dummy Doctor unsent a message'), 'other person unsend shows up');

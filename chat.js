@@ -255,7 +255,7 @@ const CHAT_ACT={
  msave:async()=>{const e=S.msg.edit,t=$('#medtext');if(!e||!t)return;const b=t.value.trim();if(!b)return toast('A message cannot be empty. Use Unsend to remove it.');
   const m=S.msg.msgs.find(x=>x.id===e.id);if(m&&m.b===b){S.msg.edit=null;return chatRefresh()}
   try{const r=await rpc('app_msg_edit',{p_token:TOK,p_id:e.id,p_body:b});S.msg.edit=null;msgApply(r)}catch(x){if(x&&x.code==='SESSION_EXPIRED')return cloudKick();return toast(msgErr(x))}chatRefresh()},
- munsend:async a=>{menuClose();const id=+a.dataset.id;if(!confirm('Unsend this message? It will be removed for everyone in the chat.'))return;
+ munsend:async a=>{menuClose();const id=+a.dataset.id;if(!await askConfirm({title:'Unsend this message?',text:'It will be removed for everyone in the chat.',ok:'Unsend',danger:true}))return;
   try{const r=await rpc('app_msg_unsend',{p_token:TOK,p_id:id});msgApply(r)}catch(x){if(x&&x.code==='SESSION_EXPIRED')return cloudKick();return toast(msgErr(x))}chatRefresh()},
  cmention:a=>mentionPick(+a.dataset.k),
  cpick:a=>{S.msg.pick=a.dataset.id;chatPanelRender()},

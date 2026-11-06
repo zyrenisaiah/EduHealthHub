@@ -415,3 +415,8 @@ button.mention{font:inherit;border:0;cursor:pointer}button.mention:hover{text-de
 .bubble .mact .btn{border:1px solid rgba(255,255,255,.7);background:transparent;color:inherit;font-weight:600}
 .bubble .mact .btn.primary{background:#fff;color:#2f5d44;border-color:#fff}
 .mrow.them .bubble .mact .btn{border-color:var(--line);color:var(--ink)}.mrow.them .bubble .mact .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+.cfm{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;padding:16px}
+.cfmbox{background:var(--surface);color:var(--ink);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.3);padding:18px 18px 14px;width:min(340px,100%)}
+.cfmbox h3{margin:0 0 6px;font-size:17px}.cfmbox p{margin:0 0 14px;color:var(--muted);font-size:14px;line-height:1.4}
+.cfmrow{display:flex;justify-content:flex-end;gap:8px}.cfm .btn.danger{background:#b3261e;color:#fff;border-color:#b3261e}

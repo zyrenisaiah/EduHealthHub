@@ -222,3 +222,17 @@ function stockView(){
    <button class="btn primary" type="submit">Add item</button>
   </form></section>`;
 }
+
+/* A small confirmation pop-up inside the page (instead of the browser's own confirm box). Resolves true/false. */
+function askConfirm(o){
+ return new Promise(res=>{
+  const old=document.getElementById('cfm');if(old)old.remove();
+  const prev=document.activeElement,d=document.createElement('div');d.id='cfm';d.className='cfm';d.setAttribute('role','alertdialog');d.setAttribute('aria-modal','true');d.setAttribute('aria-labelledby','cfmt');d.setAttribute('aria-describedby','cfmd');
+  d.innerHTML=`<div class="cfmbox"><h3 id="cfmt">${esc(o.title||'Are you sure?')}</h3><p id="cfmd">${esc(o.text||'')}</p><div class="cfmrow"><button type="button" class="btn" data-cfm="no">${esc(o.cancel||'Cancel')}</button><button type="button" class="btn ${o.danger?'danger':'primary'}" data-cfm="yes">${esc(o.ok||'OK')}</button></div></div>`;
+  const done=v=>{document.removeEventListener('keydown',key,true);d.remove();try{if(prev&&prev.focus)prev.focus()}catch(e){}res(v)};
+  const key=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();done(false)}
+   else if(e.key==='Tab'){const b=[...d.querySelectorAll('button')],i=b.indexOf(document.activeElement);e.preventDefault();b[(i+(e.shiftKey?b.length-1:1))%b.length].focus()}};
+  d.addEventListener('click',e=>{const b=e.target.closest('[data-cfm]');if(b)done(b.dataset.cfm==='yes');else if(e.target===d)done(false)});
+  document.addEventListener('keydown',key,true);document.body.appendChild(d);
+  d.querySelector('[data-cfm=no]').focus();
+ })}

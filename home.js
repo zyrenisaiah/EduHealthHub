@@ -226,9 +226,9 @@ const HOME_ACT={
  hpick:a=>{logView(a.dataset.id);S.hm.sid=a.dataset.id;S.hm.q=stu(a.dataset.id).lrn;S.hm.msg='';S.hm.panel=a.dataset.k||'';render();const r=$('#hres');if(r)r.scrollIntoView({block:'start'})},
  sgok:a=>signupDecide(a.dataset.id,true),
  sgno:a=>signupDecide(a.dataset.id,false),
- acreset:a=>{const r=(S.ac.rows||[]).find(x=>x.id===a.dataset.id);if(!r||!confirm('Reset the password of '+r.name+'? They will be signed out and must choose a new password.'))return;
+ acreset:async a=>{const r=(S.ac.rows||[]).find(x=>x.id===a.dataset.id);if(!r||!await askConfirm({title:'Reset password?',text:r.name+' will be signed out and must choose a new password.',ok:'Reset'}))return;
   const pw=tempPw();acctDo(r.id,async()=>{if(CLOUD_ON)await rpc('app_account_reset',{p_token:TOK,p_id:r.id,p_temp:pw});else{const x=DB.accounts.find(y=>y.id===r.id);x.pw=pwHash(x.id,pw);save()}S.ac.temp={name:r.name,pw}})},
- actoggle:a=>{const r=(S.ac.rows||[]).find(x=>x.id===a.dataset.id);if(!r)return;if(r.active&&!confirm('Deactivate '+r.name+'? They will be signed out and cannot log in until re-activated.'))return;
+ actoggle:async a=>{const r=(S.ac.rows||[]).find(x=>x.id===a.dataset.id);if(!r)return;if(r.active&&!await askConfirm({title:'Deactivate this account?',text:r.name+' will be signed out and cannot log in until you activate the account again.',ok:'Deactivate',danger:true}))return;
   acctDo(r.id,async()=>{if(CLOUD_ON)await rpc('app_account_set',{p_token:TOK,p_id:r.id,p_active:!r.active,p_adv:null,p_set_adv:false});else{const x=DB.accounts.find(y=>y.id===r.id);x.active=!r.active;save()}})},
  acadvsave:a=>{const r=(S.ac.rows||[]).find(x=>x.id===a.dataset.id),sel=$('#acadv-'+a.dataset.id);if(!r||!sel)return;
   acctDo(r.id,async()=>{if(CLOUD_ON)await rpc('app_account_set',{p_token:TOK,p_id:r.id,p_active:null,p_adv:sel.value,p_set_adv:true});else{const x=DB.accounts.find(y=>y.id===r.id);x.adv=sel.value||null;save()}toast('Advisory saved.')})},
