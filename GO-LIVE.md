@@ -19,7 +19,7 @@ Health records are sensitive personal information (in the Philippines, covered b
 - [ ] **You** Review the Records opened list regularly (suggested: weekly) for people looking at learners they have no reason to see.
 
 ## 4. Backups
-- [x] **Code** Nightly in-database backup (7 days) and a Doctor-only **Download backup**.
+- [x] **Code** Nightly in-database backup (7 days). The Doctor **Download backup** button was removed on request.
 - [ ] **You** Download a backup weekly and keep it somewhere private (encrypted drive). The file contains health records.
 - [ ] **You** The free Supabase plan can pause an unused project and has no point-in-time recovery. Consider the paid plan with daily backups once real data is in.
 

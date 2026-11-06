@@ -1573,3 +1573,8 @@ begin
     on conflict (account_id,conv) do update set last_id=greatest(public.msg_reads.last_id,excluded.last_id);
   return public.ehh_msg_json(m);
 end $$;
+
+-- =====================================================================
+-- DOWNLOAD BACKUP REMOVED (kept: the nightly in-database backup, ehh_backup)
+-- =====================================================================
+drop function if exists public.app_backup(text);

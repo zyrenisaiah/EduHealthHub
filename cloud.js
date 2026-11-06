@@ -65,8 +65,8 @@ function applySync(r){
 function inField(){const a=document.activeElement;return !!(a&&(/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)||a.isContentEditable))||!!(S.view==='doc'&&S.doc&&S.doc.edit)}
 function softRender(){if(!S.user)return;if(inField()){S.stale=true;return}S.stale=false;render()}
 addEventListener('focusout',()=>setTimeout(()=>{if(S.stale&&S.user&&!inField()){S.stale=false;render()}},60));
-async function cloudSync(initial){
- const r=await rpc('app_sync',{p_token:TOK,p_since:initial?0:Math.max(0,REV-100)});
+async function cloudSync(initial,pre){
+ const r=pre||await rpc('app_sync',{p_token:TOK,p_since:initial?0:Math.max(0,REV-100)});
  if(initial)baseline();
  const ch=applySync(r);return {r,ch}}
 async function cloudPush(){
@@ -141,10 +141,10 @@ async function cloudPollOnce(){
  catch(e){if(e.code==='SESSION_EXPIRED')cloudKick();else syncStat('Offline: will retry',true)}}
 function cloudStart(){clearInterval(_poll);_poll=setInterval(()=>{if(RT_ON&&++_pk%5)return;cloudPollOnce()},12000);if(typeof msgStart==='function')msgStart();rtStart();hbStart()}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)cloudPollOnce()});
-async function cloudEnter(r){
+async function cloudEnter(r,pre){
  TOK=r.token;ss.set('ehh_tok',TOK);ss.set('ehh_role',r.account.role);
  const a=r.account;DB.accounts=[Object.assign({},a)];
- await cloudSync(true);
+ await cloudSync(true,pre);
  S.user={id:a.id,role:a.role,name:a.name,adv:a.adv||null,photo:a.photo||null};
  S.view=NAV[a.role][0][0];S.back=S.view;S.f={q:'',grade:'',strand:'',section:''};S.sy=CUR_SY;
  syncStat('Saved online ✓');cloudStart();render()}
@@ -162,7 +162,7 @@ async function cloudLogin(u,pw){
 async function cloudRestore(){
  const t=ss.get('ehh_tok');if(!t)return 'none';
  try{TOK=t;const r=await rpc('app_sync',{p_token:t,p_since:0});
-  await cloudEnter({token:t,account:r.account})}
+  await cloudEnter({token:t,account:r.account},r)}
  catch(e){console.error('restore failed',e);if(e&&e.code==='SESSION_EXPIRED'){TOK=null;ss.del('ehh_tok');ss.del('ehh_role');return 'expired'}return e}return 'ok'}
 async function cloudLogout(){rtStop();clearInterval(_hb);const t=TOK;TOK=null;clearInterval(_poll);ss.del('ehh_tok');ss.del('ehh_role');REV=0;
  if(t){try{await rpc('app_logout',{p_token:t})}catch(e){}}}

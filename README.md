@@ -34,7 +34,7 @@ People can link their Google account under **My account**. After that, every log
 
 **Backups.**
 - Every night at 03:00 (Manila time) the database copies all records into `backup_*` tables and keeps the last 7 days.
-- The Doctor can press **Activity log > Download backup** for a full copy as a `.json` file. Keep it somewhere private: it contains health records.
+- There is no download-backup button. The database keeps its own nightly backup for 7 days (see `supabase-setup.sql`, BACKUPS).
 - *Restore one learner* (SQL editor): `select id, at from backup_snapshots order by id desc;` then `select ehh_restore_student(<snapshot id>, '<student id>');`
 - *Take a backup right now:* `select ehh_backup('before big change');`
 - These in-database copies protect against bad edits and deletions. They do not protect if the whole Supabase project is lost, which is why the downloaded file matters. Do it weekly, and on a paid Supabase plan turn on its own daily backups too.

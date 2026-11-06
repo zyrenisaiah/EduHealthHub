@@ -1,0 +1,2 @@
+/* Loads the Google fonts without blocking the first paint. (An external file, because the CSP forbids inline scripts.) */
+(function(){var l=document.createElement('link');l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=Public+Sans:wght@400;500;600&display=swap';document.head.appendChild(l)})();
