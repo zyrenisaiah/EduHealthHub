@@ -33,7 +33,7 @@ async function start(viewport = { width: 1200, height: 900 }) {
     p.on('pageerror', e => errors.push(role + ' page error: ' + e.message));
     p.on('console', m => { if (m.type() === 'error' && !/ERR_|Failed to load resource/.test(m.text())) errors.push(role + ' console: ' + m.text()); });
     await p.route(/fonts\.(googleapis|gstatic)\.com/, r => r.abort());
-    await p.route('**/config.js', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:""').replace(/key:"[^"]*"/, 'key:""') }); });
+    await p.route('**/config.js*', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:""').replace(/key:"[^"]*"/, 'key:""') }); });
     await p.goto(base + file); await p.waitForSelector('#loginform');
     await p.fill('#lu', user); await p.fill('#pw', pw); await p.click('#loginform button[type=submit]');
     await p.waitForSelector('.shell'); return p;

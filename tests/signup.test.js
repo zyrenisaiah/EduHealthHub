@@ -3,7 +3,7 @@ const assert = require('assert'), { start } = require('./helpers');
 (async () => {
   const h = await start({ width: 1100, height: 900 }), errs = [];
   const mk = async () => { const p = await h.ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.route(/fonts\./, r => r.abort());
-    await p.route('**/config.js', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:""') }); }); return p; };
+    await p.route('**/config.js*', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:""') }); }); return p; };
   const p = await mk(); await p.goto(h.base + 'index.html'); await p.waitForSelector('#loginform');
   await p.click('[data-act=signupopen]'); await p.waitForSelector('#signupform');
   const fill = async (o) => { for (const [k, v] of Object.entries(o)) await p.fill('#su-' + k, v); };

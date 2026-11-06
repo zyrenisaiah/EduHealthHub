@@ -3,7 +3,7 @@ const assert = require('assert'), { start } = require('./helpers');
 (async () => {
   const h = await start({ width: 1200, height: 900 }), errs = [];
   const mk = async () => { const p = await h.ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); p.on('dialog', d => d.accept()); await p.route(/fonts\./, r => r.abort());
-    await p.route('**/config.js', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:""') }); }); return p; };
+    await p.route('**/config.js*', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:""') }); }); return p; };
   const d = await mk(); await d.goto(h.base + 'doctor.html'); await d.waitForSelector('#loginform');
   await d.fill('#lu', 'Dummy Doctor1'); await d.fill('#pw', 'doctor1'); await d.click('#loginform [type=submit]'); await d.waitForSelector('.shell');
   await d.click('[data-act=nav][data-v=accounts]'); await d.waitForSelector('text=Reset a forgotten password');

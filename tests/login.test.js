@@ -5,7 +5,7 @@ const assert = require('assert'), { start } = require('./helpers');
   async function attempt(user, pw) {
     const p = await h.ctx.newPage();
     await p.route(/fonts\./, r => r.abort());
-    await p.route('**/config.js', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:""').replace(/key:"[^"]*"/, 'key:""') }); });
+    await p.route('**/config.js*', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:""').replace(/key:"[^"]*"/, 'key:""') }); });
     await p.goto(h.base + 'doctor.html'); await p.waitForSelector('#loginform');
     await p.fill('#lu', user); await p.fill('#pw', pw); await p.click('#loginform button[type=submit]');
     const ok = await p.waitForSelector('.shell', { timeout: 2500 }).then(() => true, () => false);

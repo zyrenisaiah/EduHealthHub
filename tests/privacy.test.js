@@ -11,7 +11,7 @@ const assert = require('assert'), fs = require('fs'), path = require('path'), { 
   const browser = await chromium.launch(), p = await browser.newPage(), calls = [], errs = [];
   p.on('console', m => { if (m.type() === 'error' && !/ERR_|Failed to load resource/.test(m.text())) errs.push(m.text()); });
   await p.route(/fonts\./, r => r.abort());
-  await p.route('**/config.js', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:"https://test.supabase.co"').replace(/key:"[^"]*"/, 'key:"k"') }); });
+  await p.route('**/config.js*', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:"https://test.supabase.co"').replace(/key:"[^"]*"/, 'key:"k"') }); });
   await p.route('https://test.supabase.co/**', async r => {
     const u = r.request().url(), body = r.request().postData() ? JSON.parse(r.request().postData()) : {}; calls.push([u.split('/').pop(), body]);
     if (/app_login$/.test(u)) return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ token: 't1', account: { id: 'A1', role: 'Doctor', name: 'Dummy Doctor1', must_change: true } }) });
@@ -35,7 +35,7 @@ const assert = require('assert'), fs = require('fs'), path = require('path'), { 
   // 2) Idle logout (local mode): 14 min warns, 15 min logs out
   const ctx = h.ctx, d = await ctx.newPage(); await d.clock.install();
   await d.route(/fonts\./, r => r.abort());
-  await d.route('**/config.js', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:""').replace(/key:"[^"]*"/, 'key:""') }); });
+  await d.route('**/config.js*', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:""').replace(/key:"[^"]*"/, 'key:""') }); });
   await d.goto(h.base + 'doctor.html'); await d.waitForSelector('#loginform');
   await d.fill('#lu', 'Dummy Doctor1'); await d.fill('#pw', 'doctor1'); await d.click('#loginform button[type=submit]'); await d.waitForSelector('.shell');
   await d.clock.fastForward('14:30'); assert(await d.$('.shell'), 'still signed in at 14.5 minutes');

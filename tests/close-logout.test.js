@@ -3,7 +3,7 @@ const assert = require('assert'), { chromium } = require('playwright'), { start 
 (async () => {
   const h = await start(), browser = await chromium.launch(), ctx = await browser.newContext(), calls = [];
   await ctx.route(/fonts\./, r => r.abort());
-  await ctx.route('**/config.js', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:"https://test.supabase.co"').replace(/key:"[^"]*"/, 'key:"k"') }); });
+  await ctx.route('**/config.js*', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:"https://test.supabase.co"').replace(/key:"[^"]*"/, 'key:"k"') }); });
   await ctx.route('https://test.supabase.co/**', r => { const u = r.request().url().split('/').pop(); const b = r.request().postData(); calls.push([u, b ? JSON.parse(b) : {}]); r.fulfill({ status: /app_(logout|ping)$/.test(u) ? 200 : 400, contentType: 'application/json', body: /app_(logout|ping)$/.test(u) ? 'null' : '{"message":"SESSION_EXPIRED"}' }); });
   const logouts = () => calls.filter(c => c[0] === 'app_logout').map(c => c[1].p_token);
   const open = async () => { const p = await ctx.newPage(); await p.goto(h.base + 'index.html'); await p.waitForSelector('#loginform'); return p; };

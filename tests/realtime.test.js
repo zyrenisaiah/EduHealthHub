@@ -4,7 +4,7 @@ const assert = require('assert'), { chromium } = require('playwright'), { start 
   const h = await start(), browser = await chromium.launch(), p = await browser.newPage(), frames = []; let server = null;
   p.on('pageerror', e => { throw e; });
   await p.route(/fonts\./, r => r.abort());
-  await p.route('**/config.js', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:"https://test.supabase.co"').replace(/key:"[^"]*"/, 'key:"pubkey"') }); });
+  await p.route('**/config.js*', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:"https://test.supabase.co"').replace(/key:"[^"]*"/, 'key:"pubkey"') }); });
   await p.route('https://test.supabase.co/**', r => r.fulfill({ status: 400, contentType: 'application/json', body: '{"message":"x"}' }));
   await p.route('https://test.supabase.co/rest/v1/rpc/app_rt', r => r.fulfill({ status: 200, contentType: 'application/json', body: '"secretkey123"' }));
   await p.routeWebSocket(/test\.supabase\.co\/realtime\/v1\/websocket/, ws => {
