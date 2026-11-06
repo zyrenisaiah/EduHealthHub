@@ -539,7 +539,7 @@ const ACT={
  open:a=>goOpen(a.dataset.id,a.dataset.tab),
  back:()=>{S.view=S.back;render()},
  tab:a=>{S.tab=a.dataset.t;render()},
- logout:()=>{if(CLOUD_ON)cloudLogout();ss.del('ehh_uid');ss.del('ehh_role');S.user=null;location.href='index.html'},
+ logout:()=>{lockFree();if(CLOUD_ON)cloudLogout();ss.del('ehh_uid');ss.del('ehh_role');S.user=null;location.href='index.html'},
  seedcloud:()=>{seedCloud()},
  qty:a=>{const i=DB.stock.find(x=>x.id===a.dataset.id);i.qty=Math.max(0,i.qty+ +a.dataset.d);save();render()},
  delstock:a=>{DB.stock=DB.stock.filter(x=>x.id!==a.dataset.id);save();render();toast('Item removed')},
@@ -635,13 +635,14 @@ document.addEventListener('submit',e=>{
  e.preventDefault();
  if(S.user&&homeSubmit(e))return;
  if(e.target.id==='loginform'){
+  const held=lockOther();if(held){S.login.err=lockMsg(held);render();return}
   if(CLOUD_ON){cloudLogin($('#lu').value.trim(),$('#pw').value);return}
   const typed=$('#lu').value.trim(),id=typed.toLowerCase(),pw=$('#pw').value,L=S.login,f=S.fails[id]||{n:0,t:0};
   if(f.n>=5&&Date.now()-f.t<300000){L.err='Too many attempts. Wait 5 minutes and try again.';render();return}
   const acc=DB.accounts.find(x=>x.username===typed||x.email.toLowerCase()===id);   /* username and password are case-sensitive */
   if(!acc||acc.active===false||acc.pw!==pwHash(acc.id,pw)){S.fails[id]={n:f.n+1,t:Date.now()};L.err='Username or password is incorrect.';render();$('#lu').value=typed;return}
   delete S.fails[id];L.err='';
-  ss.set('ehh_uid',acc.id);ss.set('ehh_role',acc.role);location.href=ROLE_PAGE[acc.role];return}
+  lockWrite(acc);ss.set('ehh_uid',acc.id);ss.set('ehh_role',acc.role);location.href=ROLE_PAGE[acc.role];return}
  if(e.target.id==='signupform'){const L=S.login,v=id=>($('#'+id)||{}).value||'';
   const name=v('su-name').trim(),role=v('su-role'),adv=v('su-adv')==='__other'?v('su-adv2').trim():v('su-adv'),email=v('su-email').trim(),user=v('su-user'),pw=v('su-pw');
   const bad=name.length<2?'Enter your full name.':role==='Teacher'&&adv.length<2?'Write your advisory section.':user.length<3||user!==user.trim()?'Username needs 3 or more characters, with no space at the start or end.':!/^\S+@\S+\.\S+$/.test(email)?'Enter a valid email address.':pwWeak(pw,user,'')||(pw!==v('su-pw2')?'The passwords do not match.':'');
@@ -654,7 +655,7 @@ document.addEventListener('submit',e=>{
   (DB.signups=DB.signups||[]).push({id:Date.now(),name,role,email,username:user,pw,adv:role==='Teacher'?adv:null,at:new Date().toISOString()});save();fin();return}
  if(e.target.id==='mustform'){const L=S.login,m=L.must,n=$('#mu-n').value,r=$('#mu-r').value;if(!m)return;
   const weak=pwWeak(n,'',m.old);if(weak){L.err=weak;render();return}if(n!==r){L.err='The new passwords do not match.';render();return}
-  rpc('app_change_password',{p_token:m.token,p_old:m.old,p_new:n}).then(()=>{L.must=null;TOK=m.token;ss.set('ehh_tok',TOK);ss.set('ehh_role',m.role);location.href=ROLE_PAGE[m.role]}).catch(x=>{L.err=cloudErr(x);render()});return}
+  rpc('app_change_password',{p_token:m.token,p_old:m.old,p_new:n}).then(()=>{L.must=null;if(m.acct)lockWrite(m.acct);TOK=m.token;ss.set('ehh_tok',TOK);ss.set('ehh_role',m.role);location.href=ROLE_PAGE[m.role]}).catch(x=>{L.err=cloudErr(x);render()});return}
  if(e.target.id==='gm-unlink'){const pw=$('#gm-pw').value;rpc('app_unlink_gmail',{p_token:TOK,p_password:pw}).then(r=>{Object.assign(DB.accounts[0],r);S.gm=null;toast('Gmail unlinked');render()}).catch(x=>{S.gm=Object.assign(S.gm||{},{err:cloudErr(x)});render()});return}
  if(e.target.id==='acctform'){
   const a=DB.accounts.find(x=>x.id===S.user.id),u=$('#ac-u').value.trim(),m=$('#ac-e').value.trim();
@@ -690,15 +691,7 @@ function boot(){
   $('#root').innerHTML='<div class="login"><div style="display:grid;gap:12px;max-width:420px"><h2>Could not open this page</h2><div class="pill bad" style="white-space:normal">'+esc(m)+' ('+esc(c)+')</div><div class="small muted">Your login is still active. Check the connection and try again.</div><div><button class="btn primary" onclick="location.reload()">Try again</button> <button class="btn" onclick="sessionStorage.clear();location.href=&quot;index.html&quot;">Back to login</button></div></div></div>'})}
  else{if(localRestore())render();else bad()}
 }
-/* ---------- privacy: log out after 15 idle minutes (warns at 14) ---------- */
-const IDLE_MS=15*60000;let _idleT=null,_idleW=null,_idleLast=Date.now();
-function idleReset(){_idleLast=Date.now()}
-function idleTick(){
- if(!S.user)return;const idle=Date.now()-_idleLast;
- if(idle>=IDLE_MS){ACT.logout();return}
- if(idle>=IDLE_MS-60000){if(!_idleW){_idleW=true;toast('You will be logged out in a minute because of no activity. Move the mouse or press a key to stay.')}}else _idleW=null}
-['pointerdown','mousemove','keydown','scroll','touchstart'].forEach(ev=>addEventListener(ev,idleReset,{passive:true,capture:true}));
-setInterval(idleTick,15000);
+/* No idle logout: a session ends when the browser or tab is closed, after 8 hours, or when the person logs out. */
 /* ---------- login page effects: parallax, rotating tagline, caps-lock hint ---------- */
 let _tagT=null,_fxBound=false;
 const TAGS=['Healthy Students. Brighter Futures.','Health records, one trusted place.','From the clinic to the classroom.','Care that follows every learner.'];

@@ -1,4 +1,4 @@
-// Privacy guards: content security policy, forced password change, idle logout.
+// Privacy guards: content security policy, forced password change, no idle logout.
 const assert = require('assert'), fs = require('fs'), path = require('path'), { chromium } = require('playwright'), { start, ROOT } = require('./helpers');
 (async () => {
   for (const f of ['index', 'doctor', 'nurse', 'dentist', 'teacher']) {
@@ -38,10 +38,6 @@ const assert = require('assert'), fs = require('fs'), path = require('path'), { 
   await d.route('**/config.js*', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:""').replace(/key:"[^"]*"/, 'key:""') }); });
   await d.goto(h.base + 'doctor.html'); await d.waitForSelector('#loginform');
   await d.fill('#lu', 'Dummy Doctor1'); await d.fill('#pw', 'doctor1'); await d.click('#loginform button[type=submit]'); await d.waitForSelector('.shell');
-  await d.clock.fastForward('14:30'); assert(await d.$('.shell'), 'still signed in at 14.5 minutes');
-  await d.mouse.move(100, 100); await d.mouse.down(); await d.mouse.up();
-  await d.clock.fastForward('14:30'); assert(await d.$('.shell'), 'activity restarts the idle clock');
-  await d.clock.fastForward('16:00');
-  await d.waitForSelector('#loginform', { timeout: 5000 }); assert(!(await d.$('.shell')), 'logged out after 15 idle minutes');
+  await d.clock.fastForward('01:00:00'); await d.waitForTimeout(300); assert(await d.$('.shell'), 'no idle logout: still signed in after an hour of no activity');
   await h.stop(); console.log('privacy ok');
 })().catch(e => { console.error(e); process.exit(1); });

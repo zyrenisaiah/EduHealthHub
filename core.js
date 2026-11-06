@@ -118,7 +118,7 @@ ${L.signup?` <form class="login-card" id="signupform" autocomplete="off">
   <div class="lhead">${WANT&&ROLE_ICON[WANT]?`<img class="role-ic lg" src="${ROLE_ICON[WANT]}" alt="">`:'<span class="lock" aria-hidden="true">&#128274;</span>'}<div><h2>${WANT?esc(WANT)+' log in':'Welcome back'}</h2><div class="small muted">${WANT?`Log in with a ${WANT} account to open the ${WANT} page.`:'Use your own username or email. Learners do not have accounts.'}</div></div></div>
   <div class="field"><label for="lu">Username or email</label><input class="inp" id="lu" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" required></div>
   <div class="field"><label for="pw">Password</label><div class="who-cell"><input class="inp" id="pw" name="password" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required><button type="button" class="btn sm" data-act="showpw" aria-pressed="false">Show</button></div><div class="caps" id="caps" hidden>Caps Lock is on</div><div class="small muted" style="margin-top:4px">Username and password are case-sensitive: capitals and small letters must match exactly.</div></div>
-  ${L.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.err)}</div>`:''}
+  ${(()=>{const o=lockOther(),n=ss.get('ehh_notice');window._lockShown=!!o;if(n)ss.del('ehh_notice');return L.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.err)}</div>`:o?`<div class="pill warn" role="status" style="white-space:normal">${esc(lockMsg(o))}</div>`:n?`<div class="pill warn" role="status" style="white-space:normal">${esc(n)}</div>`:''})()}
   <button class="btn primary" type="submit">Log in</button>
  <div class="trow" style="justify-content:center"><span class="small muted">New here?</span> <button type="button" class="btn sm" data-act="signupopen">Create an account</button></div>
  </form>`}
@@ -236,3 +236,22 @@ function askConfirm(o){
   document.addEventListener('keydown',key,true);document.body.appendChild(d);
   d.querySelector('[data-cfm=no]').focus();
  })}
+
+/* ---------- one signed-in account per browser ----------
+   A tab that is signed in writes a small marker (with a heartbeat) to localStorage. Another tab of the same browser
+   cannot log in while a fresh marker exists, and a tab that finds an older marker of another tab signs itself out. */
+const LOCK_KEY='ehh_active',LOCK_TTL=15000;
+const TAB_ID=(()=>{let t=ss.get('ehh_tab');if(!t){t=Math.random().toString(36).slice(2)+Date.now().toString(36);ss.set('ehh_tab',t)}return t})();
+function lockRead(){try{const v=JSON.parse(localStorage.getItem(LOCK_KEY)||'null');return v&&Date.now()-v.t<LOCK_TTL?v:null}catch(e){return null}}
+function lockOther(){const v=lockRead();return v&&v.tab!==TAB_ID?v:null}
+let _since=0;
+function lockWrite(a){if(!_since)_since=Date.now();try{localStorage.setItem(LOCK_KEY,JSON.stringify({tab:TAB_ID,id:a.id,name:a.name,role:a.role,since:_since,t:Date.now()}))}catch(e){}}
+function lockFree(){const v=lockRead();if(v&&v.tab===TAB_ID)try{localStorage.removeItem(LOCK_KEY)}catch(e){}}
+function lockMsg(v){return (v.name||'Another account')+' ('+v.role+') is already signed in on this browser. Only one account can be signed in at a time. Log out there first.'}
+function lockTick(){
+ if(!S.user)return;const o=lockOther();
+ /* two tabs signed in at once: the tab that signed in first keeps the session, the other one signs out */
+ if(o&&(_since?o.since<=_since:true)){ss.set('ehh_notice',lockMsg(o));try{ACT.logout()}catch(e){}return}
+ lockWrite(S.user)}
+setInterval(lockTick,1500);
+addEventListener('storage',e=>{if(e.key===LOCK_KEY){if(S.user)lockTick();else{const u=document.getElementById('lu');if(u&&!u.value&&document.getElementById('loginform')&&!!lockOther()!==!!window._lockShown)render()}}});

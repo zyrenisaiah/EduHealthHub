@@ -22,10 +22,13 @@ const ACCOUNTS = {
   Teacher: ['teacher.html', 'Dummy Teacher 11A1', 'acad1'],
 };
 
-async function start(viewport = { width: 1200, height: 900 }) {
+async function start(viewport = { width: 1200, height: 900 }, opts) {
   const { srv, base } = await serve();
   const browser = await chromium.launch();
   const ctx = await browser.newContext({ viewport, acceptDownloads: true });
+  // Tests often sign several roles into one browser profile to share the local data. The real site refuses that (one account per browser),
+  // so hide the marker from the pages unless a test asks for the real rule with start(viewport, { realLock: true }).
+  if (!(opts && opts.realLock)) await ctx.addInitScript(() => { const g = Storage.prototype.getItem; Storage.prototype.getItem = function (k) { return k === 'ehh_active' ? null : g.call(this, k); }; });
   const errors = [];
   async function login(role) {
     const [file, user, pw] = ACCOUNTS[role];

@@ -155,9 +155,9 @@ async function cloudLogin(u,pw){
   if(r.pending){L.pending={token:r.pending,hint:r.hint};L.err='';L.info='';
    render();const ci=$('#lc');if(ci)ci.focus();return}
   L.err='';
-  if(r.account&&r.account.must_change){L.must={token:r.token,old:pw,role:r.account.role};L.info='';render();const ni=$('#mu-n');if(ni)ni.focus();return}
+  if(r.account&&r.account.must_change){L.must={token:r.token,old:pw,role:r.account.role,acct:r.account};lockWrite(r.account);L.info='';render();const ni=$('#mu-n');if(ni)ni.focus();return}
   /* app_sync needs the token; the account comes back from app_login */
-  TOK=r.token;ss.set('ehh_tok',TOK);ss.set('ehh_role',r.account.role);location.href=ROLE_PAGE[r.account.role]}
+  lockWrite(r.account);TOK=r.token;ss.set('ehh_tok',TOK);ss.set('ehh_role',r.account.role);location.href=ROLE_PAGE[r.account.role]}
  catch(e){TOK=null;L.err=cloudErr(e);render();const i=$('#lu');if(i)i.value=u}}
 async function cloudRestore(){
  const t=ss.get('ehh_tok');if(!t)return 'none';
@@ -205,7 +205,7 @@ async function googleCall(kind,token,credential){
 async function googleLogin(cred){
  const L=S.login;if(!L.pending)return;
  try{const r=await googleCall('login',L.pending.token,cred);
-  L.pending=null;L.err='';ss.set('ehh_tok',r.token);ss.set('ehh_role',r.account.role);location.href=ROLE_PAGE[r.account.role]}
+  L.pending=null;L.err='';lockWrite(r.account);ss.set('ehh_tok',r.token);ss.set('ehh_role',r.account.role);location.href=ROLE_PAGE[r.account.role]}
  catch(e){if(e.code==='SESSION_EXPIRED')L.pending=null;L.err=cloudErr(e);L.info='';render()}}
 async function googleLink(cred){
  try{const r=await googleCall('link',TOK,cred);Object.assign(DB.accounts[0],r.account);S.gm=null;toast('Google account linked. Logins now ask you to confirm with Google.');render()}
