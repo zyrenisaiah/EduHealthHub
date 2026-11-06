@@ -161,7 +161,7 @@ tr.grp td{background:var(--surface2);font-weight:600;font-size:12px}
 .dside{position:sticky;top:12px;border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:12px;background:var(--bg)}
 .tno{font-size:34px;font-weight:500;line-height:1}
 #tip{position:fixed;z-index:30;pointer-events:none;background:var(--ink);color:var(--bg);padding:5px 9px;border-radius:6px;font-size:12px;max-width:240px}
-@media (max-width:900px){.dgrid{grid-template-columns:1fr}.dside{position:static}}
+@media (max-width:900px){.dgrid{grid-template-columns:minmax(0,1fr)}.dside{position:static}}
 
 .seg{display:flex;gap:6px;margin-bottom:10px}
 .seg .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
@@ -406,3 +406,6 @@ button.mention{font:inherit;border:0;cursor:pointer}button.mention:hover{text-de
 .fwdprev{background:var(--surface2);border-radius:8px;padding:8px 10px;margin-bottom:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fwdlist{overflow:auto;display:flex;flex-direction:column;gap:2px}
 
 .boot{min-height:60vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#4b5b52;font:500 15px system-ui,sans-serif}.boot img{animation:bootp 1.2s ease-in-out infinite}@keyframes bootp{50%{opacity:.45;transform:scale(.94)}}
+.dmain,.dside{min-width:0}
+
+.swipe-hint{display:none}@media (max-width:700px){.swipe-hint{display:inline;font-weight:600}}

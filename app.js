@@ -157,7 +157,7 @@ function chartInner(d,edit){
    <div class="seg" role="group" aria-label="Dentition shown">${[['perm','Permanent teeth'],['temp','Temporary teeth']].map(x=>`<button class="btn sm" data-act="dlayer" data-v="${x[0]}" aria-pressed="${lay===x[0]}">${x[1]}</button>`).join('')}</div>
    ${edit?`<button class="btn sm" data-act="undo" ${(S.undo||[]).length?'':'disabled'}>Undo</button><button class="btn sm" data-act="marksound">Mark unexamined permanent teeth sound</button>`:''}</div>
   ${palette}</div>
- <div class="dgrid"><div class="dmain"><p class="small muted" style="margin:0 0 6px">Click any tooth to update its status, accomplishment and treatment need.</p><div class="tw">${archScene(d)}</div>
+ <div class="dgrid"><div class="dmain"><p class="small muted" style="margin:0 0 6px">Click any tooth to update its status, accomplishment and treatment need.<span class="swipe-hint"> Swipe the chart sideways to see every tooth.</span></p><div class="tw">${archScene(d)}</div>
   <div class="legend-row"><span><i class="sw sw-ok"></i>Healthy</span><span><i class="sw sw-warn"></i>Damaged</span><span><i class="sw sw-ext"></i>Extracted / missing</span><span><i class="sw sw-fil"></i>Filled</span><span><i class="sw sw-acc"></i>Accomplished dot</span><span><i class="sw sw-need"></i>Needs treatment dot</span></div></div>
   <aside class="dside" aria-live="polite">${insp}</aside></div>`;
 }
