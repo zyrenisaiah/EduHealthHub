@@ -409,3 +409,9 @@ button.mention{font:inherit;border:0;cursor:pointer}button.mention:hover{text-de
 .dmain,.dside{min-width:0}
 
 .swipe-hint{display:none}@media (max-width:700px){.swipe-hint{display:inline;font-weight:600}}
+/* edit box inside my (green) bubble: readable text and buttons */
+.bubble textarea#medtext{background:#fff;color:#1c2a23;border:1px solid rgba(0,0,0,.18);caret-color:#1c2a23;font:inherit;padding:8px 10px;border-radius:10px;display:block}
+.bubble textarea#medtext::placeholder{color:#6b7a72}
+.bubble .mact .btn{border:1px solid rgba(255,255,255,.7);background:transparent;color:inherit;font-weight:600}
+.bubble .mact .btn.primary{background:#fff;color:#2f5d44;border-color:#fff}
+.mrow.them .bubble .mact .btn{border-color:var(--line);color:var(--ink)}.mrow.them .bubble .mact .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
