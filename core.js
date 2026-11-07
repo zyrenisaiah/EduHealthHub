@@ -47,7 +47,7 @@ const P={
  Teacher:{exam:'view',dental:'view',prof:'view',stock:null}
 };
 const NAV={
- Doctor:[['home','Home'],['chat','Messages'],['overview','Overview'],['students','Students'],['stock','Supply stock'],['accounts','Accounts'],['activity','Activity log'],['account','My account']],
+ Doctor:[['home','Home'],['chat','Messages'],['overview','Overview'],['students','Students'],['stock','Supply stock'],['activity','Activity log'],['account','My account']],
  Nurse:[['home','Home'],['chat','Messages'],['students','Students'],['stock','Supply stock'],['account','My account']],
  Dentist:[['home','Home'],['chat','Messages'],['students','Students'],['account','My account']],
  Teacher:[['home','Home'],['chat','Messages'],['dash','My advisory'],['files','Record of files'],['account','My account']]
@@ -126,11 +126,11 @@ ${L.signup?` <form class="login-card" id="signupform" autocomplete="off">
 </div></div></div>`;
 }
 
-/* The head developer's admin account is a Doctor account with extra screens: Backups, Error reports. */
-function navFor(u){const n=NAV[u.role].slice();if(u.admin){const i=n.findIndex(x=>x[0]==='activity');n.splice(i<0?n.length:i+1,0,['backups','Backups'],['errors','Error reports'])}return n}
+/* The head developer's admin account is a Doctor account with extra screens: Accounts, Backups, Error reports. */
+function navFor(u){const n=NAV[u.role].slice();if(u.admin){const i=n.findIndex(x=>x[0]==='activity');n.splice(i<0?n.length:i+1,0,['accounts','Accounts'],['backups','Backups'],['errors','Error reports'])}return n}
 /* ---------- shell ---------- */
 function shell(){
- const u=S.user, nav=navFor(u); if(['backups','errors'].includes(S.view)&&!u.admin||S.view==='accounts'&&u.role!=='Doctor')S.view='home';
+ const u=S.user, nav=navFor(u); if(['accounts','backups','errors'].includes(S.view)&&!u.admin)S.view='home';
  const body={chat:chatView,doc:docView,activity:activityView,accounts:accountsView,backups:backupsView,errors:errorsView,home:()=>S.user.role==='Teacher'?teacherHome():homeView(),overview:overviewView,students:studentsView,stock:stockView,dash:teacherView,student:studentView,account:accountView,files:filesView}[S.view]();
  const navKey=(S.view==='student'||S.view==='doc')?S.back:S.view;
  return `<div class="shell"><header class="topbar"><button class="name homebtn" data-act="nav" data-v="${nav[0][0]}" title="Go to Home" aria-label="EduHealthHub, go to Home"><span class="logo-chip"><img src="${LOGO_EMBLEM}" alt="" height="34"></span>EduHealthHub</button><div class="spacer"></div>

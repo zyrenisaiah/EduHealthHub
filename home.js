@@ -114,12 +114,12 @@ function searchMatches(q){
 
 /* Account requests (sign-up). Doctors approve or reject; nothing works until approved. */
 async function loadSignups(){
- if(!S.user||S.user.role!=='Doctor'||S.sg.busy)return;S.sg.busy=true;S.sg.t=Date.now();
+ if(!S.user||!S.user.admin||S.sg.busy)return;S.sg.busy=true;S.sg.t=Date.now();
  try{S.sg.rows=CLOUD_ON?await rpc('app_signups',{p_token:TOK}):(DB.signups||[]);S.sg.err=''}catch(e){if(e&&e.code==='SESSION_EXPIRED')cloudKick();else S.sg.err=cloudErr(e)}
  finally{S.sg.busy=false}if(S.view==='home')render()}
-setInterval(()=>{if(S.user&&S.user.role==='Doctor'&&S.view==='home'&&!document.hidden)loadSignups()},60000);
+setInterval(()=>{if(S.user&&S.user.admin&&S.view==='home'&&!document.hidden)loadSignups()},60000);
 function signupPanel(){
- if(S.user.role!=='Doctor')return '';
+ if(!S.user.admin)return '';
  if(!S.sg.t&&!S.sg.busy)setTimeout(loadSignups,0);
  const rows=S.sg.rows||[];if(!rows.length&&!S.sg.err)return '';
  return `<section class="panel" id="signq" style="border-color:var(--warn)"><div class="head"><h3>Account requests</h3><span class="small muted">${rows.length} waiting</span></div>
@@ -325,7 +325,7 @@ async function loadAudit(){
 /* Doctor: manage accounts (reset password, deactivate, advisory) */
 S.ac={rows:null,err:'',busy:false,temp:null,q:''};
 async function loadAccts(){
- if(!S.user||S.user.role!=='Doctor')return;S.ac.busy=true;
+ if(!S.user||!S.user.admin)return;S.ac.busy=true;
  try{S.ac.rows=CLOUD_ON?await rpc('app_accounts',{p_token:TOK}):DB.accounts.map(a=>({id:a.id,role:a.role,name:a.name,username:a.username,email:a.email,adv:a.adv||null,active:a.active!==false,must_change:false,admin:!!a.admin}));S.ac.err=''}
  catch(e){if(e&&e.code==='SESSION_EXPIRED')cloudKick();else S.ac.err=cloudErr(e)}
  S.ac.busy=false;if(S.view==='accounts')render()}
@@ -334,7 +334,7 @@ function tempPw(){const L='abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ',D='2
 function accountsView(){
  const a=S.ac,q=a.q.trim().toLowerCase(),rows=(a.rows||[]).filter(r=>!q||(r.name+' '+r.username+' '+r.role).toLowerCase().includes(q));
  const adv=r=>r.role!=='Teacher'?'<span class="small muted">-</span>':`<select class="inp" id="acadv-${esc(r.id)}" aria-label="Advisory of ${esc(r.name)}"><option value="">No advisory</option>${SECTIONS.map(c=>`<option value="${esc(c.id)}" ${c.id===r.adv?'selected':''}>${esc(secLabel(c))}</option>`).join('')}</select> <button class="btn sm" data-act="acadvsave" data-id="${esc(r.id)}">Save</button>`;
- return `<div class="head"><div><div class="eyebrow">Doctor</div><h2>Accounts</h2></div></div>
+ return `<div class="head"><div><div class="eyebrow">Admin</div><h2>Accounts</h2></div></div>
  <section class="panel"><div class="small muted" style="margin-bottom:8px">Reset a forgotten password, deactivate someone who has left, or change a teacher's advisory. Everything here is recorded in the Activity log.</div>
  <input class="inp" data-bind="acq" placeholder="Search a name, username or role" value="${esc(a.q)}" autocomplete="off" aria-label="Search accounts" style="max-width:360px">
  ${a.err?`<div class="pill bad" role="alert" style="white-space:normal;margin-top:8px">${esc(a.err)}</div>`:''}

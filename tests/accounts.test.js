@@ -5,7 +5,7 @@ const assert = require('assert'), { start } = require('./helpers');
   const mk = async () => { const p = await h.ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.route(/fonts\./, r => r.abort());
     await p.route('**/config.js*', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:""') }); }); return p; };
   const d = await mk(); await d.goto(h.base + 'doctor.html'); await d.waitForSelector('#loginform');
-  await d.fill('#lu', 'Dummy Doctor1'); await d.fill('#pw', 'doctor1'); await d.click('#loginform [type=submit]'); await d.waitForSelector('.shell');
+  await d.fill('#lu', 'Demo Admin'); await d.fill('#pw', 'admin1234567'); await d.click('#loginform [type=submit]'); await d.waitForSelector('.shell');
   await d.click('[data-act=nav][data-v=accounts]'); await d.waitForSelector('text=Reset a forgotten password');
   await d.fill('[data-bind=acq]', 'Nurse1'); await d.waitForSelector('tbody tr'); assert.strictEqual((await d.$$('tbody tr')).length, 1, 'search narrows the list');
   await d.click('[data-act=acreset]'); await d.click('#cfm [data-cfm=yes]'); await d.waitForSelector('text=Temporary password for Dummy Nurse1');
