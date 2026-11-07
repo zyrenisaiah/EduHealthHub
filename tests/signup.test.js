@@ -28,7 +28,7 @@ const assert = require('assert'), { start } = require('./helpers');
   await p.waitForTimeout(700); // local save is debounced
   // doctor approves
   const d = await mk(); await d.goto(h.base + 'doctor.html'); await d.waitForSelector('#loginform');
-  await d.fill('#lu', 'Demo Admin'); await d.fill('#pw', 'admin1234567'); await d.click('#loginform [type=submit]'); await d.waitForSelector('.shell');
+  await d.fill('#lu', 'Dummy Doctor1'); await d.fill('#pw', 'doctor1'); await d.click('#loginform [type=submit]'); await d.waitForSelector('.shell');
   await d.waitForSelector('#signq'); assert((await d.textContent('#signq')).includes('New Nurse'));
   await d.click('#signq [data-act=sgok]'); await d.waitForFunction(() => !(document.querySelector('#signq') || { textContent: '' }).textContent.includes('New Nurse'));
   assert((await d.textContent('#signq')).includes('Grade 12 STEM-A'), 'doctor sees the section the teacher wrote');

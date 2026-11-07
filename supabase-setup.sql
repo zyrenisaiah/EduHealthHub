@@ -1608,7 +1608,7 @@ create or replace function public.app_accounts(p_token text) returns jsonb langu
 declare a public.accounts;
 begin
   a := public.ehh_auth(p_token);
-  if not a.is_admin then raise exception 'NOT_ALLOWED'; end if;
+  if a.role<>'Doctor' then raise exception 'NOT_ALLOWED'; end if;
   return coalesce((select jsonb_agg(jsonb_build_object('id',id,'role',role,'name',name,'username',username,'email',email,'adv',adv,'active',active,'must_change',must_change,'admin',is_admin) order by is_admin desc,role,name) from public.accounts),'[]'::jsonb);
 end $$;
 
@@ -1616,7 +1616,7 @@ create or replace function public.app_account_set(p_token text,p_id text,p_activ
 declare a public.accounts; t public.accounts;
 begin
   a := public.ehh_auth(p_token);
-  if not a.is_admin then raise exception 'NOT_ALLOWED'; end if;
+  if a.role<>'Doctor' then raise exception 'NOT_ALLOWED'; end if;
   select * into t from public.accounts where id=p_id;
   if not found then raise exception 'NOT_FOUND'; end if;
   if t.is_admin then raise exception 'SELF'; end if;
@@ -1639,7 +1639,7 @@ create or replace function public.app_account_reset(p_token text,p_id text,p_tem
 declare a public.accounts; t public.accounts; n text := coalesce(p_temp,'');
 begin
   a := public.ehh_auth(p_token);
-  if not a.is_admin then raise exception 'NOT_ALLOWED'; end if;
+  if a.role<>'Doctor' then raise exception 'NOT_ALLOWED'; end if;
   select * into t from public.accounts where id=p_id;
   if not found then raise exception 'NOT_FOUND'; end if;
   if t.is_admin then raise exception 'SELF'; end if;
@@ -1654,7 +1654,7 @@ create or replace function public.app_signups(p_token text) returns jsonb langua
 declare a public.accounts;
 begin
   a := public.ehh_auth(p_token);
-  if not a.is_admin then raise exception 'NOT_ALLOWED'; end if;
+  if a.role<>'Doctor' then raise exception 'NOT_ALLOWED'; end if;
   return coalesce((select jsonb_agg(jsonb_build_object('id',id,'name',name,'username',username,'email',email,'role',role,'adv',adv,'at',at) order by id) from public.signup_requests where status='pending'),'[]'::jsonb);
 end $$;
 
@@ -1662,7 +1662,7 @@ create or replace function public.app_signup_decide(p_token text,p_id bigint,p_o
 declare a public.accounts; r public.signup_requests; rl text; ad text;
 begin
   a := public.ehh_auth(p_token);
-  if not a.is_admin then raise exception 'NOT_ALLOWED'; end if;
+  if a.role<>'Doctor' then raise exception 'NOT_ALLOWED'; end if;
   select * into r from public.signup_requests where id=p_id and status='pending' for update;
   if not found then raise exception 'NOT_FOUND'; end if;
   if p_ok then
