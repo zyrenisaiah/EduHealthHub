@@ -145,7 +145,7 @@ async function cloudEnter(r,pre){
  TOK=r.token;ss.set('ehh_tok',TOK);ss.set('ehh_role',r.account.role);
  const a=r.account;DB.accounts=[Object.assign({},a)];
  await cloudSync(true,pre);
- S.user={id:a.id,role:a.role,name:a.name,adv:a.adv||null,photo:a.photo||null,admin:!!a.admin};
+ S.user={id:a.id,role:a.role,name:a.name,adv:a.adv||null,photo:a.photo||null};
  S.view=NAV[a.role][0][0];S.back=S.view;S.f={q:'',grade:'',strand:'',section:''};S.sy=CUR_SY;
  syncStat('Saved online ✓');cloudStart();render()}
 async function cloudLogin(u,pw){

@@ -679,7 +679,7 @@ document.addEventListener('submit',e=>{
 function localRestore(){
  const acc=DB.accounts.find(x=>x.id===ss.get('ehh_uid'));
  if(!acc)return false;
- S.user={id:acc.id,role:acc.role,name:acc.name,adv:acc.adv||null,photo:acc.photo||null,admin:!!acc.admin};
+ S.user={id:acc.id,role:acc.role,name:acc.name,adv:acc.adv||null,photo:acc.photo||null};
  S.view=NAV[acc.role][0][0];S.back=S.view;return true}
 function boot(){
  const role=ss.get('ehh_role');

@@ -114,12 +114,12 @@ function searchMatches(q){
 
 /* Account requests (sign-up). Doctors approve or reject; nothing works until approved. */
 async function loadSignups(){
- if(!S.user||!S.user.admin||S.sg.busy)return;S.sg.busy=true;S.sg.t=Date.now();
+ if(!S.user||S.user.role!=='Doctor'||S.sg.busy)return;S.sg.busy=true;S.sg.t=Date.now();
  try{S.sg.rows=CLOUD_ON?await rpc('app_signups',{p_token:TOK}):(DB.signups||[]);S.sg.err=''}catch(e){if(e&&e.code==='SESSION_EXPIRED')cloudKick();else S.sg.err=cloudErr(e)}
  finally{S.sg.busy=false}if(S.view==='home')render()}
-setInterval(()=>{if(S.user&&S.user.admin&&S.view==='home'&&!document.hidden)loadSignups()},60000);
+setInterval(()=>{if(S.user&&S.user.role==='Doctor'&&S.view==='home'&&!document.hidden)loadSignups()},60000);
 function signupPanel(){
- if(!S.user.admin)return '';
+ if(S.user.role!=='Doctor')return '';
  if(!S.sg.t&&!S.sg.busy)setTimeout(loadSignups,0);
  const rows=S.sg.rows||[];if(!rows.length&&!S.sg.err)return '';
  return `<section class="panel" id="signq" style="border-color:var(--warn)"><div class="head"><h3>Account requests</h3><span class="small muted">${rows.length} waiting</span></div>
@@ -219,7 +219,7 @@ function certificate(s,c){
 
 /* ---- actions ---- */
 const HOME_ACT={
- nav:a=>{S.view=a.dataset.v;if(S.view==='chat'&&!S.msg.active&&innerWidth>860)S.msg.active=convList()[0]||'';render();scrollTo(0,0);if(S.view==='activity')loadAudit();if(S.view==='accounts')loadAccts();if(S.view==='backups')loadBackups();if(S.view==='errors')loadErrors();if(S.view==='chat'){msgSync();msgMarkRead()}},
+ nav:a=>{S.view=a.dataset.v;if(S.view==='chat'&&!S.msg.active&&innerWidth>860)S.msg.active=convList()[0]||'';render();scrollTo(0,0);if(S.view==='activity')loadAudit();if(S.view==='accounts')loadAccts();if(S.view==='chat'){msgSync();msgMarkRead()}},
  auditrefresh:()=>loadAudit(),
  auditkind:a=>{S.audit.kind=a.dataset.k;loadAudit()},
  hpanel:a=>{S.hm.panel=a.dataset.k;render();const f=$('.hform');if(f)f.scrollIntoView({block:'nearest'})},
@@ -233,9 +233,6 @@ const HOME_ACT={
  acadvsave:a=>{const r=(S.ac.rows||[]).find(x=>x.id===a.dataset.id),sel=$('#acadv-'+a.dataset.id);if(!r||!sel)return;
   acctDo(r.id,async()=>{if(CLOUD_ON)await rpc('app_account_set',{p_token:TOK,p_id:r.id,p_active:null,p_adv:sel.value,p_set_adv:true});else{const x=DB.accounts.find(y=>y.id===r.id);x.adv=sel.value||null;save()}toast('Advisory saved.')})},
  actempdone:()=>{S.ac.temp=null;render()},
- bkdl:async()=>{if(S.bk.busy)return;S.bk.busy=true;render();try{const x=await rpc('app_backup',{p_token:TOK});saveJson('EduHealthHub-backup-'+new Date().toISOString().slice(0,16).replace(/[:T]/g,'-')+'.json',x);toast('Backup downloaded. Keep the file private.')}catch(e){toast(cloudErr(e))}S.bk.busy=false;render()},
- bkdlsnap:async a=>{try{const x=await rpc('app_backup_snapshot',{p_token:TOK,p_snap:+a.dataset.id});saveJson('EduHealthHub-nightly-'+String(x.at).slice(0,10)+'.json',x);toast('Nightly copy downloaded. Keep the file private.')}catch(e){toast(cloudErr(e))}},
- erreload:()=>loadErrors(),
  hclear:()=>{S.hm={q:'',sid:null,panel:'',msg:''};render()},
  'qa-walk':()=>{S.hm.panel='walk';S.hm.msg=S.hm.sid?'':'Type the learner\'s LRN first.';render();S.hm.sid?0:homeFocusSearch()},
  'qa-refer':()=>{S.hm.panel='refer';S.hm.msg=S.hm.sid?'':'Type the learner\'s LRN first.';render();S.hm.sid?0:homeFocusSearch()},
@@ -325,8 +322,8 @@ async function loadAudit(){
 /* Doctor: manage accounts (reset password, deactivate, advisory) */
 S.ac={rows:null,err:'',busy:false,temp:null,q:''};
 async function loadAccts(){
- if(!S.user||!S.user.admin)return;S.ac.busy=true;
- try{S.ac.rows=CLOUD_ON?await rpc('app_accounts',{p_token:TOK}):DB.accounts.map(a=>({id:a.id,role:a.role,name:a.name,username:a.username,email:a.email,adv:a.adv||null,active:a.active!==false,must_change:false,admin:!!a.admin}));S.ac.err=''}
+ if(!S.user||S.user.role!=='Doctor')return;S.ac.busy=true;
+ try{S.ac.rows=CLOUD_ON?await rpc('app_accounts',{p_token:TOK}):DB.accounts.map(a=>({id:a.id,role:a.role,name:a.name,username:a.username,email:a.email,adv:a.adv||null,active:a.active!==false,must_change:false}));S.ac.err=''}
  catch(e){if(e&&e.code==='SESSION_EXPIRED')cloudKick();else S.ac.err=cloudErr(e)}
  S.ac.busy=false;if(S.view==='accounts')render()}
 function tempPw(){const L='abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ',D='23456789',r=n=>{const u=new Uint32Array(n);crypto.getRandomValues(u);return u},a=[...r(9)].map(x=>L[x%L.length]),d=[...r(3)].map(x=>D[x%D.length]),all=a.concat(d),j=[...r(all.length)];
@@ -334,14 +331,14 @@ function tempPw(){const L='abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ',D='2
 function accountsView(){
  const a=S.ac,q=a.q.trim().toLowerCase(),rows=(a.rows||[]).filter(r=>!q||(r.name+' '+r.username+' '+r.role).toLowerCase().includes(q));
  const adv=r=>r.role!=='Teacher'?'<span class="small muted">-</span>':`<select class="inp" id="acadv-${esc(r.id)}" aria-label="Advisory of ${esc(r.name)}"><option value="">No advisory</option>${SECTIONS.map(c=>`<option value="${esc(c.id)}" ${c.id===r.adv?'selected':''}>${esc(secLabel(c))}</option>`).join('')}</select> <button class="btn sm" data-act="acadvsave" data-id="${esc(r.id)}">Save</button>`;
- return `<div class="head"><div><div class="eyebrow">Admin</div><h2>Accounts</h2></div></div>
+ return `<div class="head"><div><div class="eyebrow">Doctor</div><h2>Accounts</h2></div></div>
  <section class="panel"><div class="small muted" style="margin-bottom:8px">Reset a forgotten password, deactivate someone who has left, or change a teacher's advisory. Everything here is recorded in the Activity log.</div>
  <input class="inp" data-bind="acq" placeholder="Search a name, username or role" value="${esc(a.q)}" autocomplete="off" aria-label="Search accounts" style="max-width:360px">
  ${a.err?`<div class="pill bad" role="alert" style="white-space:normal;margin-top:8px">${esc(a.err)}</div>`:''}
  ${a.temp?`<div class="panel" style="border-color:var(--warn);margin-top:10px" role="status"><b>Temporary password for ${esc(a.temp.name)}</b><div class="mono" style="font-size:20px;margin:6px 0;user-select:all">${esc(a.temp.pw)}</div><div class="small muted">Give this to ${esc(a.temp.name)} in person. It is shown once. They must choose their own password at their next login.</div><div class="trow"><button class="btn sm" data-act="actempdone">Done</button></div></div>`:''}
  <div class="tw" style="margin-top:10px"><table class="wrapth"><thead><tr><th>Name</th><th>Role</th><th>Advisory</th><th>Status</th><th></th></tr></thead><tbody>
  ${a.rows?rows.map(r=>`<tr><td><b>${esc(r.name)}</b><div class="small muted">${esc(r.username)} &middot; ${esc(r.email)}</div></td><td>${esc(r.role)}</td><td>${adv(r)}</td><td>${r.active?(r.must_change?pill('Must change password','warn'):pill('Active','good')):pill('Deactivated','bad')}</td>
- <td style="white-space:nowrap">${r.admin||r.id===S.user.id?'<span class="small muted">'+(r.id===S.user.id?'You (admin)':'Admin')+'</span>':`<button class="btn sm" data-act="acreset" data-id="${esc(r.id)}">Reset password</button> <button class="btn sm ${r.active?'':'primary'}" data-act="actoggle" data-id="${esc(r.id)}">${r.active?'Deactivate':'Activate'}</button>`}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">No account matches.</td></tr>':'<tr><td colspan="5"><div class="sk sk-row" style="margin:0"></div></td></tr>'}
+ <td style="white-space:nowrap">${r.id===S.user.id?'<span class="small muted">You</span>':`<button class="btn sm" data-act="acreset" data-id="${esc(r.id)}">Reset password</button> <button class="btn sm ${r.active?'':'primary'}" data-act="actoggle" data-id="${esc(r.id)}">${r.active?'Deactivate':'Activate'}</button>`}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">No account matches.</td></tr>':'<tr><td colspan="5"><div class="sk sk-row" style="margin:0"></div></td></tr>'}
  </tbody></table></div></section>`}
 async function acctDo(id,fn){
  const a=S.ac;if(a.busy)return;a.busy=true;a.err='';
@@ -378,26 +375,3 @@ function activityView(){
 /* "Other" ailment: ask the nurse to type it */
 document.addEventListener('change',e=>{if(e.target.id!=='w-ail')return;const f=$('#w-other-f'),i=$('#w-other'),on=e.target.value==='Other';if(!f||!i)return;f.style.display=on?'':'none';i.required=on;i.setCustomValidity('');if(on)i.focus()});
 document.addEventListener('input',e=>{if(e.target.id==='w-other')e.target.setCustomValidity('')});
-
-
-/* ---- Admin only: backups and browser error reports ---- */
-S.bk={list:null,err:'',busy:false};S.er={rows:null,err:'',busy:false};
-async function loadBackups(){if(!S.user||!S.user.admin)return;if(!CLOUD_ON){S.bk={list:[],err:'Backups live in the online database. Nothing to show in offline mode.',busy:false};return render()}
- S.bk.busy=true;try{S.bk.list=await rpc('app_backup_list',{p_token:TOK});S.bk.err=''}catch(e){if(e&&e.code==='SESSION_EXPIRED')return cloudKick();S.bk.err=cloudErr(e)}S.bk.busy=false;if(S.view==='backups')render()}
-function saveJson(name,obj){browserSave(name,new Blob([JSON.stringify(obj)],{type:'application/json'}))}
-function backupsView(){
- const b=S.bk,when=t=>{const d=new Date(t);return d.toLocaleDateString()+' '+d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})};
- return `<div class="head"><div><div class="eyebrow">Admin</div><h2>Backups</h2></div></div>
- <section class="panel"><h3>Full copy of everything, right now</h3><p class="small muted">Learner records, supplies, notes, transfers, accounts (without passwords), messages, the list of uploaded files and the activity log, as one <b>.json</b> file. It contains health data: keep it private. Each download is written to the Activity log.</p>
- <div class="trow"><button class="btn primary" data-act="bkdl" ${b.busy?'disabled':''}>Download backup now</button></div></section>
- <section class="panel"><h3>Nightly copies kept in the database</h3><p class="small muted">Made automatically every night and kept for 7 days. Downloading one saves its learner records and its account list (with password hashes: extra private).</p>
- ${b.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(b.err)}</div>`:''}
- <div class="tw"><table class="wrapth"><thead><tr><th>Taken</th><th>Learners</th><th>Type</th><th></th></tr></thead><tbody>${b.list===null?'<tr><td colspan="4"><div class="sk sk-row" style="margin:0"></div></td></tr>':(b.list.map(x=>`<tr><td>${when(x.at)}</td><td>${x.students}</td><td>${esc(x.note||'')}</td><td><button class="btn sm" data-act="bkdlsnap" data-id="${x.id}">Download</button></td></tr>`).join('')||'<tr><td colspan="4" class="muted">No nightly copy yet.</td></tr>')}</tbody></table></div></section>`}
-async function loadErrors(){if(!S.user||!S.user.admin)return;if(!CLOUD_ON){S.er={rows:[],err:'Error reports are collected in the online database. Nothing to show in offline mode.',busy:false};return render()}
- S.er.busy=true;try{S.er.rows=await rpc('app_errors',{p_token:TOK,p_limit:100});S.er.err=''}catch(e){if(e&&e.code==='SESSION_EXPIRED')return cloudKick();S.er.err=cloudErr(e)}S.er.busy=false;if(S.view==='errors')render()}
-function errorsView(){
- const e=S.er;
- return `<div class="head"><div><div class="eyebrow">Admin</div><h2>Error reports</h2></div><div class="trow"><button class="btn" data-act="erreload" ${e.busy?'disabled':''}>Refresh</button></div></div>
- <p class="small muted">When something breaks in anyone's browser it is reported here automatically (last 30 days, latest 100). An empty list is good news.</p>
- ${e.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(e.err)}</div>`:''}
- <section class="panel" style="padding:0"><div class="tw"><table class="wrapth"><thead><tr><th>When</th><th>Who</th><th>Page</th><th>Error</th></tr></thead><tbody>${e.rows===null?'<tr><td colspan="4"><div class="sk sk-row" style="margin:0"></div></td></tr>':(e.rows.map(r=>{const t=new Date(r.at);return `<tr><td class="mono small" style="white-space:nowrap">${t.toLocaleDateString()} ${t.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</td><td>${r.actor?`<b>${esc(r.actor)}</b> ${pill(esc(r.role||''),'mute')}`:'<span class="muted">not signed in</span>'}</td><td class="small">${esc(r.page||'')}</td><td class="small" style="overflow-wrap:anywhere"><b>${esc(r.msg||'')}</b>${r.stack?`<div class="muted mono" style="margin-top:2px">${esc(String(r.stack).slice(0,300))}</div>`:''}</td></tr>`}).join('')||'<tr><td colspan="4" class="muted">No errors reported.</td></tr>')}</tbody></table></div></section>`}

@@ -38,11 +38,3 @@ Health records are sensitive personal information (in the Philippines, covered b
 ## 7. Known limits
 - The demo mode ("offline") stores data in the browser. **Never use it for real data.**
 - The site is hosted on GitHub Pages and Supabase's free tier. Fine for a pilot; for a whole school consider paid plans and a Philippine or Singapore data region review.
-
-## Admin account (head developer only)
-Accounts, sign-up approvals, Backups and Error reports are visible only to one admin account. Doctors no longer see them.
-Create it once in the Supabase SQL editor, with your own password (never share it in chat):
-
-    select public.ehh_create_admin('Your Name','your-username','you@email','a-password-of-12+-chars-with-letter-and-digit');
-
-Then sign in on the Doctor page and hard-refresh (Ctrl+Shift+R). The admin cannot be reset or deactivated from the site.
