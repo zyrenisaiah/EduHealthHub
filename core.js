@@ -20,15 +20,16 @@ function plainAccounts(){
  const mk=(id,role,name,pw,extra)=>Object.assign({id,role,name,username:name,email:name.replace(/\s+/g,'').toLowerCase()+'@eduhealthhub.demo',pw},extra||{});
  const A=[mk('A1','Doctor','Dummy Doctor1','doctor1'),mk('A2','Doctor','Dummy Doctor2','doctor2'),
   mk('A3','Nurse','Dummy Nurse1','nurse1'),mk('A4','Nurse','Dummy Nurse2','nurse2'),mk('A5','Nurse','Dummy Nurse3','nurse3'),
-  mk('A6','Dentist','Dummy Dentist1','dentist1')];
+  mk('A6','Dentist','Dummy Dentist1','dentist1'),
+  mk('A0','Doctor','Demo Admin','admin1234567',{admin:true})];   /* offline demo of the head developer's admin account */
  TEACHERS.forEach((t,i)=>A.push(mk('T'+(i+1),'Teacher',t[0],t[1],{adv:SECTIONS[i].id})));
  return A;
 }
 const normU=s=>String(s).replace(/\s+/g,'').toLowerCase();
 const DEMO=plainAccounts();
-const DEMO_UI=DEMO.filter(a=>a.role!=='Teacher').concat(SECT_UI.map(sc=>DEMO.find(a=>a.adv===sc.id)));
+const DEMO_UI=DEMO.filter(a=>a.role!=='Teacher'&&!a.admin).concat(SECT_UI.map(sc=>DEMO.find(a=>a.adv===sc.id)));
 if(CLOUD_ON)DB.accounts=[];
-else if(!DB.accounts){DB.accounts=DEMO.map(a=>({id:a.id,role:a.role,adv:a.adv,name:a.name,username:a.username,email:a.email,pw:pwHash(a.id,a.pw)}));save()}
+else if(!DB.accounts){DB.accounts=DEMO.map(a=>({id:a.id,role:a.role,adv:a.adv,admin:!!a.admin,name:a.name,username:a.username,email:a.email,pw:pwHash(a.id,a.pw)}));save()}
 if(!CLOUD_ON)DEMO.forEach(a=>{if(!DB.accounts.find(x=>x.id===a.id))DB.accounts.push({id:a.id,role:a.role,adv:a.adv,name:a.name,username:a.username,email:a.email,pw:pwHash(a.id,a.pw)})});
 /* tidy teacher usernames to one format, keeping older typed forms working at login */
 const ALIAS={T17:'dummyteacher1111a3',T18:'dummyteacher1111a4',T19:'dummyteacher1111a5',T20:'dummyteacher1111a6',T21:'dummyteachertp3',T22:'dummyteachertp4',T23:'dummyteachertp5',T24:'dummyteachertp6'};
@@ -46,7 +47,7 @@ const P={
  Teacher:{exam:'view',dental:'view',prof:'view',stock:null}
 };
 const NAV={
- Doctor:[['home','Home'],['chat','Messages'],['overview','Overview'],['students','Students'],['stock','Supply stock'],['accounts','Accounts'],['activity','Activity log'],['account','My account']],
+ Doctor:[['home','Home'],['chat','Messages'],['overview','Overview'],['students','Students'],['stock','Supply stock'],['activity','Activity log'],['account','My account']],
  Nurse:[['home','Home'],['chat','Messages'],['students','Students'],['stock','Supply stock'],['account','My account']],
  Dentist:[['home','Home'],['chat','Messages'],['students','Students'],['account','My account']],
  Teacher:[['home','Home'],['chat','Messages'],['dash','My advisory'],['files','Record of files'],['account','My account']]
@@ -125,10 +126,12 @@ ${L.signup?` <form class="login-card" id="signupform" autocomplete="off">
 </div></div></div>`;
 }
 
+/* The head developer's admin account is a Doctor account with extra screens: Accounts, Backups, Error reports. */
+function navFor(u){const n=NAV[u.role].slice();if(u.admin){const i=n.findIndex(x=>x[0]==='activity');n.splice(i<0?n.length:i+1,0,['accounts','Accounts'],['backups','Backups'],['errors','Error reports'])}return n}
 /* ---------- shell ---------- */
 function shell(){
- const u=S.user, nav=NAV[u.role];
- const body={chat:chatView,doc:docView,activity:activityView,accounts:accountsView,home:()=>S.user.role==='Teacher'?teacherHome():homeView(),overview:overviewView,students:studentsView,stock:stockView,dash:teacherView,student:studentView,account:accountView,files:filesView}[S.view]();
+ const u=S.user, nav=navFor(u); if(['accounts','backups','errors'].includes(S.view)&&!u.admin)S.view='home';
+ const body={chat:chatView,doc:docView,activity:activityView,accounts:accountsView,backups:backupsView,errors:errorsView,home:()=>S.user.role==='Teacher'?teacherHome():homeView(),overview:overviewView,students:studentsView,stock:stockView,dash:teacherView,student:studentView,account:accountView,files:filesView}[S.view]();
  const navKey=(S.view==='student'||S.view==='doc')?S.back:S.view;
  return `<div class="shell"><header class="topbar"><button class="name homebtn" data-act="nav" data-v="${nav[0][0]}" title="Go to Home" aria-label="EduHealthHub, go to Home"><span class="logo-chip"><img src="${LOGO_EMBLEM}" alt="" height="34"></span>EduHealthHub</button><div class="spacer"></div>
   <img class="role-ic" style="object-fit:cover" src="${u.photo||ROLE_ICON[u.role]}" alt="${u.role}">
