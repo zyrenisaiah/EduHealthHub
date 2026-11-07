@@ -428,3 +428,16 @@ button.mention{font:inherit;border:0;cursor:pointer}button.mention:hover{text-de
 
 /* show / hide password */
 .pwwrap{display:flex;gap:8px;align-items:center;min-width:0}.pwwrap .inp{flex:1;min-width:0}.pwwrap .btn{flex:none}
+
+/* file preview */
+.fimgbtn{display:block;padding:0;margin:0;border:0;background:none;cursor:zoom-in;max-width:100%}
+.fnamebtn{border:0;background:none;padding:0;margin:0;text-align:left;font:inherit;color:inherit;cursor:pointer;display:grid;gap:1px}.fnamebtn:hover b{text-decoration:underline}.fnamebtn:focus-visible,.fimgbtn:focus-visible{outline:2px solid var(--accent,#2b7a99);outline-offset:2px;border-radius:6px}
+.pv{position:fixed;inset:0;z-index:2000;background:rgba(10,16,13,.95);display:flex;flex-direction:column}
+.pvbar{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 14px;color:#fff;background:rgba(0,0,0,.35)}
+.pvname{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pvbtns{display:flex;gap:8px;flex:none}
+.pvbody{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:12px;overflow:auto}
+.pvimg{max-width:100%;max-height:100%;object-fit:contain;border-radius:6px;background:#fff}
+.pvpdf{width:100%;height:100%;border:0;border-radius:6px;background:#fff}
+.pvtxt{margin:0;width:min(900px,100%);max-height:100%;overflow:auto;background:#fff;color:#22362b;padding:16px;border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere;font:14px/1.5 ui-monospace,Menlo,Consolas,monospace}
+.pvmsg{color:#fff;text-align:center;display:grid;gap:12px;justify-items:center;padding:20px}
+.pvbtns .btn:not(.primary){color:#22362b;background:#fff}

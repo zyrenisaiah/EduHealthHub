@@ -95,9 +95,9 @@ const b64blob=(b,t)=>{const bin=atob(b),u=new Uint8Array(bin.length);for(let i=0
 function fileCard(m){
  const r=m.r||{},img=/^image\/(jpeg|png|webp|gif)$/.test(r.mime||''),F=(S.msg.files=S.msg.files||{});let pic='';
  if(img){const f=F[r.fid];
-  if(f&&f.url)pic=`<img class="fimg" src="${f.url}" alt="${esc(r.name||'')}">`;
+  if(f&&f.url)pic=`<button type="button" class="fimgbtn" data-act="cpv" data-fid="${esc(r.fid)}" data-n="${esc(r.name||'file')}" data-m="${esc(r.mime||'')}" aria-label="Preview ${esc(r.name||'photo')}"><img class="fimg" src="${f.url}" alt="${esc(r.name||'')}"></button>`;
   else{pic='<div class="fimg ph small muted">Loading photo...</div>';if(!f){F[r.fid]={};rpc('app_file_get',{p_token:TOK,p_fid:r.fid}).then(x=>{F[r.fid]={url:URL.createObjectURL(b64blob(x.b64,x.mime))};chatRefresh(true)}).catch(()=>{delete F[r.fid]})}}}
- return `<div class="mcard fcard">${pic}<div class="frow"><span class="ico">${img?'&#128247;':'&#128206;'}</span><span class="cmid"><b>${esc(r.name||'File')}</b><span class="small muted">${fsize(r.size||0)}</span></span><button type="button" class="btn sm primary" data-act="cfdl" data-fid="${esc(r.fid)}" data-n="${esc(r.name||'file')}">Download</button></div></div>`}
+ return `<div class="mcard fcard">${pic}<div class="frow"><span class="ico">${img?'&#128247;':'&#128206;'}</span><button type="button" class="cmid fnamebtn" data-act="cpv" data-fid="${esc(r.fid)}" data-n="${esc(r.name||'file')}" data-m="${esc(r.mime||'')}" aria-label="Preview ${esc(r.name||'file')}"><b>${esc(r.name||'File')}</b><span class="small muted">${fsize(r.size||0)} &middot; tap to preview</span></button><button type="button" class="btn sm primary" data-act="cfdl" data-fid="${esc(r.fid)}" data-n="${esc(r.name||'file')}">Download</button></div></div>`}
 async function fileUpload(file){
  const c=S.msg.active;if(!c||!file)return;
  const ext=(file.name.split('.').pop()||'').toLowerCase(),mime=FEXT[ext];
@@ -240,6 +240,7 @@ const CHAT_ACT={
  cprof:a=>{S.msg.prof=a.dataset.id;S.msg.panel='prof';if(!S.msg.active)render();else chatPanelRender()},
  cdm:a=>{const c=dmId(S.user.id,a.dataset.id);S.msg.tmp[c]=1;chatOpen(c)},
  cfilepick:()=>{const i=$('#cfile');if(i)i.click()},
+ cpv:a=>pvOpen(+a.dataset.fid,a.dataset.n||'file',a.dataset.m||''),
  cfdl:async a=>{try{const x=await rpc('app_file_get',{p_token:TOK,p_fid:+a.dataset.fid});browserSave(x.name,b64blob(x.b64,x.mime))}catch(e){toast(msgErr(e))}},
  mmenu:a=>{if($('#mmenu')&&a.classList.contains('on'))return menuClose();menuOpen(a)},
  mmreply:a=>{menuClose();S.msg.reply={conv:S.msg.active,id:+a.dataset.id};replyBarRender();const i=$('#chtext');if(i)i.focus()},
@@ -291,3 +292,29 @@ document.addEventListener('drop',e=>{if(e.target.closest&&e.target.closest('.chm
 document.addEventListener('input',e=>{if(e.target.id==='medtext'&&S.msg.edit)S.msg.edit.text=e.target.value});
 document.addEventListener('keydown',e=>{if(e.target.id==='medtext'){if(e.key==='Escape'){e.preventDefault();CHAT_ACT.mcancel()}else if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();CHAT_ACT.msave()}}});
 document.addEventListener('input',e=>{if(e.target.id==='chtext'){S.msg.draft[S.msg.active]=e.target.value;e.target.style.height='auto';e.target.style.height=Math.min(140,e.target.scrollHeight)+'px';mentionPop()}});
+
+
+/* ---------- file preview: photo, PDF and text open in a viewer; other types offer download ---------- */
+let PV=null;
+function pvClose(){const o=$('#pv');if(o)o.remove();if(PV){PV.urls.forEach(u=>URL.revokeObjectURL(u));PV=null}}
+async function pvOpen(fid,name,mime){
+ pvClose();PV={fid,name,urls:[],blob:null,seq:(PV&&PV.seq||0)+1};const me=PV,o=document.createElement('div');
+ o.id='pv';o.className='pv';o.setAttribute('role','dialog');o.setAttribute('aria-modal','true');o.setAttribute('aria-label','Preview of '+name);
+ o.innerHTML='<div class="pvbar"><b class="pvname"></b><span class="pvbtns"><button type="button" class="btn sm primary" data-pv="dl">Download</button><button type="button" class="btn sm" data-pv="x" aria-label="Close preview">Close</button></span></div><div class="pvbody" id="pvbody"><div class="small pvmsg">Loading...</div></div>';
+ o.querySelector('.pvname').textContent=name;document.body.appendChild(o);const body=o.querySelector('#pvbody');o.querySelector('[data-pv=x]').focus();
+ const say=t=>{body.innerHTML='';const d=document.createElement('div');d.className='small pvmsg';d.textContent=t;body.appendChild(d)};
+ try{
+  const x=await rpc('app_file_get',{p_token:TOK,p_fid:fid});if(PV!==me)return;
+  const type=x.mime||mime,blob=b64blob(x.b64,type);me.blob=blob;me.name=x.name||name;
+  if(/^image\/(jpeg|png|webp|gif)$/.test(type)){const u=URL.createObjectURL(blob);me.urls.push(u);body.innerHTML='';const im=document.createElement('img');im.className='pvimg';im.alt=name;im.src=u;body.appendChild(im)}
+  else if(type==='application/pdf'){const u=URL.createObjectURL(blob);me.urls.push(u);
+   if(/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)){body.innerHTML='';const d=document.createElement('div');d.className='pvmsg';d.innerHTML='<div class="small">This phone cannot show a PDF inside the page.</div>';const a=document.createElement('a');a.className='btn primary';a.href=u;a.target='_blank';a.rel='noopener';a.textContent='Open the PDF';d.appendChild(a);body.appendChild(d)}
+   else{body.innerHTML='';const f=document.createElement('iframe');f.className='pvpdf';f.title=name;f.src=u;body.appendChild(f)}}
+  else if(type==='text/plain'){const t=await blob.text();if(PV!==me)return;body.innerHTML='';const pre=document.createElement('pre');pre.className='pvtxt';pre.textContent=t.slice(0,200000);body.appendChild(pre)}
+  else say('This type of file cannot be previewed here. Press Download to open it on your device.')}
+ catch(e){if(PV!==me)return;if(e&&e.code==='SESSION_EXPIRED'){pvClose();cloudKick();return}say(msgErr(e))}}
+document.addEventListener('click',e=>{const o=$('#pv');if(!o)return;const b=e.target.closest('[data-pv]');
+ if(b&&b.dataset.pv==='x'){pvClose();return}
+ if(b&&b.dataset.pv==='dl'){if(PV&&PV.blob)browserSave(PV.name,PV.blob);return}
+ if(e.target===o||e.target.id==='pvbody')pvClose()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#pv'))pvClose()});
