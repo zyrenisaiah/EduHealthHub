@@ -420,3 +420,8 @@ button.mention{font:inherit;border:0;cursor:pointer}button.mention:hover{text-de
 .cfmbox{background:var(--surface);color:var(--ink);border-radius:16px;box-shadow:0 12px 40px rgba(0,0,0,.3);padding:18px 18px 14px;width:min(340px,100%)}
 .cfmbox h3{margin:0 0 6px;font-size:17px}.cfmbox p{margin:0 0 14px;color:var(--muted);font-size:14px;line-height:1.4}
 .cfmrow{display:flex;justify-content:flex-end;gap:8px}.cfm .btn.danger{background:#b3261e;color:#fff;border-color:#b3261e}
+
+/* two-step verification */
+.qrbox{background:#fff;border-radius:12px;padding:6px;width:fit-content;border:1px solid var(--line,#d8e0e6)}
+.qrbox svg{display:block;max-width:100%;height:auto}
+.rcodes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px;padding:12px;border:1px dashed var(--line,#c9d3da);border-radius:12px;font-size:15px;user-select:all}

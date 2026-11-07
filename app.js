@@ -264,6 +264,7 @@ function accountView(){
   <div style="display:grid;gap:8px"><h3 style="margin:0">Profile picture</h3><div class="small muted">Shown in the top bar. JPG or PNG.</div>
    <div class="trow"><button class="btn sm primary" type="button" data-act="pickaccphoto">${a.photo?'Change picture':'Upload picture'}</button>${a.photo?'<button class="btn sm" type="button" data-act="rmaccphoto">Remove</button>':''}</div>
    <input type="file" id="acc-photo" accept="image/*" hidden data-bind="accphoto"></div></section>
+ ${twofaPanel(a)}
  ${gmailPanel(a)}
  <div class="grid2">
  <form class="panel" id="acctform" style="display:grid;gap:12px;align-content:start"><h3>Sign-in details</h3>
@@ -278,6 +279,13 @@ function accountView(){
   <div id="pw-msg" class="small" role="status"></div><div><button class="btn primary" type="submit">Change password</button></div></form>
  </div>`;
 }
+function twofaPanel(a){
+ if(!CLOUD_ON)return '';
+ const t=S.tf||{};let body;
+ if(t.codes)body=`<div class="small muted">Your new recovery codes. The old ones no longer work. Each works once, and they are shown only now.</div>${codesHtml(t.codes)}<div class="trow"><button type="button" class="btn sm" data-act="tfcopy">Copy</button><button type="button" class="btn sm" data-act="tfdl">Download</button><button type="button" class="btn sm primary" data-act="tfclose">Done</button></div>`;
+ else if(t.open)body=`<form id="tf-new" style="display:grid;gap:10px"><div class="small muted">Type the current 6-digit code from your app to get a fresh set of recovery codes. The old ones stop working.</div><div class="field"><label for="tf-c">6-digit code</label><input class="inp" id="tf-c" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required></div>${t.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(t.err)}</div>`:''}<div class="trow"><button class="btn sm primary" type="submit">Get new codes</button><button type="button" class="btn sm" data-act="tfclose">Cancel</button></div></form>`;
+ else body=`<div class="small muted">${a.totp?'Logging in needs your password and a 6-digit code from your authenticator app. If you lose your phone, a Doctor can reset it for you.':'Not set up yet. You will be asked to set it up the next time you log in.'}</div>${a.totp?'<div><button class="btn sm" type="button" data-act="tfopen">New recovery codes</button></div>':''}`;
+ return `<section class="panel" style="margin-bottom:14px;display:grid;gap:10px"><h3 style="margin:0">Two-step verification <span class="pill ${a.totp?'good':'warn'}">${a.totp?'On':'Off'}</span></h3>${body}</section>`}
 function gmailPanel(a){
  if(!CLOUD_ON)return '';
  const g=S.gm||{};
@@ -563,7 +571,14 @@ const ACT={
  pickphoto:()=>{const i=$('#photo-in');if(i)i.click()},
  signupopen:()=>{Object.assign(S.login,{signup:true,done:false,err:'',pending:null});render();const i=$('#su-name');if(i)i.focus()},
  signupback:()=>{Object.assign(S.login,{signup:false,done:false,err:''});render()},
- codeback:()=>{S.login.pending=null;S.login.err='';S.login.info='';render()},
+ enrcopy:()=>{const E=S.login.enroll;if(E&&E.codes&&navigator.clipboard)navigator.clipboard.writeText(E.codes.join('\n')).then(()=>toast('Codes copied'),()=>toast('Could not copy. Select the codes and copy them.'))},
+ enrdl:()=>{const E=S.login.enroll;if(E&&E.codes)browserSave('EduHealthHub-recovery-codes.txt',new Blob(['EduHealthHub recovery codes for '+E.username+'\nEach code works once.\n\n'+E.codes.join('\n')+'\n'],{type:'text/plain'}))},
+ enrdone:()=>{const E=S.login.enroll;if(!E)return;const c=$('#en-ok');if(!c||!c.checked){E.err='Tick the box to confirm you saved the codes.';render();return}twofaFinish(E.token,E.acct,E.role)},
+ tfopen:()=>{S.tf={open:true};render();const i=$('#tf-c');if(i)i.focus()},
+ tfclose:()=>{S.tf=null;render()},
+ tfcopy:()=>{const t=S.tf;if(t&&t.codes&&navigator.clipboard)navigator.clipboard.writeText(t.codes.join('\n')).then(()=>toast('Codes copied'),()=>toast('Could not copy.'))},
+ tfdl:()=>{const t=S.tf;if(t&&t.codes)browserSave('EduHealthHub-recovery-codes.txt',new Blob(['EduHealthHub recovery codes for '+S.user.name+'\nEach code works once.\n\n'+t.codes.join('\n')+'\n'],{type:'text/plain'}))},
+ codeback:()=>{if(S.login.enroll||S.login.totp)lockFree();S.login.totp=null;S.login.enroll=null;S.login.pending=null;S.login.err='';S.login.info='';render()},
  gmcancel:()=>{S.gm=null;render()},
  gmunlinkask:()=>{S.gm={unlink:true};render()},
  pickaccphoto:()=>{const i=$('#acc-photo');if(i)i.click()},
@@ -653,9 +668,12 @@ document.addEventListener('submit',e=>{
    rpc('app_signup',{p_name:name,p_role:role,p_email:email,p_username:user,p_pw:pw,p_adv:role==='Teacher'?adv:null}).then(fin).catch(fail);return}
   if(DB.accounts.some(x=>normU(x.username)===normU(user)||normU(x.email)===normU(email))||(DB.signups||[]).some(x=>normU(x.username)===normU(user)||normU(x.email)===normU(email)))return fail({code:'DUPLICATE'});
   (DB.signups=DB.signups||[]).push({id:Date.now(),name,role,email,username:user,pw,adv:role==='Teacher'?adv:null,at:new Date().toISOString()});save();fin();return}
+ if(e.target.id==='totpform'){totpLogin();return}
+ if(e.target.id==='enrollform'){twofaVerify();return}
+ if(e.target.id==='tf-new'){const c=$('#tf-c').value;rpc('app_totp_new_codes',{p_token:TOK,p_code:c}).then(r=>{if(r.error){S.tf={open:true,err:cloudErr({code:r.error})}}else S.tf={codes:r.codes};render()}).catch(x=>{S.tf={open:true,err:cloudErr(x)};render()});return}
  if(e.target.id==='mustform'){const L=S.login,m=L.must,n=$('#mu-n').value,r=$('#mu-r').value;if(!m)return;
   const weak=pwWeak(n,'',m.old);if(weak){L.err=weak;render();return}if(n!==r){L.err='The new passwords do not match.';render();return}
-  rpc('app_change_password',{p_token:m.token,p_old:m.old,p_new:n}).then(()=>{L.must=null;if(m.acct)lockWrite(m.acct);TOK=m.token;ss.set('ehh_tok',TOK);ss.set('ehh_role',m.role);location.href=ROLE_PAGE[m.role]}).catch(x=>{L.err=cloudErr(x);render()});return}
+  rpc('app_change_password',{p_token:m.token,p_old:m.old,p_new:n}).then(()=>{L.must=null;if(m.acct&&m.acct.need2fa)return twofaStart(m.token,m.acct,m.role);if(m.acct)lockWrite(m.acct);TOK=m.token;ss.set('ehh_tok',TOK);ss.set('ehh_role',m.role);location.href=ROLE_PAGE[m.role]}).catch(x=>{L.err=cloudErr(x);render()});return}
  if(e.target.id==='gm-unlink'){const pw=$('#gm-pw').value;rpc('app_unlink_gmail',{p_token:TOK,p_password:pw}).then(r=>{Object.assign(DB.accounts[0],r);S.gm=null;toast('Gmail unlinked');render()}).catch(x=>{S.gm=Object.assign(S.gm||{},{err:cloudErr(x)});render()});return}
  if(e.target.id==='acctform'){
   const a=DB.accounts.find(x=>x.id===S.user.id),u=$('#ac-u').value.trim(),m=$('#ac-e').value.trim();
@@ -686,7 +704,7 @@ function boot(){
  if(PAGE==='home'){ if(role&&ROLE_PAGE[role]&&(ss.get('ehh_tok')||ss.get('ehh_uid'))){location.replace(ROLE_PAGE[role]);return} render();return}
  render();
  const bad=()=>{ss.del('ehh_tok');ss.del('ehh_uid');ss.del('ehh_role');location.replace('index.html?role='+PAGE)};
- if(CLOUD_ON){cloudRestore().then(r=>{if(r==='ok'&&S.user)return;if(r==='none'||r==='expired'||(r&&r.code==='PASSWORD_CHANGE_REQUIRED'))return bad();
+ if(CLOUD_ON){cloudRestore().then(r=>{if(r==='ok'&&S.user)return;if(r==='none'||r==='expired'||(r&&(r.code==='PASSWORD_CHANGE_REQUIRED'||r.code==='TWOFA_SETUP_REQUIRED')))return bad();
   const m=cloudErr(r),c=(r&&r.code)||'error';
   $('#root').innerHTML='<div class="login"><div style="display:grid;gap:12px;max-width:420px"><h2>Could not open this page</h2><div class="pill bad" style="white-space:normal">'+esc(m)+' ('+esc(c)+')</div><div class="small muted">Your login is still active. Check the connection and try again.</div><div><button class="btn primary" onclick="location.reload()">Try again</button> <button class="btn" onclick="sessionStorage.clear();location.href=&quot;index.html&quot;">Back to login</button></div></div></div>'})}
  else{if(localRestore())render();else bad()}

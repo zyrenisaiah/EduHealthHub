@@ -38,3 +38,10 @@ Health records are sensitive personal information (in the Philippines, covered b
 ## 7. Known limits
 - The demo mode ("offline") stores data in the browser. **Never use it for real data.**
 - The site is hosted on GitHub Pages and Supabase's free tier. Fine for a pilot; for a whole school consider paid plans and a Philippine or Singapore data region review.
+
+## Two-step verification (authenticator app)
+Every account sets it up at its next login: scan a QR code with Google Authenticator, Microsoft Authenticator or Authy,
+type the first 6-digit code, and save 8 one-time recovery codes. After that, each login asks for the password and a code.
+- Lost phone: a Doctor opens Accounts and presses **Reset 2-step** for that person. They set it up again at their next login. A Doctor cannot reset their own (ask another Doctor, or use the SQL editor: `update public.accounts set totp_on=false, totp_secret=null, totp_pending=null, totp_last=0 where username='NAME'; delete from public.sessions where account_id=(select id from public.accounts where username='NAME');`).
+- The rule is one switch. Turn it off: `update public.app_flags set v=false where k='require_2fa';` Turn it on: `... set v=true ...`.
+- Offline demo mode (no database) has no two-step.

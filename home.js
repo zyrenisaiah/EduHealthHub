@@ -228,6 +228,8 @@ const HOME_ACT={
  sgno:a=>signupDecide(a.dataset.id,false),
  acreset:async a=>{const r=(S.ac.rows||[]).find(x=>x.id===a.dataset.id);if(!r||!await askConfirm({title:'Reset password?',text:r.name+' will be signed out and must choose a new password.',ok:'Reset'}))return;
   const pw=tempPw();acctDo(r.id,async()=>{if(CLOUD_ON)await rpc('app_account_reset',{p_token:TOK,p_id:r.id,p_temp:pw});else{const x=DB.accounts.find(y=>y.id===r.id);x.pw=pwHash(x.id,pw);save()}S.ac.temp={name:r.name,pw}})},
+ ac2fa:async a=>{const r=(S.ac.rows||[]).find(x=>x.id===a.dataset.id);if(!r||!await askConfirm({title:'Reset two-step verification?',text:r.name+' will be signed out and must set up two-step again at the next login. Use this when they lost their phone.',ok:'Reset'}))return;
+  acctDo(r.id,async()=>{if(CLOUD_ON)await rpc('app_account_2fa_reset',{p_token:TOK,p_id:r.id})})},
  actoggle:async a=>{const r=(S.ac.rows||[]).find(x=>x.id===a.dataset.id);if(!r)return;if(r.active&&!await askConfirm({title:'Deactivate this account?',text:r.name+' will be signed out and cannot log in until you activate the account again.',ok:'Deactivate',danger:true}))return;
   acctDo(r.id,async()=>{if(CLOUD_ON)await rpc('app_account_set',{p_token:TOK,p_id:r.id,p_active:!r.active,p_adv:null,p_set_adv:false});else{const x=DB.accounts.find(y=>y.id===r.id);x.active=!r.active;save()}})},
  acadvsave:a=>{const r=(S.ac.rows||[]).find(x=>x.id===a.dataset.id),sel=$('#acadv-'+a.dataset.id);if(!r||!sel)return;
@@ -337,8 +339,8 @@ function accountsView(){
  ${a.err?`<div class="pill bad" role="alert" style="white-space:normal;margin-top:8px">${esc(a.err)}</div>`:''}
  ${a.temp?`<div class="panel" style="border-color:var(--warn);margin-top:10px" role="status"><b>Temporary password for ${esc(a.temp.name)}</b><div class="mono" style="font-size:20px;margin:6px 0;user-select:all">${esc(a.temp.pw)}</div><div class="small muted">Give this to ${esc(a.temp.name)} in person. It is shown once. They must choose their own password at their next login.</div><div class="trow"><button class="btn sm" data-act="actempdone">Done</button></div></div>`:''}
  <div class="tw" style="margin-top:10px"><table class="wrapth"><thead><tr><th>Name</th><th>Role</th><th>Advisory</th><th>Status</th><th></th></tr></thead><tbody>
- ${a.rows?rows.map(r=>`<tr><td><b>${esc(r.name)}</b><div class="small muted">${esc(r.username)} &middot; ${esc(r.email)}</div></td><td>${esc(r.role)}</td><td>${adv(r)}</td><td>${r.active?(r.must_change?pill('Must change password','warn'):pill('Active','good')):pill('Deactivated','bad')}</td>
- <td style="white-space:nowrap">${r.id===S.user.id?'<span class="small muted">You</span>':`<button class="btn sm" data-act="acreset" data-id="${esc(r.id)}">Reset password</button> <button class="btn sm ${r.active?'':'primary'}" data-act="actoggle" data-id="${esc(r.id)}">${r.active?'Deactivate':'Activate'}</button>`}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">No account matches.</td></tr>':'<tr><td colspan="5"><div class="sk sk-row" style="margin:0"></div></td></tr>'}
+ ${a.rows?rows.map(r=>`<tr><td><b>${esc(r.name)}</b><div class="small muted">${esc(r.username)} &middot; ${esc(r.email)}</div></td><td>${esc(r.role)}</td><td>${adv(r)}</td><td>${r.active?(r.must_change?pill('Must change password','warn'):pill('Active','good')):pill('Deactivated','bad')}${CLOUD_ON?'<div style="margin-top:4px">'+pill(r.totp?'2-step on':'2-step off',r.totp?'good':'warn')+'</div>':''}</td>
+ <td style="white-space:nowrap">${r.id===S.user.id?'<span class="small muted">You</span>':`<button class="btn sm" data-act="acreset" data-id="${esc(r.id)}">Reset password</button> ${CLOUD_ON&&r.totp?`<button class="btn sm" data-act="ac2fa" data-id="${esc(r.id)}">Reset 2-step</button> `:''}<button class="btn sm ${r.active?'':'primary'}" data-act="actoggle" data-id="${esc(r.id)}">${r.active?'Deactivate':'Activate'}</button>`}</td></tr>`).join('')||'<tr><td colspan="5" class="muted">No account matches.</td></tr>':'<tr><td colspan="5"><div class="sk sk-row" style="margin:0"></div></td></tr>'}
  </tbody></table></div></section>`}
 async function acctDo(id,fn){
  const a=S.ac;if(a.busy)return;a.busy=true;a.err='';
@@ -348,6 +350,10 @@ function auditText(r){
  const d=r.detail||{};
  if(r.action==='message.edit')return 'Edited a message';
  if(r.action==='message.unsend')return 'Unsent a message';
+ if(r.action==='twofa.enable')return 'Turned on two-step verification';
+ if(r.action==='twofa.recovery_used')return 'Logged in with a recovery code';
+ if(r.action==='twofa.new_codes')return 'Made new recovery codes';
+ if(r.action==='account.2fa_reset')return 'Reset two-step verification of '+(d.name||r.target);
  if(r.action==='account.reset')return 'Reset the password of '+(d.name||r.target);
  if(r.action==='account.deactivate')return 'Deactivated the account of '+(d.name||r.target);
  if(r.action==='account.activate')return 'Re-activated the account of '+(d.name||r.target);

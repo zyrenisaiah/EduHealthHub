@@ -1370,6 +1370,10 @@ begin
   delete from public.sessions where account_id=a.id and token in (
     select token from public.sessions where account_id=a.id order by expires desc offset 4);
   tok := encode(gen_random_bytes(24),'hex');
+  if a.totp_on then
+    insert into public.sessions(token,account_id,expires,stage) values (tok,a.id,now()+interval '15 minutes','totp');
+    return jsonb_build_object('totp',tok);
+  end if;
   if a.gmail_ok then
     insert into public.sessions(token,account_id,expires,stage) values (tok,a.id,now()+interval '15 minutes','pending');
     return jsonb_build_object('pending',tok,'hint',public.ehh_mask(a.gmail));
@@ -1578,3 +1582,186 @@ end $$;
 -- DOWNLOAD BACKUP REMOVED (kept: the nightly in-database backup, ehh_backup)
 -- =====================================================================
 drop function if exists public.app_backup(text);
+
+-- =====================================================================
+-- TWO-STEP VERIFICATION (authenticator app codes, 6 digits, 30 seconds)
+-- Required for everyone while app_flags.require_2fa is true.
+-- Turn the rule off:  update public.app_flags set v=false where k='require_2fa';
+-- =====================================================================
+create table if not exists public.app_flags(k text primary key, v boolean not null);
+insert into public.app_flags(k,v) values ('require_2fa',true) on conflict (k) do nothing;
+alter table public.app_flags enable row level security;
+revoke all on public.app_flags from anon, authenticated;
+
+alter table public.accounts add column if not exists totp_secret bytea;
+alter table public.accounts add column if not exists totp_pending bytea;
+alter table public.accounts add column if not exists totp_on boolean not null default false;
+alter table public.accounts add column if not exists totp_last bigint not null default 0;
+create table if not exists public.totp_recovery(id bigserial primary key, account_id text not null references public.accounts(id) on delete cascade, h text not null, used boolean not null default false);
+alter table public.totp_recovery enable row level security;
+revoke all on public.totp_recovery from anon, authenticated;
+
+create or replace function public.ehh_flag(p_k text) returns boolean language sql stable security definer set search_path=public as $$
+  select coalesce((select v from public.app_flags where k=p_k),false) $$;
+revoke all on function public.ehh_flag(text) from public, anon, authenticated;
+
+create or replace function public.ehh_acct_json(a public.accounts) returns jsonb language sql stable set search_path=public,pg_temp as $$
+  select jsonb_build_object('id',a.id,'role',a.role,'name',a.name,'username',a.username,'email',a.email,'adv',a.adv,'photo',a.photo,'must_change',a.must_change,'totp',a.totp_on,'need2fa',(public.ehh_flag('require_2fa') and not a.totp_on)) $$;
+
+create or replace function public.ehh_b32(b bytea) returns text language plpgsql immutable as $$
+declare al constant text:='ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'; bits text:=''; r text:=''; i int;
+begin
+  for i in 0..length(b)-1 loop bits:=bits||get_byte(b,i)::bit(8)::text; end loop;
+  for i in 0..length(bits)/5-1 loop r:=r||substr(al,(substring(bits from i*5+1 for 5)::bit(5)::int)+1,1); end loop;
+  return r;
+end $$;
+
+create or replace function public.ehh_totp(sec bytea, ctr bigint) returns text language plpgsql immutable set search_path=public,extensions as $$
+declare h bytea; o int; v bigint;
+begin
+  h := hmac(decode(lpad(to_hex(ctr),16,'0'),'hex'), sec, 'sha1');
+  o := get_byte(h,19) & 15;
+  v := ((get_byte(h,o)&127)::bigint<<24)|(get_byte(h,o+1)::bigint<<16)|(get_byte(h,o+2)::bigint<<8)|get_byte(h,o+3)::bigint;
+  return lpad((v % 1000000)::text,6,'0');
+end $$;
+
+-- a code is good if it matches this 30-second step or one either side, and is newer than the last one used
+create or replace function public.ehh_totp_check(a public.accounts, sec bytea, p_code text, p_upd boolean) returns boolean language plpgsql security definer set search_path=public,extensions as $$
+declare c bigint := floor(extract(epoch from now())/30)::bigint; k bigint; cd text := regexp_replace(coalesce(p_code,''),'\s','','g');
+begin
+  if sec is null or cd !~ '^[0-9]{6}$' then return false; end if;
+  for k in c-1..c+1 loop
+    if k>a.totp_last and public.ehh_totp(sec,k)=cd then
+      if p_upd then update public.accounts set totp_last=k where id=a.id; end if;
+      return true;
+    end if;
+  end loop;
+  return false;
+end $$;
+
+create or replace function public.ehh_totp_locked(p_id text) returns boolean language sql stable security definer set search_path=public as $$
+  select exists (select 1 from public.login_fails f where f.k='totp:'||p_id and ((f.n>=10 and f.t>now()-interval '15 minutes') or (f.n>=5 and f.t>now()-interval '5 minutes'))) $$;
+create or replace function public.ehh_totp_fail(p_id text) returns void language sql security definer set search_path=public as $$
+  insert into public.login_fails(k,n,t) values ('totp:'||p_id,1,now())
+  on conflict (k) do update set n = case when public.login_fails.t>now()-interval '15 minutes' then public.login_fails.n+1 else 1 end, t=now() $$;
+
+create or replace function public.ehh_new_codes(p_id text) returns jsonb language plpgsql security definer set search_path=public,extensions as $$
+declare c text; out jsonb := '[]'::jsonb; i int;
+begin
+  delete from public.totp_recovery where account_id=p_id;
+  for i in 1..8 loop
+    c := lower(encode(gen_random_bytes(5),'hex'));
+    insert into public.totp_recovery(account_id,h) values (p_id,crypt(c,gen_salt('bf')));
+    out := out || to_jsonb(substr(c,1,5)||'-'||substr(c,6,5));
+  end loop;
+  return out;
+end $$;
+revoke all on function public.ehh_b32(bytea), public.ehh_totp(bytea,bigint), public.ehh_totp_check(public.accounts,bytea,text,boolean), public.ehh_totp_locked(text), public.ehh_totp_fail(text), public.ehh_new_codes(text) from public, anon, authenticated;
+
+-- normal session check: also needs two-step set up while the rule is on
+create or replace function public.ehh_auth(p_token text) returns public.accounts language plpgsql security definer set search_path=public,extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_auth_any(p_token);
+  if a.must_change then raise exception 'PASSWORD_CHANGE_REQUIRED'; end if;
+  if not a.totp_on and public.ehh_flag('require_2fa') then raise exception 'TWOFA_SETUP_REQUIRED'; end if;
+  return a;
+end $$;
+
+-- set-up step 1: make a secret (shown once as a QR code / typed key)
+create or replace function public.app_totp_begin(p_token text) returns jsonb language plpgsql security definer set search_path=public,extensions as $$
+declare a public.accounts; s bytea;
+begin
+  a := public.ehh_auth_any(p_token);
+  if a.totp_on then raise exception 'BAD_REQUEST'; end if;
+  s := gen_random_bytes(20);
+  update public.accounts set totp_pending=s where id=a.id;
+  return jsonb_build_object('secret',public.ehh_b32(s),'username',a.username);
+end $$;
+
+-- set-up step 2: prove it works with a first code, then get the recovery codes (shown once)
+create or replace function public.app_totp_enable(p_token text, p_code text) returns jsonb language plpgsql security definer set search_path=public,extensions as $$
+declare a public.accounts; codes jsonb;
+begin
+  a := public.ehh_auth_any(p_token);
+  if a.totp_on or a.totp_pending is null then raise exception 'BAD_REQUEST'; end if;
+  if public.ehh_totp_locked(a.id) then return jsonb_build_object('error','TOO_MANY_ATTEMPTS'); end if;
+  if not public.ehh_totp_check(a,a.totp_pending,p_code,true) then
+    perform public.ehh_totp_fail(a.id); return jsonb_build_object('error','BAD_CODE'); end if;
+  delete from public.login_fails where k='totp:'||a.id;
+  update public.accounts set totp_secret=totp_pending, totp_pending=null, totp_on=true where id=a.id;
+  codes := public.ehh_new_codes(a.id);
+  perform public.ehh_log(a,'twofa.enable',null,'{}'::jsonb);
+  return jsonb_build_object('codes',codes);
+end $$;
+
+-- login step 2: password was right, now the code (or one recovery code)
+create or replace function public.app_totp_login(p_token text, p_code text) returns jsonb language plpgsql security definer set search_path=public,extensions as $$
+declare a public.accounts; ok boolean; rid bigint; rc text := lower(regexp_replace(coalesce(p_code,''),'[\s-]','','g'));
+begin
+  select ac.* into a from public.sessions s join public.accounts ac on ac.id=s.account_id
+   where s.token=p_token and s.expires>now() and s.stage='totp' and ac.active and ac.totp_on;
+  if not found then raise exception 'SESSION_EXPIRED'; end if;
+  if public.ehh_totp_locked(a.id) then return jsonb_build_object('error','TOO_MANY_ATTEMPTS'); end if;
+  ok := public.ehh_totp_check(a,a.totp_secret,p_code,true);
+  if not ok and rc ~ '^[0-9a-f]{10}$' then
+    select id into rid from public.totp_recovery where account_id=a.id and not used and h=crypt(rc,h) limit 1;
+    if found then update public.totp_recovery set used=true where id=rid; ok:=true;
+      perform public.ehh_log(a,'twofa.recovery_used',null,'{}'::jsonb); end if;
+  end if;
+  if not ok then perform public.ehh_totp_fail(a.id); return jsonb_build_object('error','BAD_CODE'); end if;
+  delete from public.login_fails where k='totp:'||a.id;
+  update public.sessions set stage='ok', expires=now()+interval '8 hours' where token=p_token;
+  return jsonb_build_object('token',p_token,'account',public.ehh_acct_json(a));
+end $$;
+
+-- new set of recovery codes (needs a current code from the app)
+create or replace function public.app_totp_new_codes(p_token text, p_code text) returns jsonb language plpgsql security definer set search_path=public,extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_auth(p_token);
+  if not a.totp_on then raise exception 'BAD_REQUEST'; end if;
+  if public.ehh_totp_locked(a.id) then return jsonb_build_object('error','TOO_MANY_ATTEMPTS'); end if;
+  if not public.ehh_totp_check(a,a.totp_secret,p_code,true) then
+    perform public.ehh_totp_fail(a.id); return jsonb_build_object('error','BAD_CODE'); end if;
+  perform public.ehh_log(a,'twofa.new_codes',null,'{}'::jsonb);
+  return jsonb_build_object('codes',public.ehh_new_codes(a.id));
+end $$;
+
+-- a Doctor can reset someone else's two-step (lost phone). They set it up again at next login.
+create or replace function public.app_account_2fa_reset(p_token text, p_id text) returns void language plpgsql security definer set search_path=public,extensions as $$
+declare a public.accounts; t public.accounts;
+begin
+  a := public.ehh_auth(p_token);
+  if a.role<>'Doctor' then raise exception 'NOT_ALLOWED'; end if;
+  select * into t from public.accounts where id=p_id;
+  if not found then raise exception 'NOT_FOUND'; end if;
+  if t.id=a.id then raise exception 'SELF'; end if;
+  update public.accounts set totp_on=false, totp_secret=null, totp_pending=null, totp_last=0 where id=t.id;
+  delete from public.totp_recovery where account_id=t.id;
+  delete from public.sessions where account_id=t.id;
+  perform public.ehh_log(a,'account.2fa_reset',t.username,jsonb_build_object('name',t.name));
+end $$;
+
+create or replace function public.app_accounts(p_token text) returns jsonb language plpgsql security definer set search_path=public,extensions as $$
+declare a public.accounts;
+begin
+  a := public.ehh_auth(p_token);
+  if a.role<>'Doctor' then raise exception 'NOT_ALLOWED'; end if;
+  return coalesce((select jsonb_agg(jsonb_build_object('id',id,'role',role,'name',name,'username',username,'email',email,'adv',adv,'active',active,'must_change',must_change,'totp',totp_on) order by role,name) from public.accounts),'[]'::jsonb);
+end $$;
+
+-- login: accounts with two-step get a code step first
+do $$ declare d text; begin
+  d := pg_get_functiondef('public.app_login(text,text)'::regprocedure);
+  if d not like '%''totp'',tok%' then
+    d := replace(d, '  if a.gmail_ok then', E'  if a.totp_on then\n    insert into public.sessions(token,account_id,expires,stage) values (tok,a.id,now()+interval ''15 minutes'',''totp'');\n    return jsonb_build_object(''totp'',tok);\n  end if;\n  if a.gmail_ok then');
+    execute d;
+  end if;
+end $$;
+do $$ declare f text; begin
+  foreach f in array array['app_totp_begin(text)','app_totp_enable(text,text)','app_totp_login(text,text)','app_totp_new_codes(text,text)','app_account_2fa_reset(text,text)'] loop
+    execute 'revoke all on function public.'||f||' from public';
+    execute 'grant execute on function public.'||f||' to anon, authenticated';
+  end loop;
+end $$;

@@ -109,6 +109,12 @@ ${L.signup?` <form class="login-card" id="signupform" autocomplete="off">
   <div class="field"><label for="mu-r">Repeat new password</label><input class="inp" id="mu-r" type="password" autocomplete="new-password" autocapitalize="off" required></div>
   ${L.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.err)}</div>`:''}
   <button class="btn primary" type="submit">Save and continue</button>
+ </form>`:L.enroll?` <form class="login-card" id="enrollform" autocomplete="off">${enrollHtml(L.enroll)}</form>`:L.totp?` <form class="login-card" id="totpform" autocomplete="off">
+  <div><h2>Enter your code</h2><div class="small muted">Open your authenticator app and type the 6-digit code for EduHealthHub. Lost your phone? Type one of your recovery codes instead.</div></div>
+  <div class="field"><label for="tc">Code</label><input class="inp" id="tc" autocomplete="one-time-code" autocapitalize="off" spellcheck="false" maxlength="12" required></div>
+  ${L.totp.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.totp.err)}</div>`:''}
+  <button class="btn primary" type="submit">Verify</button>
+  <div class="trow"><button type="button" class="btn sm" data-act="codeback">Back</button></div>
  </form>`:L.pending?` <form class="login-card" id="codeform" autocomplete="off">
   <div><h2>Confirm it is you</h2><div class="small muted">Your account is linked to <b>${esc(L.pending.hint)}</b>. Confirm with the same Google account.</div></div>
   <div style="display:grid;gap:6px;justify-items:start"><div id="g-login" style="min-height:44px"></div></div>

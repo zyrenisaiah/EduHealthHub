@@ -20,6 +20,8 @@ async function rpc(fn,args,keep){
 })();
 function cloudErr(e){
  const c=e&&e.code;
+ if(c==='BAD_CODE')return 'That code is not right. Type the newest code from your app, or use a recovery code.';
+ if(c==='TWOFA_SETUP_REQUIRED')return 'Two-step verification is now required. Log in again to set it up.';
  if(c==='OFFLINE')return 'Cannot reach the online database. Check your internet connection and try again.';
  if(c==='PASSWORD_CHANGE_REQUIRED')return 'You must choose a new password before continuing. Log in again to set it.';
  if(c==='SLOW_DOWN')return 'Too many requests at once. Wait a few seconds and try again.';
@@ -154,11 +156,51 @@ async function cloudLogin(u,pw){
   if(r.error){L.err=cloudErr({code:r.error});render();const i=$('#lu');if(i)i.value=u;return}
   if(r.pending){L.pending={token:r.pending,hint:r.hint};L.err='';L.info='';
    render();const ci=$('#lc');if(ci)ci.focus();return}
+  if(r.totp){L.totp={token:r.totp,pw,err:''};L.err='';L.info='';render();const ti=$('#tc');if(ti)ti.focus();return}
   L.err='';
   if(r.account&&r.account.must_change){L.must={token:r.token,old:pw,role:r.account.role,acct:r.account};lockWrite(r.account);L.info='';render();const ni=$('#mu-n');if(ni)ni.focus();return}
+  if(r.account&&r.account.need2fa){lockWrite(r.account);return twofaStart(r.token,r.account,r.account.role)}
   /* app_sync needs the token; the account comes back from app_login */
   lockWrite(r.account);TOK=r.token;ss.set('ehh_tok',TOK);ss.set('ehh_role',r.account.role);location.href=ROLE_PAGE[r.account.role]}
  catch(e){TOK=null;L.err=cloudErr(e);render();const i=$('#lu');if(i)i.value=u}}
+/* ---------- two-step verification (authenticator app codes) ---------- */
+function spaceKey(s){return String(s||'').replace(/(.{4})/g,'$1 ').trim()}
+function otpUri(secret,user){return 'otpauth://totp/'+encodeURIComponent('EduHealthHub:'+user)+'?secret='+secret+'&issuer=EduHealthHub&algorithm=SHA1&digits=6&period=30'}
+function codesHtml(codes){return `<div class="rcodes mono">${codes.map(c=>`<span>${esc(c)}</span>`).join('')}</div>`}
+function enrollHtml(E){
+ if(E.step==='codes')return `<div><h2>Save your recovery codes</h2><div class="small muted">If you lose your phone, each code below works <b>once</b> instead of an app code. Keep them somewhere safe, not only on the same phone. They are shown just this one time.</div></div>
+  ${codesHtml(E.codes)}
+  <div class="trow"><button type="button" class="btn sm" data-act="enrcopy">Copy</button><button type="button" class="btn sm" data-act="enrdl">Download</button></div>
+  <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="en-ok"> I saved my recovery codes</label>
+  ${E.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(E.err)}</div>`:''}
+  <button class="btn primary" type="button" data-act="enrdone">Continue</button>`;
+ return `<div><h2>Set up two-step verification</h2><div class="small muted">Every account needs this. After your password, you also type a 6-digit code from an app on your phone.</div></div>
+  ${E.secret?`<ol class="small" style="margin:0;padding-left:18px;display:grid;gap:4px"><li>Install an authenticator app (Google Authenticator, Microsoft Authenticator or Authy).</li><li>In the app, add an account and scan this code.</li><li>Type the 6-digit code the app shows.</li></ol>
+  <div class="qrbox">${qrSvg(otpUri(E.secret,E.username),190)}</div>
+  <div class="small muted">Cannot scan? Type this key into the app instead:</div><div class="mono" style="user-select:all;overflow-wrap:anywhere">${spaceKey(E.secret)}</div>
+  <div class="field"><label for="en-c">6-digit code</label><input class="inp" id="en-c" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required></div>`:'<div class="small muted" role="status">Preparing…</div>'}
+  ${E.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(E.err)}</div>`:''}
+  <button class="btn primary" type="submit" ${E.secret?'':'disabled'}>Verify and turn on</button>`}
+async function twofaStart(token,acct,role){
+ const L=S.login;L.must=null;L.pending=null;L.totp=null;L.err='';L.info='';
+ L.enroll={token,acct,role,step:'scan',secret:'',username:acct.username,err:''};render();
+ try{const r=await rpc('app_totp_begin',{p_token:token});L.enroll.secret=r.secret;L.enroll.username=r.username;render();const i=$('#en-c');if(i)i.focus()}
+ catch(e){L.enroll=null;lockFree();L.err=cloudErr(e);render()}}
+async function twofaVerify(){
+ const L=S.login,E=L.enroll;if(!E||E.step!=='scan')return;const el=$('#en-c');if(!el)return;
+ try{const r=await rpc('app_totp_enable',{p_token:E.token,p_code:el.value});
+  if(r.error){E.err=cloudErr({code:r.error});render();const i=$('#en-c');if(i)i.focus();return}
+  E.codes=r.codes;E.step='codes';E.err='';render()}
+ catch(e){E.err=cloudErr(e);render()}}
+function twofaFinish(token,acct,role){lockWrite(acct);TOK=token;ss.set('ehh_tok',TOK);ss.set('ehh_role',role);location.href=ROLE_PAGE[role]}
+async function totpLogin(){
+ const L=S.login,T=L.totp;if(!T)return;const el=$('#tc');if(!el)return;
+ try{const r=await rpc('app_totp_login',{p_token:T.token,p_code:el.value});
+  if(r.error){T.err=cloudErr({code:r.error});render();const i=$('#tc');if(i)i.focus();return}
+  L.totp=null;
+  if(r.account.must_change){L.must={token:r.token,old:T.pw,role:r.account.role,acct:r.account};lockWrite(r.account);render();const ni=$('#mu-n');if(ni)ni.focus();return}
+  twofaFinish(r.token,r.account,r.account.role)}
+ catch(e){if(e.code==='SESSION_EXPIRED'){L.totp=null;L.err=cloudErr(e)}else T.err=cloudErr(e);render()}}
 async function cloudRestore(){
  const t=ss.get('ehh_tok');if(!t)return 'none';
  try{TOK=t;const r=await rpc('app_sync',{p_token:t,p_since:0});
