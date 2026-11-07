@@ -1765,3 +1765,10 @@ do $$ declare f text; begin
     execute 'grant execute on function public.'||f||' to anon, authenticated';
   end loop;
 end $$;
+
+-- =====================================================================
+-- SECURITY TIDY-UP (after the audit)
+-- =====================================================================
+alter function public.ehh_b32(bytea) set search_path = public, pg_temp;
+alter function public.ehh_msg_json(public.messages) set search_path = public, pg_temp;
+revoke all on function public.ehh_conv_ok(public.accounts, text) from public, anon, authenticated;
