@@ -531,10 +531,13 @@ function skelShell(){
  <div class="layout"><nav class="nav" aria-hidden="true">${Array.from({length:nav},()=>'<div class="sk sk-nav"></div>').join('')}</nav>
  <main aria-hidden="true"><div class="sk sk-h"></div><section class="panel"><div class="sk sk-t" style="width:40%"></div><div class="sk sk-in"></div></section><div class="tiles">${tiles}</div>
  <div class="grid2"><section class="panel"><div class="sk sk-t" style="width:50%"></div>${'<div class="sk sk-row"></div>'.repeat(4)}</section><section class="panel"><div class="sk sk-t" style="width:50%"></div>${'<div class="sk sk-row"></div>'.repeat(4)}</section></div></main></div></div>`}
+/* every password box gets a Show / Hide button */
+function pwDecorate(){document.querySelectorAll('input[type=password]').forEach(i=>{if(i.parentNode.classList.contains('pwwrap'))return;const w=document.createElement('div');w.className='pwwrap';i.parentNode.insertBefore(w,i);w.appendChild(i);const b=document.createElement('button');b.type='button';b.className='btn sm';b.dataset.act='showpw';b.setAttribute('aria-pressed','false');b.setAttribute('aria-label','Show password');b.textContent='Show';w.appendChild(b)})}
 function render(){
  if(S.user&&(PAGE==='home'||PAGE!==S.user.role)){location.replace(ROLE_PAGE[S.user.role]);return}
  if(!S.user&&PAGE!=='home'){$('#root').innerHTML=skelShell();return}
  $('#root').innerHTML=S.user?shell():loginView();
+ pwDecorate();
  appBackdrop();
  if(!S.user)loginFX();
  if(typeof afterRender==='function')afterRender() }
@@ -542,7 +545,7 @@ const goOpen=(id,tab)=>{logView(id);S.back=S.view;S.view='student';S.sid=id;S.ta
 const ACT={
  fill:a=>{const d=DEMO.find(x=>x.id===a.dataset.id);$('#lu').value=d.username;$('#pw').value=d.pw;const acc=DB.accounts.find(x=>x.id===d.id);
   if(acc&&acc.pw!==pwHash(d.id,d.pw))toast('That account changed its password. Type the new one.');$('#pw').focus()},
- showpw:a=>{const i=$('#pw'),on=i.type==='password';i.type=on?'text':'password';a.textContent=on?'Hide':'Show';a.setAttribute('aria-pressed',on)},
+ showpw:a=>{const i=a.parentNode.querySelector('input');if(!i)return;const on=i.type==='password';i.type=on?'text':'password';a.textContent=on?'Hide':'Show';a.setAttribute('aria-pressed',on);a.setAttribute('aria-label',(on?'Hide':'Show')+' password')},
  nav:a=>{S.view=a.dataset.v;render();window.scrollTo(0,0)},
  open:a=>goOpen(a.dataset.id,a.dataset.tab),
  back:()=>{S.view=S.back;render()},

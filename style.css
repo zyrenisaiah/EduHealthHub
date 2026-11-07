@@ -425,3 +425,6 @@ button.mention{font:inherit;border:0;cursor:pointer}button.mention:hover{text-de
 .qrbox{background:#fff;border-radius:12px;padding:6px;width:fit-content;border:1px solid var(--line,#d8e0e6)}
 .qrbox svg{display:block;max-width:100%;height:auto}
 .rcodes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 14px;padding:12px;border:1px dashed var(--line,#c9d3da);border-radius:12px;font-size:15px;user-select:all}
+
+/* show / hide password */
+.pwwrap{display:flex;gap:8px;align-items:center;min-width:0}.pwwrap .inp{flex:1;min-width:0}.pwwrap .btn{flex:none}
