@@ -4,18 +4,50 @@
 <style>body{margin:0;background:#f1f4ef;color:#22362b;font:16px/1.6 "Segoe UI",system-ui,sans-serif}main{max-width:720px;margin:0 auto;padding:32px 20px}h1{color:#2d4a3a}a{color:#2b7a99}</style></head>
 <body><main>
 <h1>EduHealthHub Privacy Policy</h1>
-<p><em>Last updated: October 27, 2026</em></p>
-<p>EduHealthHub is a web-based student health record system for school clinic staff (doctors, nurses, dentists and teachers). This page explains what the site stores and how it is used.</p>
-<h2>What we collect</h2>
-<ul><li><b>Staff accounts:</b> name, username, email, an encrypted password, an optional profile picture, and, if you choose to link it, your Google account email address.</li>
-<li><b>Student health records:</b> entered by authorized school staff for the school clinic. In this demonstration, all students are dummy data.</li></ul>
-<h2>Sign in with Google</h2>
-<p>If you choose "Continue with Google", Google tells us only that you own the Google account and shares its email address. We use it only to confirm it is you when you log in. We do not read your Gmail, contacts or any other Google data.</p>
-<h2>How it is used and shared</h2>
-<p>Information is used only to run the clinic system. We do not sell it or share it with advertisers. It is stored in a Supabase database, and access is limited to logged-in staff according to their role.</p>
+<p><small>Last updated: November 7, 2026</small></p>
+<p>EduHealthHub is a web-based student health record system used by school clinic staff (doctors, nurses, dentists and teachers). Health information is sensitive personal information. It is handled under the Data Privacy Act of 2012 (Republic Act 10173) of the Philippines. This page explains what the site stores, why, who can see it, and your rights.</p>
+
+<h2>Who is responsible</h2>
+<p>The school is the personal information controller. The school's Data Protection Officer answers privacy questions and requests: <a href="mailto:zyrenkiyo@gmail.com">zyrenkiyo@gmail.com</a>.</p>
+
+<h2>What is collected, and why</h2>
+<ul>
+<li><b>Learner health records:</b> identity and class details, health history, screening and exam results, dental chart, visits and treatment notes, medicines given, transfers and referral notes, and uploaded health documents. They are entered by authorized staff to care for learners at the school clinic and for school health reporting. Nothing is collected for advertising.</li>
+<li><b>Staff accounts:</b> name, role, username, email, a password stored only as a one-way hash, an optional profile picture, an optional linked Google account email, and the secret behind two-step verification (stored in the database, never shown again).</li>
+<li><b>Messages and files</b> that staff send each other inside the site.</li>
+<li><b>Activity log:</b> who signed in, opened, changed, sent or deleted what, and when. This protects learners and staff, and lets a breach or mistake be traced.</li>
+<li><b>Error reports:</b> if the site breaks in a browser, a short technical note (page, error, browser type) is saved to help fix it.</li>
+</ul>
+
+<h2>Consent</h2>
+<p>Learners who are minors are recorded with the consent of a parent or guardian. Learners aged 18 and above consent for themselves. Consent can be withdrawn by writing to the school; records the school must keep by law or for the learner's safety may still be kept.</p>
+
+<h2>Who can see it</h2>
+<p>Only signed-in staff with an approved account. Doctors, nurses and dentists see learner records for clinic work. Teachers see only their own advisory section, and only what they need. Each account needs a password and a 6-digit code from an authenticator app. Accounts are approved by a Doctor. Staff agree to keep records confidential.</p>
+
+<h2>Where it is kept and who else handles it</h2>
+<ul>
+<li><b>Supabase</b> hosts the database. Access is locked so browsers can only use checked functions; nothing is open to the public.</li>
+<li><b>GitHub Pages</b> serves the website files (no learner data).</li>
+<li><b>Google</b> is used only if you choose "Continue with Google": it tells us you own that Google account and its email address. We do not read your Gmail, contacts or anything else.</li>
+</ul>
+<p>We do not sell the information or share it with advertisers.</p>
+
+<h2>Security</h2>
+<p>Passwords are hashed. Two-step verification is required. Repeated wrong logins are slowed or blocked. Sessions end when the browser closes, one account can be signed in per browser, and every request is checked on the server. A nightly automatic copy is kept for 7 days in case of an accident. Activity is logged.</p>
+
+<h2>How long it is kept</h2>
+<p>Learner health records are kept while the learner is enrolled and for the period set by the school's retention schedule afterwards, then deleted or archived securely. Nightly backup copies are deleted after 7 days. Activity logs are kept for the period set by the school. Accounts of staff who leave are deactivated and then deleted.</p>
+
+<h2>Your rights</h2>
+<p>You (or a parent or guardian) may ask to see the information held about a learner, correct mistakes, ask for it to be blocked or deleted where the law allows, object to its use, and get a copy. Write to the Data Protection Officer above. You may also complain to the National Privacy Commission (privacy.gov.ph).</p>
+
+<h2>If something goes wrong</h2>
+<p>If personal data is lost or exposed, the school will tell the National Privacy Commission and the people affected within 72 hours, as the law requires.</p>
+
 <h2>Your choices</h2>
-<p>You can remove your linked Google account, change your password and change your profile picture under "My account". To delete your account, contact the school administrator.</p>
-<h2>Contact</h2>
-<p>zyrenkiyo@gmail.com</p>
+<p>Staff can change their password, picture and recovery codes, and link or remove a Google account, under "My account". To remove an account, contact a Doctor or the Data Protection Officer.</p>
+
 <p><a href="index.html">Back to EduHealthHub</a></p>
-</main></body></html>
+</main>
+</body></html>

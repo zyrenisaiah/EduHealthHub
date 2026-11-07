@@ -24,6 +24,7 @@ Health records are sensitive personal information (in the Philippines, covered b
 - [ ] **You** The free Supabase plan can pause an unused project and has no point-in-time recovery. Consider the paid plan with daily backups once real data is in.
 
 ## 5. Consent, notices and retention (school decisions)
+Draft wording is in `PRIVACY-PACK.md` (DPO letter, parent consent, staff agreement, retention table, breach steps) and `privacy.html` is already updated. Fill the [brackets] and have the school review them.
 - [ ] **You** Parents/guardians (or learners aged 18+) are informed what is recorded and why, and consent where required. Update `privacy.html` and `terms.html` with the school's real wording and contact.
 - [ ] **You** Decide how long records are kept and who deletes them after a learner leaves.
 - [ ] **You** Staff sign a confidentiality agreement before getting an account.
