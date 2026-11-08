@@ -46,3 +46,12 @@ type the first 6-digit code, and save 8 one-time recovery codes. After that, eac
 - Lost phone: a Doctor opens Accounts and presses **Reset 2-step** for that person. They set it up again at their next login. A Doctor cannot reset their own (ask another Doctor, or use the SQL editor: `update public.accounts set totp_on=false, totp_secret=null, totp_pending=null, totp_last=0 where username='NAME'; delete from public.sessions where account_id=(select id from public.accounts where username='NAME');`).
 - The rule is one switch. Turn it off: `update public.app_flags set v=false where k='require_2fa';` Turn it on: `... set v=true ...`.
 - Offline demo mode (no database) has no two-step.
+
+## Emailed login codes (accounts with a linked Google account)
+An account that has a Google account linked (My account > Google) gets a 6-digit code emailed to that Gmail right after the password. The person types it to finish logging in. If the email does not arrive, they can confirm with the same Google account instead.
+The site needs a Gmail address to send from. Set it up once:
+1. Pick the Gmail that will send the codes (a school or new Gmail is better than a personal one).
+2. In that Google account turn on **2-Step Verification**, then open Security > **App passwords** and make one called "EduHealthHub". Copy the 16 letters.
+3. In the Supabase dashboard open **Edge Functions > Secrets** and add two secrets: `GMAIL_USER` (the Gmail address) and `GMAIL_APP_PASSWORD` (the 16 letters). Do not paste them in chat or into the repository.
+4. Log in with a linked account. The email should arrive within a few seconds (check spam the first time).
+Gmail allows roughly 500 emails a day, which is plenty for a school clinic. Codes work for 10 minutes, a new one can be asked every 30 seconds, and 5 wrong tries cancel it.

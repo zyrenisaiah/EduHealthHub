@@ -574,6 +574,7 @@ const ACT={
  pickphoto:()=>{const i=$('#photo-in');if(i)i.click()},
  signupopen:()=>{Object.assign(S.login,{signup:true,done:false,err:'',pending:null});render();const i=$('#su-name');if(i)i.focus()},
  signupback:()=>{Object.assign(S.login,{signup:false,done:false,err:''});render()},
+ resendcode:()=>mailCode(),
  enrcopy:()=>{const E=S.login.enroll;if(E&&E.codes&&navigator.clipboard)navigator.clipboard.writeText(E.codes.join('\n')).then(()=>toast('Codes copied'),()=>toast('Could not copy. Select the codes and copy them.'))},
  enrdl:()=>{const E=S.login.enroll;if(E&&E.codes)browserSave('EduHealthHub-recovery-codes.txt',new Blob(['EduHealthHub recovery codes for '+E.username+'\nEach code works once.\n\n'+E.codes.join('\n')+'\n'],{type:'text/plain'}))},
  enrdone:()=>{const E=S.login.enroll;if(!E)return;const c=$('#en-ok');if(!c||!c.checked){E.err='Tick the box to confirm you saved the codes.';render();return}twofaFinish(E.token,E.acct,E.role)},
@@ -671,6 +672,7 @@ document.addEventListener('submit',e=>{
    rpc('app_signup',{p_name:name,p_role:role,p_email:email,p_username:user,p_pw:pw,p_adv:role==='Teacher'?adv:null}).then(fin).catch(fail);return}
   if(DB.accounts.some(x=>normU(x.username)===normU(user)||normU(x.email)===normU(email))||(DB.signups||[]).some(x=>normU(x.username)===normU(user)||normU(x.email)===normU(email)))return fail({code:'DUPLICATE'});
   (DB.signups=DB.signups||[]).push({id:Date.now(),name,role,email,username:user,pw,adv:role==='Teacher'?adv:null,at:new Date().toISOString()});save();fin();return}
+ if(e.target.id==='codeform'){verifyLoginCode();return}
  if(e.target.id==='totpform'){totpLogin();return}
  if(e.target.id==='enrollform'){twofaVerify();return}
  if(e.target.id==='tf-new'){const c=$('#tf-c').value;rpc('app_totp_new_codes',{p_token:TOK,p_code:c}).then(r=>{if(r.error){S.tf={open:true,err:cloudErr({code:r.error})}}else S.tf={codes:r.codes};render()}).catch(x=>{S.tf={open:true,err:cloudErr(x)};render()});return}

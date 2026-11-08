@@ -154,8 +154,8 @@ async function cloudLogin(u,pw){
  const L=S.login,btn=$('#loginform button[type=submit]');if(btn){btn.disabled=true;btn.textContent='Signing in…'}
  try{const r=await rpc('app_login',{p_user:u,p_pw:pw});
   if(r.error){L.err=cloudErr({code:r.error});render();const i=$('#lu');if(i)i.value=u;return}
-  if(r.pending){L.pending={token:r.pending,hint:r.hint};L.err='';L.info='';
-   render();const ci=$('#lc');if(ci)ci.focus();return}
+  if(r.pending){L.pending={token:r.pending,hint:r.hint,pw,sent:false,msg:'',mailErr:''};L.err='';L.info='';
+   render();mailCode();return}
   if(r.totp){L.totp={token:r.totp,pw,err:''};L.err='';L.info='';render();const ti=$('#tc');if(ti)ti.focus();return}
   L.err='';
   if(r.account&&r.account.must_change){L.must={token:r.token,old:pw,role:r.account.role,acct:r.account};lockWrite(r.account);L.info='';render();const ni=$('#mu-n');if(ni)ni.focus();return}
@@ -237,17 +237,34 @@ function mountGoogle(elId,handler,text){
  loadGIS(()=>{const el=document.getElementById(elId);if(!el)return;
   google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID,callback:r=>handler(r.credential),auto_select:false});
   google.accounts.id.renderButton(el,{theme:'outline',size:'large',text:text||'continue_with',shape:'pill',width:260})})}
-async function googleCall(kind,token,credential){
+async function googleCall(kind,token,credential){return fnCall('google-auth',{kind,token,credential})}
+async function fnCall(name,body){
  const h={'Content-Type':'application/json',apikey:CLOUD.key};if(/^eyJ/.test(CLOUD.key))h.Authorization='Bearer '+CLOUD.key;
- let r;try{r=await fetch(CLOUD.url.replace(/\/+$/,'')+'/functions/v1/google-auth',{method:'POST',headers:h,body:JSON.stringify({kind,token,credential})})}
+ let r;try{r=await fetch(CLOUD.url.replace(/\/+$/,'')+'/functions/v1/'+name,{method:'POST',headers:h,body:JSON.stringify(body)})}
  catch(e){const x=new Error('OFFLINE');x.code='OFFLINE';throw x}
  let j=null;try{j=await r.json()}catch(e){}
  if(!r.ok||!j||j.error){const c=(j&&j.error)||('HTTP '+r.status);const x=new Error(c);x.code=c;throw x}
  return j}
+/* ---------- linked Google account: a 6-digit code is emailed before login (or confirm with Google) ---------- */
+function loginDone(r,pw){
+ const L=S.login;L.pending=null;L.totp=null;L.err='';L.info='';
+ if(r.account&&r.account.must_change){L.must={token:r.token,old:pw,role:r.account.role,acct:r.account};lockWrite(r.account);render();const ni=$('#mu-n');if(ni)ni.focus();return}
+ if(r.account&&r.account.need2fa){lockWrite(r.account);return twofaStart(r.token,r.account,r.account.role)}
+ lockWrite(r.account);TOK=r.token;ss.set('ehh_tok',TOK);ss.set('ehh_role',r.account.role);location.href=ROLE_PAGE[r.account.role]}
+async function mailCode(){
+ const L=S.login,P=L.pending;if(!P||P.busy)return;P.busy=true;P.mailErr='';P.msg='Sending a code to your Gmail...';render();
+ try{const j=await fnCall('send-code',{kind:'login',token:P.token});if(S.login.pending!==P)return;P.sent=true;P.msg='We emailed a 6-digit code to '+j.hint+'. It works for 10 minutes.'}
+ catch(e){if(S.login.pending!==P)return;P.msg='';if(e.code==='SESSION_EXPIRED'){L.pending=null;L.err=cloudErr(e)}else P.mailErr=cloudErr(e)}
+ P.busy=false;const typed=$('#lc')?$('#lc').value:'';render();const i=$('#lc');if(i){i.value=typed;i.focus()}}
+async function verifyLoginCode(){
+ const L=S.login,P=L.pending;if(!P)return;const el=$('#lc');if(!el)return;
+ try{const r=await rpc('app_verify_login',{p_token:P.token,p_code:el.value.replace(/\s/g,'')});
+  if(r.error){L.err=cloudErr({code:r.error});if(r.error==='TOO_MANY_TRIES')L.pending=null;render();const i=$('#lc');if(i)i.focus();return}
+  loginDone(r,P.pw)}
+ catch(e){if(e.code==='SESSION_EXPIRED')L.pending=null;L.err=cloudErr(e);render()}}
 async function googleLogin(cred){
- const L=S.login;if(!L.pending)return;
- try{const r=await googleCall('login',L.pending.token,cred);
-  L.pending=null;L.err='';lockWrite(r.account);ss.set('ehh_tok',r.token);ss.set('ehh_role',r.account.role);location.href=ROLE_PAGE[r.account.role]}
+ const L=S.login;if(!L.pending)return;const pw=L.pending.pw;
+ try{const r=await googleCall('login',L.pending.token,cred);loginDone(r,pw)}
  catch(e){if(e.code==='SESSION_EXPIRED')L.pending=null;L.err=cloudErr(e);L.info='';render()}}
 async function googleLink(cred){
  try{const r=await googleCall('link',TOK,cred);Object.assign(DB.accounts[0],r.account);S.gm=null;toast('Google account linked. Logins now ask you to confirm with Google.');render()}
