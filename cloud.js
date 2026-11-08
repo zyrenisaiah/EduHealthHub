@@ -29,6 +29,8 @@ function cloudErr(e){
  if(c==='BAD_LOGIN')return 'Username or password is incorrect.';
  if(c==='SESSION_EXPIRED')return 'Your session expired. Please log in again.';
  if(c==='NOT_ALLOWED')return 'Your account is not allowed to make that change.';
+ if(c==='NO_GOOGLE_ACCOUNT')return 'No login is linked to that Google account. Log in with your username and password, then link it on your Account page.';
+ if(c==='USE_PASSWORD')return 'This login needs your password first. Type your username and password instead.';
  if(c==='WRONG_GOOGLE')return 'That Google account is not the one linked to this login.';
  if(c==='GOOGLE_INVALID')return 'Google could not confirm that account. Please try again.';
  if(c==='GOOGLE_NOT_SET_UP')return 'Google sign-in is not finished being set up yet.';
@@ -266,10 +268,16 @@ async function googleLogin(cred){
  const L=S.login;if(!L.pending)return;const pw=L.pending.pw;
  try{const r=await googleCall('login',L.pending.token,cred);loginDone(r,pw)}
  catch(e){if(e.code==='SESSION_EXPIRED')L.pending=null;L.err=cloudErr(e);L.info='';render()}}
+async function googleStart(cred){
+ const L=S.login;L.err='';
+ try{const r=await fnCall('google-auth',{kind:'start',credential:cred});
+  L.pending={token:r.pending,hint:r.hint,pw:null,viaGoogle:true,sent:false,msg:'',mailErr:''};render();mailCode()}
+ catch(e){L.err=cloudErr(e);render()}}
 async function googleLink(cred){
  try{const r=await googleCall('link',TOK,cred);Object.assign(DB.accounts[0],r.account);S.gm=null;toast('Google account linked. Logins now ask you to confirm with Google.');render()}
  catch(e){S.gm=Object.assign(S.gm||{},{err:cloudErr(e)});render()}}
 function afterRender(){
  if(!GOOGLE_CLIENT_ID||!CLOUD_ON)return;
  if(document.getElementById('g-login'))mountGoogle('g-login',googleLogin,'continue_with');
+ if(document.getElementById('g-start'))mountGoogle('g-start',googleStart,'continue_with');
  if(document.getElementById('g-link'))mountGoogle('g-link',googleLink,'continue_with')}

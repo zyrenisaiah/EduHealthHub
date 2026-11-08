@@ -116,21 +116,22 @@ ${L.signup?` <form class="login-card" id="signupform" autocomplete="off">
   <button class="btn primary" type="submit">Verify</button>
   <div class="trow"><button type="button" class="btn sm" data-act="codeback">Back</button></div>
  </form>`:L.pending?` <form class="login-card" id="codeform" autocomplete="off">
-  <div><h2>Confirm it is you</h2><div class="small muted">Your account is linked to <b>${esc(L.pending.hint)}</b>. We email a 6-digit code to that Gmail before you can log in.</div></div>
+  <div><h2>Confirm it is you</h2><div class="small muted">${L.pending.viaGoogle?'Google confirmed your account, <b>':'Your account is linked to <b>'}${esc(L.pending.hint)}</b>. We email a 6-digit code to that Gmail before you can log in.</div></div>
   ${L.pending.msg?`<div class="pill good" role="status" style="white-space:normal">${esc(L.pending.msg)}</div>`:''}
   ${L.pending.mailErr?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.pending.mailErr)} You can confirm with Google below instead.</div>`:''}
   <div class="field"><label for="lc">6-digit code from your email</label><input class="inp" id="lc" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required></div>
   ${L.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.err)}</div>`:''}
   <button class="btn primary" type="submit">Verify and log in</button>
   <div class="trow"><button type="button" class="btn sm" data-act="resendcode" ${L.pending.busy?'disabled':''}>Send the code again</button><button type="button" class="btn sm" data-act="codeback">Back</button></div>
-  <div class="small muted">No email? Confirm with the same Google account instead:</div>
-  <div style="display:grid;gap:6px;justify-items:start"><div id="g-login" style="min-height:44px"></div></div>
+  ${L.pending.viaGoogle?'':`<div class="small muted">No email? Confirm with the same Google account instead:</div>
+  <div style="display:grid;gap:6px;justify-items:start"><div id="g-login" style="min-height:44px"></div></div>`}
  </form>`:` <form class="login-card ${L.err?'err':''}" id="loginform" autocomplete="on">
   <div class="lhead">${WANT&&ROLE_ICON[WANT]?`<img class="role-ic lg" src="${ROLE_ICON[WANT]}" alt="">`:'<span class="lock" aria-hidden="true">&#128274;</span>'}<div><h2>${WANT?esc(WANT)+' log in':'Welcome back'}</h2><div class="small muted">${WANT?`Log in with a ${WANT} account to open the ${WANT} page.`:'Use your own username or email. Learners do not have accounts.'}</div></div></div>
   <div class="field"><label for="lu">Username or email</label><input class="inp" id="lu" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" required></div>
   <div class="field"><label for="pw">Password</label><input class="inp" id="pw" name="password" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required><div class="caps" id="caps" hidden>Caps Lock is on</div><div class="small muted" style="margin-top:4px">Username and password are case-sensitive: capitals and small letters must match exactly.</div></div>
   ${(()=>{const o=lockOther(),n=ss.get('ehh_notice');window._lockShown=!!o;if(n)ss.del('ehh_notice');return L.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.err)}</div>`:o?`<div class="pill warn" role="status" style="white-space:normal">${esc(lockMsg(o))}</div>`:n?`<div class="pill warn" role="status" style="white-space:normal">${esc(n)}</div>`:''})()}
   <button class="btn primary" type="submit">Log in</button>
+  ${CLOUD_ON&&GOOGLE_CLIENT_ID?`<div class="small muted" style="text-align:center">or</div><div style="display:grid;justify-items:center"><div id="g-start" style="min-height:44px"></div></div><div class="small muted" style="text-align:center">For accounts linked to Google. A code is emailed next.</div>`:''}
  <div class="trow" style="justify-content:center"><span class="small muted">New here?</span> <button type="button" class="btn sm" data-act="signupopen">Create an account</button></div>
  </form>`}
 </div></div></div>`;

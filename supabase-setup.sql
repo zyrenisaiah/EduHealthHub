@@ -1772,3 +1772,27 @@ end $$;
 alter function public.ehh_b32(bytea) set search_path = public, pg_temp;
 alter function public.ehh_msg_json(public.messages) set search_path = public, pg_temp;
 revoke all on function public.ehh_conv_ok(public.accounts, text) from public, anon, authenticated;
+
+-- Google first, then the emailed code: Google proves the Gmail, then a pending session is opened and a code is mailed.
+-- Called only by the google-auth edge function (service role). Accounts that need a password change or an authenticator code must use the password.
+create or replace function public.ehh_google_start(p_email text, p_sub text) returns jsonb
+language plpgsql security definer set search_path = public, extensions as $$
+declare a public.accounts; tok text; mail text := lower(trim(coalesce(p_email,'')));
+begin
+  select * into a from public.accounts where gmail_ok and active and lower(gmail)=mail limit 1;
+  if not found or (a.google_sub is not null and a.google_sub<>coalesce(p_sub,'')) then raise exception 'NO_GOOGLE_ACCOUNT'; end if;
+  if a.must_change or a.totp_on then raise exception 'USE_PASSWORD'; end if;
+  if a.google_sub is null then update public.accounts set google_sub=p_sub where id=a.id; end if;
+  delete from public.sessions where expires<now();
+  delete from public.sessions where account_id=a.id and token in (
+    select token from public.sessions where account_id=a.id order by expires desc offset 4);
+  tok := encode(gen_random_bytes(24),'hex');
+  insert into public.sessions(token,account_id,expires,stage) values (tok,a.id,now()+interval '15 minutes','pending');
+  return jsonb_build_object('pending',tok,'hint',public.ehh_mask(a.gmail));
+end $$;
+revoke all on function public.ehh_google_start(text,text) from public, anon, authenticated;
+do $$ begin
+  if exists(select 1 from pg_roles where rolname='service_role') then
+    grant execute on function public.ehh_google_start(text,text) to service_role;
+  end if;
+end $$;

@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
   let body: { kind?: string; token?: string; credential?: string };
   try { body = await req.json(); } catch { return json({ error: "BAD_REQUEST" }, 400); }
   const { kind, token, credential } = body;
-  if (!["login", "link"].includes(kind ?? "") || !token || !credential) return json({ error: "BAD_REQUEST" }, 400);
+  if (!["login", "link", "start"].includes(kind ?? "") || !credential || (kind !== "start" && !token)) return json({ error: "BAD_REQUEST" }, 400);
   if (CLIENT_ID.startsWith("__")) return json({ error: "GOOGLE_NOT_SET_UP" }, 500);
 
   // Ask Google to verify the token's signature and expiry
@@ -34,9 +34,11 @@ Deno.serve(async (req) => {
   const db = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, {
     auth: { persistSession: false },
   });
-  const fn = kind === "link" ? "ehh_link_google" : "ehh_google_login";
+  const fn = kind === "link" ? "ehh_link_google" : kind === "start" ? "ehh_google_start" : "ehh_google_login";
   const args = kind === "link"
     ? { p_token: token, p_email: info.email, p_sub: info.sub }
+    : kind === "start"
+    ? { p_email: info.email, p_sub: info.sub }
     : { p_pending: token, p_email: info.email, p_sub: info.sub };
   const { data, error } = await db.rpc(fn, args);
   if (error) return json({ error: (error.message || "ERROR").trim() }, 400);
