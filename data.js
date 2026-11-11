@@ -1,30 +1,30 @@
 /* ---------- reference data ---------- */
 const CUR_SY='2026-2027', SYS=['2025-2026','2026-2027'];
 const TEACHERS=[ /* username, password, grade, track, strand, code, number */
- ['Dummy Teacher 11A1','acad1',11,'Academic','Academic','ACAD',1],
- ['Dummy Teacher 11A2','acad2',11,'Academic','Academic','ACAD',2],
- ['Dummy Teacher 11TP1','techpro1',11,'Technical Professional','TechPro','TP',1],
- ['Dummy Teacher 11TP2','techpro2',11,'Technical Professional','TechPro','TP',2],
- ['Dummy Teacher 12STEM1','stem1',12,'Academic','STEM','STEM',1],
- ['Dummy Teacher 12STEM2','stem2',12,'Academic','STEM','STEM',2],
- ['Dummy Teacher 12STEM3','stem3',12,'Academic','STEM','STEM',3],
- ['Dummy Teacher 12ABM1','abm1',12,'Academic','ABM','ABM',1],
- ['Dummy Teacher 12ABM2','abm2',12,'Academic','ABM','ABM',2],
- ['Dummy Teacher 12ABM3','abm3',12,'Academic','ABM','ABM',3],
- ['Dummy Teacher 12HUMMS1','humms1',12,'Academic','HUMSS','HUMSS',1],
- ['Dummy Teacher 12HUMMS2','humms2',12,'Academic','HUMSS','HUMSS',2],
- ['Dummy Teacher 12HUMMS3','humms3',12,'Academic','HUMSS','HUMSS',3],
- ['Dummy Teacher 12TVL1','tvl1',12,'TVL','TVL','TVL',1],
- ['Dummy Teacher 12TVL2','tvl2',12,'TVL','TVL','TVL',2],
- ['Dummy Teacher 12TVL3','tvl3',12,'TVL','TVL','TVL',3]
- ,['Dummy Teacher 11A3','acad3',11,'Academic','Academic','ACAD',3]
- ,['Dummy Teacher 11A4','acad4',11,'Academic','Academic','ACAD',4]
- ,['Dummy Teacher 11A5','acad5',11,'Academic','Academic','ACAD',5]
- ,['Dummy Teacher 11A6','acad6',11,'Academic','Academic','ACAD',6]
- ,['Dummy Teacher 11TP3','techpro3',11,'Technical Professional','TechPro','TP',3]
- ,['Dummy Teacher 11TP4','techpro4',11,'Technical Professional','TechPro','TP',4]
- ,['Dummy Teacher 11TP5','techpro5',11,'Technical Professional','TechPro','TP',5]
- ,['Dummy Teacher 11TP6','techpro6',11,'Technical Professional','TechPro','TP',6]
+ ['Test Teacher 11A1','acad1',11,'Academic','Academic','ACAD',1],
+ ['Test Teacher 11A2','acad2',11,'Academic','Academic','ACAD',2],
+ ['Test Teacher 11TP1','techpro1',11,'Technical Professional','TechPro','TP',1],
+ ['Test Teacher 11TP2','techpro2',11,'Technical Professional','TechPro','TP',2],
+ ['Test Teacher 12STEM1','stem1',12,'Academic','STEM','STEM',1],
+ ['Test Teacher 12STEM2','stem2',12,'Academic','STEM','STEM',2],
+ ['Test Teacher 12STEM3','stem3',12,'Academic','STEM','STEM',3],
+ ['Test Teacher 12ABM1','abm1',12,'Academic','ABM','ABM',1],
+ ['Test Teacher 12ABM2','abm2',12,'Academic','ABM','ABM',2],
+ ['Test Teacher 12ABM3','abm3',12,'Academic','ABM','ABM',3],
+ ['Test Teacher 12HUMMS1','humms1',12,'Academic','HUMSS','HUMSS',1],
+ ['Test Teacher 12HUMMS2','humms2',12,'Academic','HUMSS','HUMSS',2],
+ ['Test Teacher 12HUMMS3','humms3',12,'Academic','HUMSS','HUMSS',3],
+ ['Test Teacher 12TVL1','tvl1',12,'TVL','TVL','TVL',1],
+ ['Test Teacher 12TVL2','tvl2',12,'TVL','TVL','TVL',2],
+ ['Test Teacher 12TVL3','tvl3',12,'TVL','TVL','TVL',3]
+ ,['Test Teacher 11A3','acad3',11,'Academic','Academic','ACAD',3]
+ ,['Test Teacher 11A4','acad4',11,'Academic','Academic','ACAD',4]
+ ,['Test Teacher 11A5','acad5',11,'Academic','Academic','ACAD',5]
+ ,['Test Teacher 11A6','acad6',11,'Academic','Academic','ACAD',6]
+ ,['Test Teacher 11TP3','techpro3',11,'Technical Professional','TechPro','TP',3]
+ ,['Test Teacher 11TP4','techpro4',11,'Technical Professional','TechPro','TP',4]
+ ,['Test Teacher 11TP5','techpro5',11,'Technical Professional','TechPro','TP',5]
+ ,['Test Teacher 11TP6','techpro6',11,'Technical Professional','TechPro','TP',6]
 ];
 const SECTIONS=TEACHERS.map(t=>({id:`${t[2]}-${t[5]}-${t[6]}`,grade:t[2],track:t[3],strand:t[4],name:String(t[6]),adviser:t[0]}));
 const _RK=['ACAD','TP','STEM','ABM','HUMSS','TVL'];
@@ -37,9 +37,9 @@ const trackLabel=s=>s.track===s.strand?s.track:s.track+' / '+s.strand;
 const secOf=id=>SECTIONS.find(s=>s.id===id);
 const secLabel=s=>`Grade ${s.grade} ${s.strand}-${s.name}`;
 const USERS={
- Doctor:{name:'Dummy Doctor1',blurb:'Overview, all records and supplies'},
- Nurse:{name:'Dummy Nurse1',blurb:'Exam cards, student records, supplies'},
- Dentist:{name:'Dummy Dentist1',blurb:'Dental service charts and treatments'},
+ Doctor:{name:'Test Doctor1',blurb:'Overview, all records and supplies'},
+ Nurse:{name:'Test Nurse1',blurb:'Exam cards, student records, supplies'},
+ Dentist:{name:'Test Dentist1',blurb:'Dental service charts and treatments'},
  Teacher:{name:'',blurb:'Advisory health files and transfers'}
 };
 const GROUPS={
@@ -92,9 +92,9 @@ function seedDB(){
  SECTIONS.forEach(sec=>{const size=ri(38,48);for(let k=0;k<size;k++){
   const sex=n%2?'Female':'Male', id='S'+String(n+1).padStart(4,'0');
   const enr=[{sy:CUR_SY,section:sec.id}]; if(sec.grade===12) enr.unshift({sy:'2025-2026',section:'11-'+(sec.track==='Academic'?'ACAD':'TP')+'-'+(1+n%6)});
-  const st={id,first:'Dummy Student '+(k+1),last:secTag(sec),sex,lrn:(ri(10000000,99999999),mkLrn(sec,k)),
+  const st={id,first:'Test Student '+(k+1),last:secTag(sec),sex,lrn:(ri(10000000,99999999),mkLrn(sec,k)),
    birth:`${2026-(sec.grade===11?16:17)}-${String(ri(1,12)).padStart(2,'0')}-${String(ri(1,28)).padStart(2,'0')}`,
-   guardian:(pick(['Rosario','Eduardo','Lourdes','Armando','Teresita']),'Dummy Guardian '+(k+1)+' '+secTag(sec)),contact:'0917 '+ri(100,999)+' '+ri(1000,9999),
+   guardian:(pick(['Rosario','Eduardo','Lourdes','Armando','Teresita']),'Test Guardian '+(k+1)+' '+secTag(sec)),contact:'0917 '+ri(100,999)+' '+ri(1000,9999),
    blood:pick(['O+','A+','B+','AB+','O-']),allergies:pick(['None','None','Peanuts','Dust','Penicillin','Seafood']),
    conditions:pick(['None','None','None','Asthma','Mild myopia','Hay fever']),
    enr,exam:{},otherExams:[],files:[],dental:null,visits:[],refs:[],clear:[],plans:[],passes:[]};
@@ -122,7 +122,7 @@ function mkExam(st,sy,g){
  return {date:sy==='2025-2026'?'2025-08-14':'2026-08-10',wt:String(wt),ht:String(ht),vision:pk(['20/20','20/20','20/30','20/40']),hearing:'Normal',
   nutri:bmi<16?'b':bmi<23?'c':bmi<27?'d':'e',skin:pk(['','','','e','g','a']),eyes:pk(['','','','c']),ears:pk(['','','f']),nose:pk(['','','a']),
   mouth:pk(['','b','c','']),throat:pk(['','','a']),neck:'',heart:'a',lungs:pk(['a','a','a','d']),ext:'',other:'',
-  remarks:pk(['','','a','b','d']),by:'Dummy Nurse1'};
+  remarks:pk(['','','a','b','d']),by:'Test Nurse1'};
 }
 function mkDental(R,ri,pk,grade){
  const teeth={}, done=R()>.25;

@@ -5,7 +5,7 @@ const assert = require('assert'), { start } = require('./helpers');
   await p.route(/fonts\./, r => r.abort());
   await p.route('**/config.js*', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:""').replace('const CLOUD_ON', 'var CLOUD_ON') }); });
   await p.goto(h.base + 'nurse.html'); await p.waitForSelector('#loginform');
-  await p.fill('#lu', 'Dummy Nurse1'); await p.fill('#pw', 'nurse1'); await p.click('#loginform button[type=submit]'); await p.waitForSelector('.shell');
+  await p.fill('#lu', 'Test Nurse1'); await p.fill('#pw', 'nurse1'); await p.click('#loginform button[type=submit]'); await p.waitForSelector('.shell');
   await p.evaluate(() => {
     CLOUD_ON = true; TOK = 'tok'; window.calls = [];
     window.rpc = async (fn, a) => { calls.push([fn, a]);
@@ -13,7 +13,7 @@ const assert = require('assert'), { start } = require('./helpers');
       if (fn === 'app_msg_send') return { id: 9, conv: a.p_conv, s: S.user.id, sn: S.user.name, sr: S.user.role, b: a.p_body, k: a.p_kind, r: a.p_ref, t: Date.now() };
       if (fn === 'app_file_get') return { name: 'x.txt', mime: 'text/plain', size: 5, b64: btoa('hello') };
       return {} };
-    S.msg.dir = [{ id: 'T1', name: 'Dummy Teacher 11A1', role: 'Teacher' }]; S.msg.dirOk = true; S.msg.dirT = Date.now() + 1e9;
+    S.msg.dir = [{ id: 'T1', name: 'Test Teacher 11A1', role: 'Teacher' }]; S.msg.dirOk = true; S.msg.dirT = Date.now() + 1e9;
     S.msg.msgs = [{ id: 1, conv: 'desk:T1', s: 'T1', sn: 'T', sr: 'Teacher', k: 'text', b: 'hi', t: Date.now() }]; S.msg.active = 'desk:T1'; S.view = 'chat'; render(); });
   await p.click('[data-act=cpanel][data-k=attach]'); await p.waitForSelector('#cfile', { state: 'attached' });
   await p.setInputFiles('#cfile', { name: 'virus.exe', mimeType: 'application/octet-stream', buffer: Buffer.from('x') });

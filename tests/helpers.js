@@ -16,10 +16,10 @@ function serve() {
 }
 
 const ACCOUNTS = {
-  Doctor: ['doctor.html', 'Dummy Doctor1', 'doctor1'],
-  Nurse: ['nurse.html', 'Dummy Nurse1', 'nurse1'],
-  Dentist: ['dentist.html', 'Dummy Dentist1', 'dentist1'],
-  Teacher: ['teacher.html', 'Dummy Teacher 11A1', 'acad1'],
+  Doctor: ['doctor.html', 'Test Doctor1', 'doctor1'],
+  Nurse: ['nurse.html', 'Test Nurse1', 'nurse1'],
+  Dentist: ['dentist.html', 'Test Dentist1', 'dentist1'],
+  Teacher: ['teacher.html', 'Test Teacher 11A1', 'acad1'],
 };
 
 async function start(viewport = { width: 1200, height: 900 }, opts) {

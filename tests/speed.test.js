@@ -7,7 +7,7 @@ const assert = require('assert'), { start } = require('./helpers');
   await p.route('**/config.js*', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:"https://test.supabase.co"').replace(/key:"[^"]*"/, 'key:"pubkey"') }); });
   await p.route(/fonts\.(googleapis|gstatic)\.com/, r => { fonts++; r.abort(); });
   await p.route('https://test.supabase.co/**', r => r.fulfill({ status: 400, contentType: 'application/json', body: '{"message":"x"}' }));
-  await p.route('https://test.supabase.co/rest/v1/rpc/app_sync', r => { syncs++; r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ rev: 1, count: 0, account: { id: 'A1', role: 'Doctor', name: 'Dummy Doctor1' }, students: [], stock: null, notes: null, transfers: [] }) }); });
+  await p.route('https://test.supabase.co/rest/v1/rpc/app_sync', r => { syncs++; r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ rev: 1, count: 0, account: { id: 'A1', role: 'Doctor', name: 'Test Doctor1' }, students: [], stock: null, notes: null, transfers: [] }) }); });
   await p.goto(h.base + 'doctor.html', { waitUntil: 'commit' });
   assert(await p.waitForSelector('#root .boot', { timeout: 3000 }).then(() => true).catch(() => false) || await p.$('.shell'), 'loading screen (or the app) shows straight away');
   await p.waitForSelector('.shell', { timeout: 8000 });

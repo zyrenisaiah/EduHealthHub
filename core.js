@@ -18,9 +18,9 @@ function h53(s){let a=0xdeadbeef,b=0x41c6ce57;for(let i=0;i<s.length;i++){const 
 const pwHash=(id,p)=>h53('ehh:'+id+':'+p);
 function plainAccounts(){
  const mk=(id,role,name,pw,extra)=>Object.assign({id,role,name,username:name,email:name.replace(/\s+/g,'').toLowerCase()+'@eduhealthhub.demo',pw},extra||{});
- const A=[mk('A1','Doctor','Dummy Doctor1','doctor1'),mk('A2','Doctor','Dummy Doctor2','doctor2'),
-  mk('A3','Nurse','Dummy Nurse1','nurse1'),mk('A4','Nurse','Dummy Nurse2','nurse2'),mk('A5','Nurse','Dummy Nurse3','nurse3'),
-  mk('A6','Dentist','Dummy Dentist1','dentist1')];
+ const A=[mk('A1','Doctor','Test Doctor1','doctor1'),mk('A2','Doctor','Test Doctor2','doctor2'),
+  mk('A3','Nurse','Test Nurse1','nurse1'),mk('A4','Nurse','Test Nurse2','nurse2'),mk('A5','Nurse','Test Nurse3','nurse3'),
+  mk('A6','Dentist','Test Dentist1','dentist1')];
  TEACHERS.forEach((t,i)=>A.push(mk('T'+(i+1),'Teacher',t[0],t[1],{adv:SECTIONS[i].id})));
  return A;
 }
@@ -31,7 +31,7 @@ if(CLOUD_ON)DB.accounts=[];
 else if(!DB.accounts){DB.accounts=DEMO.map(a=>({id:a.id,role:a.role,adv:a.adv,name:a.name,username:a.username,email:a.email,pw:pwHash(a.id,a.pw)}));save()}
 if(!CLOUD_ON)DEMO.forEach(a=>{if(!DB.accounts.find(x=>x.id===a.id))DB.accounts.push({id:a.id,role:a.role,adv:a.adv,name:a.name,username:a.username,email:a.email,pw:pwHash(a.id,a.pw)})});
 /* tidy teacher usernames to one format, keeping older typed forms working at login */
-const ALIAS={T17:'dummyteacher1111a3',T18:'dummyteacher1111a4',T19:'dummyteacher1111a5',T20:'dummyteacher1111a6',T21:'dummyteachertp3',T22:'dummyteachertp4',T23:'dummyteachertp5',T24:'dummyteachertp6'};
+const ALIAS={T17:'testteacher1111a3',T18:'testteacher1111a4',T19:'testteacher1111a5',T20:'testteacher1111a6',T21:'testteachertp3',T22:'testteachertp4',T23:'testteachertp5',T24:'testteachertp6'};
 if(!CLOUD_ON)DEMO.forEach(d=>{const x=DB.accounts.find(a=>a.id===d.id);if(!x)return;
  if(normU(x.username)===normU(d.username)||normU(x.username)===ALIAS[d.id]){x.username=d.username;x.name=d.name}
  if(ALIAS[d.id]&&x.email===ALIAS[d.id]+'@eduhealthhub.demo')x.email=d.email});

@@ -5,7 +5,7 @@ const PAY = '"><img src=x onerror="window.__xss=1"><svg onload="window.__xss=1">
   let h;
   const mk = async () => { const p = await h.ctx.newPage(); await p.route(/fonts\./, r => r.abort());
     await p.route('**/config.js*', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:""') }); }); return p; };
-  for (const [page, user, pw, views] of [['doctor.html', 'Dummy Doctor1', 'doctor1', ['home', 'overview', 'students', 'stock', 'chat', 'accounts', 'activity', 'account']], ['nurse.html', 'Dummy Nurse1', 'nurse1', ['home', 'students', 'stock', 'chat', 'account']], ['dentist.html', 'Dummy Dentist1', 'dentist1', ['home', 'students', 'chat', 'account']], ['teacher.html', 'Dummy Teacher 11A1', 'acad1', ['home', 'dash', 'files', 'chat', 'account']]]) {
+  for (const [page, user, pw, views] of [['doctor.html', 'Test Doctor1', 'doctor1', ['home', 'overview', 'students', 'stock', 'chat', 'accounts', 'activity', 'account']], ['nurse.html', 'Test Nurse1', 'nurse1', ['home', 'students', 'stock', 'chat', 'account']], ['dentist.html', 'Test Dentist1', 'dentist1', ['home', 'students', 'chat', 'account']], ['teacher.html', 'Test Teacher 11A1', 'acad1', ['home', 'dash', 'files', 'chat', 'account']]]) {
     h = await start({ width: 1200, height: 900 }); const p = await mk(); p.on('dialog', d => { global.__dialog = true; d.dismiss(); });
     await p.goto(h.base + page); await p.waitForSelector('#loginform'); await p.fill('#lu', user); await p.fill('#pw', pw); await p.click('#loginform [type=submit]'); await p.waitForSelector('.shell');
     await p.evaluate(PAY => {

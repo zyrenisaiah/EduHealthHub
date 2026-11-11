@@ -14,12 +14,12 @@ const assert = require('assert'), fs = require('fs'), path = require('path'), { 
   await p.route('**/config.js*', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:"https://test.supabase.co"').replace(/key:"[^"]*"/, 'key:"k"') }); });
   await p.route('https://test.supabase.co/**', async r => {
     const u = r.request().url(), body = r.request().postData() ? JSON.parse(r.request().postData()) : {}; calls.push([u.split('/').pop(), body]);
-    if (/app_login$/.test(u)) return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ token: 't1', account: { id: 'A1', role: 'Doctor', name: 'Dummy Doctor1', must_change: true } }) });
+    if (/app_login$/.test(u)) return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ token: 't1', account: { id: 'A1', role: 'Doctor', name: 'Test Doctor1', must_change: true } }) });
     if (/app_change_password$/.test(u)) return r.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
     r.fulfill({ status: 400, contentType: 'application/json', body: '{"message":"SESSION_EXPIRED"}' });
   });
   await p.goto(h.base + 'doctor.html'); await p.waitForSelector('#loginform');
-  await p.fill('#lu', 'Dummy Doctor1'); await p.fill('#pw', 'doctor1'); await p.click('#loginform button[type=submit]');
+  await p.fill('#lu', 'Test Doctor1'); await p.fill('#pw', 'doctor1'); await p.click('#loginform button[type=submit]');
   await p.waitForSelector('#mustform'); assert(!(await p.$('#loginform')), 'login form is replaced by the new-password form');
   await p.fill('#mu-n', 'short1'); await p.fill('#mu-r', 'short1'); await p.click('#mustform button[type=submit]');
   assert(!calls.some(c => c[0] === 'app_change_password'), 'a weak password is stopped before it is sent');
@@ -37,7 +37,7 @@ const assert = require('assert'), fs = require('fs'), path = require('path'), { 
   await d.route(/fonts\./, r => r.abort());
   await d.route('**/config.js*', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:""').replace(/key:"[^"]*"/, 'key:""') }); });
   await d.goto(h.base + 'doctor.html'); await d.waitForSelector('#loginform');
-  await d.fill('#lu', 'Dummy Doctor1'); await d.fill('#pw', 'doctor1'); await d.click('#loginform button[type=submit]'); await d.waitForSelector('.shell');
+  await d.fill('#lu', 'Test Doctor1'); await d.fill('#pw', 'doctor1'); await d.click('#loginform button[type=submit]'); await d.waitForSelector('.shell');
   await d.clock.fastForward('01:00:00'); await d.waitForTimeout(300); assert(await d.$('.shell'), 'no idle logout: still signed in after an hour of no activity');
   await h.stop(); console.log('privacy ok');
 })().catch(e => { console.error(e); process.exit(1); });

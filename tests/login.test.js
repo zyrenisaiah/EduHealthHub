@@ -12,11 +12,11 @@ const assert = require('assert'), { start } = require('./helpers');
     const err = ok ? '' : (await p.textContent('#loginform [role=alert]').catch(() => '')).trim();
     await p.close(); return { ok, err };
   }
-  assert.strictEqual((await attempt('Dummy Doctor1', 'doctor1')).ok, true, 'exact username + password must work');
-  assert.strictEqual((await attempt('dummy doctor1', 'doctor1')).ok, false, 'lower-case username must fail');
-  assert.strictEqual((await attempt('DUMMY DOCTOR1', 'doctor1')).ok, false, 'upper-case username must fail');
-  assert.strictEqual((await attempt('DummyDoctor1', 'doctor1')).ok, false, 'username without the space must fail');
-  const bad = await attempt('Dummy Doctor1', 'Doctor1');
+  assert.strictEqual((await attempt('Test Doctor1', 'doctor1')).ok, true, 'exact username + password must work');
+  assert.strictEqual((await attempt('test doctor1', 'doctor1')).ok, false, 'lower-case username must fail');
+  assert.strictEqual((await attempt('TEST DOCTOR1', 'doctor1')).ok, false, 'upper-case username must fail');
+  assert.strictEqual((await attempt('TestDoctor1', 'doctor1')).ok, false, 'username without the space must fail');
+  const bad = await attempt('Test Doctor1', 'Doctor1');
   assert.strictEqual(bad.ok, false, 'wrong-case password must fail'); assert(/incorrect/i.test(bad.err), 'shows a clear message: ' + bad.err);
   // The page also tells people about case sensitivity
   const p = await h.ctx.newPage(); await p.goto(h.base + 'index.html?role=Doctor'); await p.waitForSelector('#loginform');

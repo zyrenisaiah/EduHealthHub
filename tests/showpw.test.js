@@ -14,7 +14,7 @@ const assert = require('assert'), { start } = require('./helpers');
   };
   await p.goto(h.base + 'index.html'); await p.waitForSelector('#loginform'); await check(['pw'], 'login');
   await p.click('[data-act=signupopen]'); await p.waitForSelector('#signupform'); await check(['su-pw', 'su-pw2'], 'sign-up');
-  await p.click('[data-act=signupback]'); await p.fill('#lu', 'Dummy Nurse1'); await p.fill('#pw', 'nurse1'); await p.click('#loginform [type=submit]'); await p.waitForSelector('.shell');
+  await p.click('[data-act=signupback]'); await p.fill('#lu', 'Test Nurse1'); await p.fill('#pw', 'nurse1'); await p.click('#loginform [type=submit]'); await p.waitForSelector('.shell');
   await p.click('[data-act=nav][data-v=account]'); await p.waitForSelector('#pwform'); await check(['pw-c', 'pw-n', 'pw-r'], 'My account');
   assert.deepStrictEqual(errs, []); await h.stop(); console.log('showpw ok');
 })().catch(e => { console.error(e); process.exit(1); });

@@ -18,7 +18,7 @@ No website is "unhackable". This is what protects this one, what was tested, and
 - Database tests: a Doctor cannot do admin things, a session cannot be reused after logout or deactivation, the login code step cannot be skipped or replayed.
 
 ## Known limits (honest list)
-- **The demo passwords are public** in this repository (`supabase-setup.sql` and git history). Anyone who reads the repo can log in as `Dummy Doctor1`. Fine for dummy data. **Before any real record goes in:** give every account a new random password (Accounts > Reset password, or `select ehh_require_password_change();` followed by people choosing their own right away), turn two-step on, and consider making the repository private.
+- **The demo passwords are public** in this repository (`supabase-setup.sql` and git history). Anyone who reads the repo can log in as `Test Doctor1`. Fine for dummy data. **Before any real record goes in:** give every account a new random password (Accounts > Reset password, or `select ehh_require_password_change();` followed by people choosing their own right away), turn two-step on, and consider making the repository private.
 - A person who keeps guessing can temporarily lock a victim's account (5 tries = 5 minutes). That is the price of stopping password guessing.
 - The free Supabase plan has no point-in-time recovery and can pause an idle project.
 - Supabase's own sign-up (email accounts) is not used by this site. In the Supabase dashboard, Authentication > Sign In / Providers, switch off "Allow new users to sign up" so nobody can create unused logins there.

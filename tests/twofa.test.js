@@ -7,7 +7,7 @@ const totp = (sec, ctr) => { const m = Buffer.alloc(8); m.writeBigUInt64BE(BigIn
 (async () => {
   const h = await start({ width: 1000, height: 900 }), errs = [], syncTok = [];
   const st = { sec: null, pend: null, on: false, last: 0, codes: [], used: new Set() };
-  const acct = on => ({ id: 'A1', role: 'Doctor', name: 'Dummy Doctor1', username: 'Dummy Doctor1', email: 'd@x.org', must_change: false, totp: on, need2fa: !on });
+  const acct = on => ({ id: 'A1', role: 'Doctor', name: 'Test Doctor1', username: 'Test Doctor1', email: 'd@x.org', must_change: false, totp: on, need2fa: !on });
   const ok = (r, b) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(b) });
   const p = await h.ctx.newPage(); p.on('pageerror', e => errs.push(e.message)); await p.route(/fonts\./, r => r.abort());
   await p.route('**/config.js*', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:"https://fake.supabase.co"').replace(/key:"[^"]*"/, 'key:"k"') }); });
@@ -15,13 +15,13 @@ const totp = (sec, ctr) => { const m = Buffer.alloc(8); m.writeBigUInt64BE(BigIn
     const fn = r.request().url().split('/rpc/')[1], a = JSON.parse(r.request().postData() || '{}'), c = Math.floor(Date.now() / 30000);
     const good = (sec, code) => { for (const k of [c - 1, c, c + 1]) if (k > st.last && totp(sec, k) === code) { st.last = k; return true } return false };
     if (fn === 'app_login') return ok(r, st.on ? { totp: 'P1' } : { token: 'T1', account: acct(false) });
-    if (fn === 'app_totp_begin') { st.pend = crypto.randomBytes(20); const s = (() => { let bits = ''; for (const b of st.pend) bits += b.toString(2).padStart(8, '0'); let o = ''; for (let i = 0; i < bits.length; i += 5) o += AL[parseInt(bits.slice(i, i + 5), 2)]; return o })(); return ok(r, { secret: s, username: 'Dummy Doctor1' }); }
+    if (fn === 'app_totp_begin') { st.pend = crypto.randomBytes(20); const s = (() => { let bits = ''; for (const b of st.pend) bits += b.toString(2).padStart(8, '0'); let o = ''; for (let i = 0; i < bits.length; i += 5) o += AL[parseInt(bits.slice(i, i + 5), 2)]; return o })(); return ok(r, { secret: s, username: 'Test Doctor1' }); }
     if (fn === 'app_totp_enable') { if (!good(st.pend, a.p_code)) return ok(r, { error: 'BAD_CODE' }); st.sec = st.pend; st.on = true; st.codes = Array.from({ length: 8 }, (_, i) => 'abcde-0000' + i); return ok(r, { codes: st.codes }); }
     if (fn === 'app_totp_login') { const rc = (a.p_code || '').toLowerCase(); if (good(st.sec, a.p_code) || (st.codes.includes(rc) && !st.used.has(rc) && st.used.add(rc))) return ok(r, { token: 'T2', account: acct(true) }); return ok(r, { error: 'BAD_CODE' }); }
     if (fn === 'app_sync') { syncTok.push(a.p_token); return r.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'SESSION_EXPIRED' }) }); }
     return ok(r, null);
   });
-  const login = async () => { await p.goto(h.base + 'doctor.html'); await p.waitForSelector('#loginform'); await p.fill('#lu', 'Dummy Doctor1'); await p.fill('#pw', 'doctor1'); await p.click('#loginform [type=submit]'); };
+  const login = async () => { await p.goto(h.base + 'doctor.html'); await p.waitForSelector('#loginform'); await p.fill('#lu', 'Test Doctor1'); await p.fill('#pw', 'doctor1'); await p.click('#loginform [type=submit]'); };
   // 1) first login: set-up screen
   await login(); await p.waitForSelector('#enrollform svg');
   const key = (await p.textContent('#enrollform .mono')).replace(/\s/g, ''); assert.strictEqual(key.length, 32, 'key shown');

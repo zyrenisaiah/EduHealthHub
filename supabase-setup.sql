@@ -240,39 +240,39 @@ grant execute on function public.app_login(text,text), public.app_logout(text), 
 
 -- ---------- the 30 starting accounts (only added if missing) ----------
 insert into public.accounts(id,role,name,username,email,adv,pw) values
-  ('A1','Doctor','Dummy Doctor1','Dummy Doctor1','dummydoctor1@eduhealthhub.demo',null,crypt('doctor1',gen_salt('bf'))),
-  ('A2','Doctor','Dummy Doctor2','Dummy Doctor2','dummydoctor2@eduhealthhub.demo',null,crypt('doctor2',gen_salt('bf'))),
-  ('A3','Nurse','Dummy Nurse1','Dummy Nurse1','dummynurse1@eduhealthhub.demo',null,crypt('nurse1',gen_salt('bf'))),
-  ('A4','Nurse','Dummy Nurse2','Dummy Nurse2','dummynurse2@eduhealthhub.demo',null,crypt('nurse2',gen_salt('bf'))),
-  ('A5','Nurse','Dummy Nurse3','Dummy Nurse3','dummynurse3@eduhealthhub.demo',null,crypt('nurse3',gen_salt('bf'))),
-  ('A6','Dentist','Dummy Dentist1','Dummy Dentist1','dummydentist1@eduhealthhub.demo',null,crypt('dentist1',gen_salt('bf'))),
-  ('T1','Teacher','Dummy Teacher 11A1','Dummy Teacher 11A1','dummyteacher11a1@eduhealthhub.demo','11-ACAD-1',crypt('acad1',gen_salt('bf'))),
-  ('T2','Teacher','Dummy Teacher 11A2','Dummy Teacher 11A2','dummyteacher11a2@eduhealthhub.demo','11-ACAD-2',crypt('acad2',gen_salt('bf'))),
-  ('T3','Teacher','Dummy Teacher 11TP1','Dummy Teacher 11TP1','dummyteacher11tp1@eduhealthhub.demo','11-TP-1',crypt('techpro1',gen_salt('bf'))),
-  ('T4','Teacher','Dummy Teacher 11TP2','Dummy Teacher 11TP2','dummyteacher11tp2@eduhealthhub.demo','11-TP-2',crypt('techpro2',gen_salt('bf'))),
-  ('T5','Teacher','Dummy Teacher 12STEM1','Dummy Teacher 12STEM1','dummyteacher12stem1@eduhealthhub.demo','12-STEM-1',crypt('stem1',gen_salt('bf'))),
-  ('T6','Teacher','Dummy Teacher 12STEM2','Dummy Teacher 12STEM2','dummyteacher12stem2@eduhealthhub.demo','12-STEM-2',crypt('stem2',gen_salt('bf'))),
-  ('T7','Teacher','Dummy Teacher 12STEM3','Dummy Teacher 12STEM3','dummyteacher12stem3@eduhealthhub.demo','12-STEM-3',crypt('stem3',gen_salt('bf'))),
-  ('T8','Teacher','Dummy Teacher 12ABM1','Dummy Teacher 12ABM1','dummyteacher12abm1@eduhealthhub.demo','12-ABM-1',crypt('abm1',gen_salt('bf'))),
-  ('T9','Teacher','Dummy Teacher 12ABM2','Dummy Teacher 12ABM2','dummyteacher12abm2@eduhealthhub.demo','12-ABM-2',crypt('abm2',gen_salt('bf'))),
-  ('T10','Teacher','Dummy Teacher 12ABM3','Dummy Teacher 12ABM3','dummyteacher12abm3@eduhealthhub.demo','12-ABM-3',crypt('abm3',gen_salt('bf'))),
-  ('T11','Teacher','Dummy Teacher 12HUMMS1','Dummy Teacher 12HUMMS1','dummyteacher12humms1@eduhealthhub.demo','12-HUMSS-1',crypt('humms1',gen_salt('bf'))),
-  ('T12','Teacher','Dummy Teacher 12HUMMS2','Dummy Teacher 12HUMMS2','dummyteacher12humms2@eduhealthhub.demo','12-HUMSS-2',crypt('humms2',gen_salt('bf'))),
-  ('T13','Teacher','Dummy Teacher 12HUMMS3','Dummy Teacher 12HUMMS3','dummyteacher12humms3@eduhealthhub.demo','12-HUMSS-3',crypt('humms3',gen_salt('bf'))),
-  ('T14','Teacher','Dummy Teacher 12TVL1','Dummy Teacher 12TVL1','dummyteacher12tvl1@eduhealthhub.demo','12-TVL-1',crypt('tvl1',gen_salt('bf'))),
-  ('T15','Teacher','Dummy Teacher 12TVL2','Dummy Teacher 12TVL2','dummyteacher12tvl2@eduhealthhub.demo','12-TVL-2',crypt('tvl2',gen_salt('bf'))),
-  ('T16','Teacher','Dummy Teacher 12TVL3','Dummy Teacher 12TVL3','dummyteacher12tvl3@eduhealthhub.demo','12-TVL-3',crypt('tvl3',gen_salt('bf'))),
-  ('T17','Teacher','Dummy Teacher 11A3','Dummy Teacher 11A3','dummyteacher11a3@eduhealthhub.demo','11-ACAD-3',crypt('acad3',gen_salt('bf'))),
-  ('T18','Teacher','Dummy Teacher 11A4','Dummy Teacher 11A4','dummyteacher11a4@eduhealthhub.demo','11-ACAD-4',crypt('acad4',gen_salt('bf'))),
-  ('T19','Teacher','Dummy Teacher 11A5','Dummy Teacher 11A5','dummyteacher11a5@eduhealthhub.demo','11-ACAD-5',crypt('acad5',gen_salt('bf'))),
-  ('T20','Teacher','Dummy Teacher 11A6','Dummy Teacher 11A6','dummyteacher11a6@eduhealthhub.demo','11-ACAD-6',crypt('acad6',gen_salt('bf'))),
-  ('T21','Teacher','Dummy Teacher 11TP3','Dummy Teacher 11TP3','dummyteacher11tp3@eduhealthhub.demo','11-TP-3',crypt('techpro3',gen_salt('bf'))),
-  ('T22','Teacher','Dummy Teacher 11TP4','Dummy Teacher 11TP4','dummyteacher11tp4@eduhealthhub.demo','11-TP-4',crypt('techpro4',gen_salt('bf'))),
-  ('T23','Teacher','Dummy Teacher 11TP5','Dummy Teacher 11TP5','dummyteacher11tp5@eduhealthhub.demo','11-TP-5',crypt('techpro5',gen_salt('bf'))),
-  ('T24','Teacher','Dummy Teacher 11TP6','Dummy Teacher 11TP6','dummyteacher11tp6@eduhealthhub.demo','11-TP-6',crypt('techpro6',gen_salt('bf')))
+  ('A1','Doctor','Test Doctor1','Test Doctor1','testdoctor1@eduhealthhub.demo',null,crypt('doctor1',gen_salt('bf'))),
+  ('A2','Doctor','Test Doctor2','Test Doctor2','testdoctor2@eduhealthhub.demo',null,crypt('doctor2',gen_salt('bf'))),
+  ('A3','Nurse','Test Nurse1','Test Nurse1','testnurse1@eduhealthhub.demo',null,crypt('nurse1',gen_salt('bf'))),
+  ('A4','Nurse','Test Nurse2','Test Nurse2','testnurse2@eduhealthhub.demo',null,crypt('nurse2',gen_salt('bf'))),
+  ('A5','Nurse','Test Nurse3','Test Nurse3','testnurse3@eduhealthhub.demo',null,crypt('nurse3',gen_salt('bf'))),
+  ('A6','Dentist','Test Dentist1','Test Dentist1','testdentist1@eduhealthhub.demo',null,crypt('dentist1',gen_salt('bf'))),
+  ('T1','Teacher','Test Teacher 11A1','Test Teacher 11A1','testteacher11a1@eduhealthhub.demo','11-ACAD-1',crypt('acad1',gen_salt('bf'))),
+  ('T2','Teacher','Test Teacher 11A2','Test Teacher 11A2','testteacher11a2@eduhealthhub.demo','11-ACAD-2',crypt('acad2',gen_salt('bf'))),
+  ('T3','Teacher','Test Teacher 11TP1','Test Teacher 11TP1','testteacher11tp1@eduhealthhub.demo','11-TP-1',crypt('techpro1',gen_salt('bf'))),
+  ('T4','Teacher','Test Teacher 11TP2','Test Teacher 11TP2','testteacher11tp2@eduhealthhub.demo','11-TP-2',crypt('techpro2',gen_salt('bf'))),
+  ('T5','Teacher','Test Teacher 12STEM1','Test Teacher 12STEM1','testteacher12stem1@eduhealthhub.demo','12-STEM-1',crypt('stem1',gen_salt('bf'))),
+  ('T6','Teacher','Test Teacher 12STEM2','Test Teacher 12STEM2','testteacher12stem2@eduhealthhub.demo','12-STEM-2',crypt('stem2',gen_salt('bf'))),
+  ('T7','Teacher','Test Teacher 12STEM3','Test Teacher 12STEM3','testteacher12stem3@eduhealthhub.demo','12-STEM-3',crypt('stem3',gen_salt('bf'))),
+  ('T8','Teacher','Test Teacher 12ABM1','Test Teacher 12ABM1','testteacher12abm1@eduhealthhub.demo','12-ABM-1',crypt('abm1',gen_salt('bf'))),
+  ('T9','Teacher','Test Teacher 12ABM2','Test Teacher 12ABM2','testteacher12abm2@eduhealthhub.demo','12-ABM-2',crypt('abm2',gen_salt('bf'))),
+  ('T10','Teacher','Test Teacher 12ABM3','Test Teacher 12ABM3','testteacher12abm3@eduhealthhub.demo','12-ABM-3',crypt('abm3',gen_salt('bf'))),
+  ('T11','Teacher','Test Teacher 12HUMMS1','Test Teacher 12HUMMS1','testteacher12humms1@eduhealthhub.demo','12-HUMSS-1',crypt('humms1',gen_salt('bf'))),
+  ('T12','Teacher','Test Teacher 12HUMMS2','Test Teacher 12HUMMS2','testteacher12humms2@eduhealthhub.demo','12-HUMSS-2',crypt('humms2',gen_salt('bf'))),
+  ('T13','Teacher','Test Teacher 12HUMMS3','Test Teacher 12HUMMS3','testteacher12humms3@eduhealthhub.demo','12-HUMSS-3',crypt('humms3',gen_salt('bf'))),
+  ('T14','Teacher','Test Teacher 12TVL1','Test Teacher 12TVL1','testteacher12tvl1@eduhealthhub.demo','12-TVL-1',crypt('tvl1',gen_salt('bf'))),
+  ('T15','Teacher','Test Teacher 12TVL2','Test Teacher 12TVL2','testteacher12tvl2@eduhealthhub.demo','12-TVL-2',crypt('tvl2',gen_salt('bf'))),
+  ('T16','Teacher','Test Teacher 12TVL3','Test Teacher 12TVL3','testteacher12tvl3@eduhealthhub.demo','12-TVL-3',crypt('tvl3',gen_salt('bf'))),
+  ('T17','Teacher','Test Teacher 11A3','Test Teacher 11A3','testteacher11a3@eduhealthhub.demo','11-ACAD-3',crypt('acad3',gen_salt('bf'))),
+  ('T18','Teacher','Test Teacher 11A4','Test Teacher 11A4','testteacher11a4@eduhealthhub.demo','11-ACAD-4',crypt('acad4',gen_salt('bf'))),
+  ('T19','Teacher','Test Teacher 11A5','Test Teacher 11A5','testteacher11a5@eduhealthhub.demo','11-ACAD-5',crypt('acad5',gen_salt('bf'))),
+  ('T20','Teacher','Test Teacher 11A6','Test Teacher 11A6','testteacher11a6@eduhealthhub.demo','11-ACAD-6',crypt('acad6',gen_salt('bf'))),
+  ('T21','Teacher','Test Teacher 11TP3','Test Teacher 11TP3','testteacher11tp3@eduhealthhub.demo','11-TP-3',crypt('techpro3',gen_salt('bf'))),
+  ('T22','Teacher','Test Teacher 11TP4','Test Teacher 11TP4','testteacher11tp4@eduhealthhub.demo','11-TP-4',crypt('techpro4',gen_salt('bf'))),
+  ('T23','Teacher','Test Teacher 11TP5','Test Teacher 11TP5','testteacher11tp5@eduhealthhub.demo','11-TP-5',crypt('techpro5',gen_salt('bf'))),
+  ('T24','Teacher','Test Teacher 11TP6','Test Teacher 11TP6','testteacher11tp6@eduhealthhub.demo','11-TP-6',crypt('techpro6',gen_salt('bf')))
 on conflict (id) do nothing;
 
--- Done. Now open the website, log in as Dummy Doctor1 and press 'Upload starting data' on the Overview page.
+-- Done. Now open the website, log in as Test Doctor1 and press 'Upload starting data' on the Overview page.
 
 -- =====================================================================
 --  Gmail confirmation (each person links their own Gmail; every login then
@@ -952,7 +952,7 @@ select cron.unschedule('ehh-nightly-backup') where exists (select 1 from cron.jo
 select cron.schedule('ehh-nightly-backup','0 19 * * *','select public.ehh_backup()');
 
 -- ============ STRICTER LOGIN ============
--- * Username and password are CASE-SENSITIVE ("Dummy Doctor1" is not "dummy doctor1"; spaces count).
+-- * Username and password are CASE-SENSITIVE ("Test Doctor1" is not "test doctor1"; spaces count).
 --   (Email addresses stay case-insensitive, as emails always are.)
 -- * Lockout grows: 5 wrong tries lock that name for 5 minutes, 10 wrong tries for 15 minutes.
 --   The lock is kept per lower-cased name so changing capitals cannot dodge it.

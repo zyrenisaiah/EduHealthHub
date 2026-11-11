@@ -14,11 +14,11 @@ const assert = require('assert'), { start } = require('./helpers');
     if (u.includes('/functions/v1/send-code')) { sends.push(a); return mailOk ? ok(r, { ok: true, hint: 'z***@gmail.com' }) : r.fulfill({ status: 500, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ error: 'MAIL_NOT_SET_UP' }) }); }
     const fn = u.split('/rpc/')[1];
     if (fn === 'app_login') return ok(r, { pending: 'P1', hint: 'zy***@gmail.com' });
-    if (fn === 'app_verify_login') { tries++; return a.p_code === '123456' ? ok(r, { token: 'T9', account: { id: 'T1', role: 'Teacher', name: 'Dummy Teacher 11A1', username: 'Dummy Teacher 11A1', email: 'z@x.org', must_change: false, need2fa: false } }) : ok(r, { error: 'BAD_CODE' }); }
+    if (fn === 'app_verify_login') { tries++; return a.p_code === '123456' ? ok(r, { token: 'T9', account: { id: 'T1', role: 'Teacher', name: 'Test Teacher 11A1', username: 'Test Teacher 11A1', email: 'z@x.org', must_change: false, need2fa: false } }) : ok(r, { error: 'BAD_CODE' }); }
     if (fn === 'app_sync') { syncTok.push(a.p_token); return r.fulfill({ status: 400, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' }, body: JSON.stringify({ message: 'SESSION_EXPIRED' }) }); }
     return ok(r, null);
   });
-  const login = async () => { await p.goto(h.base + 'teacher.html'); await p.waitForSelector('#loginform'); await p.fill('#lu', 'Dummy Teacher 11A1'); await p.fill('#pw', 'x'); await p.click('#loginform [type=submit]'); };
+  const login = async () => { await p.goto(h.base + 'teacher.html'); await p.waitForSelector('#loginform'); await p.fill('#lu', 'Test Teacher 11A1'); await p.fill('#pw', 'x'); await p.click('#loginform [type=submit]'); };
   await login(); await p.waitForSelector('#codeform'); await p.waitForSelector('#codeform .pill.good');
   assert.strictEqual(sends.length, 1, 'code emailed automatically'); assert.strictEqual(sends[0].kind, 'login'); assert.strictEqual(sends[0].token, 'P1');
   assert((await p.textContent('#codeform .pill.good')).includes('z***@gmail.com'));

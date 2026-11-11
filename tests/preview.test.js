@@ -6,12 +6,12 @@ const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwA
   await p.route(/fonts\./, r => r.abort());
   await p.route('**/config.js*', async r => { const x = await r.fetch(); r.fulfill({ response: x, body: (await x.text()).replace(/url:"https:[^"]*"/, 'url:""').replace('const CLOUD_ON', 'var CLOUD_ON') }); });
   await p.goto(h.base + 'nurse.html'); await p.waitForSelector('#loginform');
-  await p.fill('#lu', 'Dummy Nurse1'); await p.fill('#pw', 'nurse1'); await p.click('#loginform button[type=submit]'); await p.waitForSelector('.shell');
+  await p.fill('#lu', 'Test Nurse1'); await p.fill('#pw', 'nurse1'); await p.click('#loginform button[type=submit]'); await p.waitForSelector('.shell');
   await p.evaluate(PNG => {
     CLOUD_ON = true; TOK = 'tok';
     const F = { 1: { name: 'photo.png', mime: 'image/png', b64: PNG }, 2: { name: 'doc.pdf', mime: 'application/pdf', b64: btoa('%PDF-1.1\n%%EOF') }, 3: { name: 'note.txt', mime: 'text/plain', b64: btoa('hello <b>world</b>') }, 4: { name: 'sheet.xlsx', mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', b64: btoa('x') } };
     window.rpc = async (fn, a) => { if (fn === 'app_file_get') { const f = F[a.p_fid]; return { name: f.name, mime: f.mime, size: 5, b64: f.b64 } } return {} };
-    S.msg.dir = [{ id: 'T1', name: 'Dummy Teacher 11A1', role: 'Teacher' }]; S.msg.dirOk = true; S.msg.dirT = Date.now() + 1e9;
+    S.msg.dir = [{ id: 'T1', name: 'Test Teacher 11A1', role: 'Teacher' }]; S.msg.dirOk = true; S.msg.dirT = Date.now() + 1e9;
     S.msg.msgs = Object.entries(F).map(([id, f]) => ({ id: +id, conv: 'desk:T1', s: 'T1', sn: 'T', sr: 'Teacher', k: 'file', b: '', r: { fid: +id, name: f.name, mime: f.mime, size: 5 }, t: Date.now() + +id }));
     S.msg.active = 'desk:T1'; S.view = 'chat'; render(); }, PNG);
   await p.waitForSelector('.fimgbtn');

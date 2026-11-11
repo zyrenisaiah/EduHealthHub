@@ -1,6 +1,6 @@
 // A student the clinic has received (pass arrived) must show in "In the clinic now" for every clinic role.
 const assert = require('assert'), { start } = require('./helpers');
-const roles = [['nurse', 'Dummy Nurse1', 'nurse1', 'Log visit'], ['doctor', 'Dummy Doctor1', 'doctor1', 'Log visit'], ['dentist', 'Dummy Dentist1', 'dentist1', 'Open record']];
+const roles = [['nurse', 'Test Nurse1', 'nurse1', 'Log visit'], ['doctor', 'Test Doctor1', 'doctor1', 'Log visit'], ['dentist', 'Test Dentist1', 'dentist1', 'Open record']];
 (async () => {
   for (const [pg, user, pass, btn] of roles) {
     const h = await start({ width: 1100, height: 800 }), p = await h.ctx.newPage(); const errs = []; p.on('pageerror', e => errs.push(e.message));
