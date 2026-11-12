@@ -178,8 +178,8 @@ tr.grp td{background:var(--surface2);font-weight:600;font-size:12px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .logo-card{background:#fff;border-radius:16px;padding:14px 18px;border:1px solid var(--line);max-width:460px;margin-bottom:16px}
 .logo-full{display:block;width:100%;height:auto}
-.logo-chip{background:#fff;border-radius:9px;padding:2px 4px;display:grid;place-items:center;border:1px solid var(--line)}
-.logo-chip img{display:block;height:30px;width:auto}
+.logo-chip{background:#fff;border-radius:50%;padding:2px;display:grid;place-items:center;border:1px solid var(--line)}
+.logo-chip img{display:block;height:30px;width:30px;border-radius:50%}
 .role-ic{width:34px;height:34px;border-radius:50%;display:block;flex:none}
 .role-ic.sm{width:26px;height:26px}.role-ic.lg{width:52px;height:52px}
 .role-strip{display:flex;gap:18px;flex-wrap:wrap;margin:0 0 16px}
@@ -441,3 +441,6 @@ button.mention{font:inherit;border:0;cursor:pointer}button.mention:hover{text-de
 .pvtxt{margin:0;width:min(900px,100%);max-height:100%;overflow:auto;background:#fff;color:#22362b;padding:16px;border-radius:8px;white-space:pre-wrap;overflow-wrap:anywhere;font:14px/1.5 ui-monospace,Menlo,Consolas,monospace}
 .pvmsg{color:#fff;text-align:center;display:grid;gap:12px;justify-items:center;padding:20px}
 .pvbtns .btn:not(.primary){color:#22362b;background:#fff}
+
+.seal-wrap{display:flex;justify-content:center;margin:0 0 14px}.seal{width:min(240px,62vw);height:auto;border-radius:50%;box-shadow:0 14px 40px rgba(40,100,80,.22);background:#fff}
+@media(min-width:900px){.seal-wrap{justify-content:flex-start}.seal{width:260px}}

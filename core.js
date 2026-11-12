@@ -83,6 +83,7 @@ function loginView(){
  return `<div class="stage"><div class="bg" aria-hidden="true"><i class="blob b1"></i><i class="blob b2"></i><i class="blob b3"></i>${[1,2,3,4,5,6,7].map(n=>`<i class="fx x${n}"></i>`).join('')}<svg class="ecg" viewBox="0 0 1200 120" preserveAspectRatio="none"><path d="M0 60 H300 l20 0 l15 -40 l25 80 l20 -70 l15 30 H620 l20 0 l15 -40 l25 80 l20 -70 l15 30 H940 l20 0 l15 -40 l25 80 l20 -70 l15 30 H1200"/></svg></div>
 <div class="login"><div class="intro">
   <h1 class="sr">EduHealthHub</h1>
+  <div class="seal-wrap"><img class="seal" src="${LOGO_SEAL}" width="220" height="220" alt="Dasmariñas Integrated High School seal, with the EduHealthHub mark"></div>
   <div class="logo-card"><img class="logo-full" src="${LOGO_FULL}" alt="EduHealthHub. Healthy Students. Brighter Futures."></div>
   <p class="lead">A Web-Based Student Health Record Management System</p>
   <p class="tag" aria-live="off"><span id="tagtxt">Healthy Students. Brighter Futures.</span></p>
