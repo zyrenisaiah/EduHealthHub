@@ -442,5 +442,11 @@ button.mention{font:inherit;border:0;cursor:pointer}button.mention:hover{text-de
 .pvmsg{color:#fff;text-align:center;display:grid;gap:12px;justify-items:center;padding:20px}
 .pvbtns .btn:not(.primary){color:#22362b;background:#fff}
 
-.seal-wrap{display:flex;justify-content:center;margin:0 0 14px}.seal{width:min(240px,62vw);height:auto;border-radius:50%;box-shadow:0 14px 40px rgba(40,100,80,.22);background:#fff}
-@media(min-width:900px){.seal-wrap{justify-content:flex-start}.seal{width:260px}}
+.seal-wrap{display:flex;justify-content:center;margin:4px 0 18px;position:relative}
+.seal-wrap::before{content:"";position:absolute;top:50%;left:50%;width:min(372px,84vw);aspect-ratio:1;margin:calc(min(372px,84vw)/-2) 0 0 calc(min(372px,84vw)/-2);border-radius:50%;background:conic-gradient(from 0deg,#2e8b57,#f39c12,#fff6d6,#2e8b57,#f39c12,#2e8b57);filter:blur(10px);opacity:.55;animation:seal-spin 9s linear infinite}
+.seal{position:relative;width:min(340px,76vw);height:auto;border-radius:50%;border:6px solid #fff;box-shadow:0 0 0 3px rgba(46,139,87,.35),0 18px 48px rgba(40,100,80,.35);background:#fff;animation:seal-float 4.5s ease-in-out infinite;transition:transform .4s,box-shadow .4s}
+.seal:hover{transform:scale(1.05) rotate(-3deg);box-shadow:0 0 0 4px rgba(243,156,18,.55),0 22px 56px rgba(40,100,80,.45)}
+@keyframes seal-spin{to{transform:rotate(360deg)}}
+@keyframes seal-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@media(min-width:900px){.seal-wrap{justify-content:flex-start;padding-left:10px}.seal-wrap::before{left:calc(50% - (50% - 190px));left:190px;width:372px;margin-left:-186px}.seal{width:360px}}
+.login .logo-card{max-width:250px;padding:10px 14px;margin-bottom:12px}
