@@ -602,6 +602,24 @@ const ACT={
 };
 Object.assign(ACT,HOME_ACT,DOC_ACT,CHAT_ACT);
 document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');if(a&&ACT[a.dataset.act])ACT[a.dataset.act](a)});
+/* ---------- click a profile picture to see it enlarged ---------- */
+const isPhoto=src=>/^data:image\/(jpeg|jpg|png|webp)/.test(src||'');
+function zoomPhoto(src,name){
+ const old=document.getElementById('zoomov');if(old)old.remove();
+ const prev=document.activeElement;
+ const ov=document.createElement('div');ov.id='zoomov';ov.className='zoomov';ov.setAttribute('role','dialog');ov.setAttribute('aria-modal','true');ov.setAttribute('aria-label',name||'Photo');
+ const img=document.createElement('img');img.src=src;img.alt=name||'Photo';
+ const x=document.createElement('button');x.type='button';x.className='zoomx';x.setAttribute('aria-label','Close photo');x.textContent='×';
+ ov.append(img,x);document.body.appendChild(ov);x.focus();
+ const close=()=>{ov.remove();document.removeEventListener('keydown',onKey);if(prev&&prev.focus)try{prev.focus()}catch(_){}};
+ const onKey=ev=>{if(ev.key==='Escape')close()};document.addEventListener('keydown',onKey);
+ ov.addEventListener('click',ev=>{if(ev.target!==img)close()});
+}
+document.addEventListener('click',e=>{
+ const im=e.target.closest&&e.target.closest('img.av,img.role-ic,img.cav,img.mav');
+ if(!im||im.closest('[data-act]')||!isPhoto(im.getAttribute('src')))return;
+ zoomPhoto(im.getAttribute('src'),im.getAttribute('alt'));
+});
 const KEYS={s:'✓',x:'X',f:'F',o:'O',r:'RF',h:'HS'};
 document.addEventListener('keydown',e=>{
  const g=e.target.classList&&e.target.classList.contains('og')?e.target:null;if(!g)return;

@@ -450,3 +450,11 @@ button.mention{font:inherit;border:0;cursor:pointer}button.mention:hover{text-de
 @keyframes seal-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
 @media(min-width:900px){.seal-wrap{justify-content:flex-start;padding-left:10px}.seal-wrap::before{left:calc(50% - (50% - 190px));left:190px;width:372px;margin-left:-186px}.seal{width:360px}}
 .login .logo-card{max-width:250px;padding:10px 14px;margin-bottom:12px}
+
+/* enlarged profile picture */
+img.av[src^="data:image/jpeg"],img.av[src^="data:image/png"],img.av[src^="data:image/webp"],img.role-ic[src^="data:image/jpeg"],img.role-ic[src^="data:image/png"],img.role-ic[src^="data:image/webp"]{cursor:zoom-in}
+.zoomov{position:fixed;inset:0;z-index:90;background:rgba(10,20,15,.82);display:grid;place-items:center;padding:20px;animation:zoomin .18s ease-out}
+.zoomov img{width:min(86vw,520px);max-height:86vh;height:auto;object-fit:contain;border-radius:18px;border:5px solid #fff;box-shadow:0 20px 70px rgba(0,0,0,.5);background:#fff;cursor:default}
+.zoomx{position:absolute;top:14px;right:16px;width:44px;height:44px;border-radius:50%;border:0;background:#fff;color:#1d3b2c;font-size:28px;line-height:1;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)}
+.zoomx:focus-visible{outline:3px solid #f39c12;outline-offset:2px}
+@keyframes zoomin{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
