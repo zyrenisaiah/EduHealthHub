@@ -3,7 +3,7 @@
    Leave both empty to run in single-browser (local) mode. */
 const CLOUD={url:"https://myfcltwnunmrtiymkths.supabase.co",key:"sb_publishable_7m37CCvmCEAsIhff10wadA_y6zjaJLO"};
 /* Optional: your Google OAuth "Web client ID" turns on the 'Continue with Google' buttons (see README). */
-const GOOGLE_CLIENT_ID="239588073376-u1pet0b32a3qfbo4824c2tk5n13se5li.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID="733681641488-2e19d66pnhib0tva37rvh338ns4dciun.apps.googleusercontent.com";
 /* Emailed 6-digit codes need a sender Gmail (see README). Leave false to use Google confirmation only. */
 /* Not allowed inside another website's frame (stops click-jacking). */
 try{if(window.top!==window.self){document.documentElement.style.display='none';window.top.location=window.self.location}}catch(e){document.documentElement.style.display='none'}
