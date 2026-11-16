@@ -458,3 +458,12 @@ img.av[src^="data:image/jpeg"],img.av[src^="data:image/png"],img.av[src^="data:i
 .zoomx{position:absolute;top:14px;right:16px;width:44px;height:44px;border-radius:50%;border:0;background:#fff;color:#1d3b2c;font-size:28px;line-height:1;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35)}
 .zoomx:focus-visible{outline:3px solid #f39c12;outline-offset:2px}
 @keyframes zoomin{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+
+/* notifications + idle logout */
+.bellwrap{position:relative}.bellbtn{position:relative;font-size:15px}.bellbtn .badge{margin-left:6px}
+.ntpanel{position:absolute;right:0;top:calc(100% + 8px);width:min(360px,88vw);max-height:70vh;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);z-index:60}
+.nthead{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.ntitem{display:grid;gap:4px;padding:10px 12px;border-bottom:1px solid var(--line)}.ntitem:last-child{border-bottom:0}.ntitem.unread{background:var(--accent-soft)}
+.ntbanner{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:10px 0 0;padding:10px 14px;border:1px solid var(--line-strong);border-radius:10px;background:var(--warn-soft);color:var(--ink)}
+.idleov{position:fixed;inset:0;z-index:200;background:rgba(20,35,25,.55);display:grid;place-items:center;padding:16px}
+.idlebox{background:var(--surface);border-radius:12px;padding:22px;max-width:420px;display:grid;gap:12px;box-shadow:var(--shadow)}

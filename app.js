@@ -539,10 +539,17 @@ function render(){
  $('#root').innerHTML=S.user?shell():loginView();
  pwDecorate();
  appBackdrop();
+ ntAfter();
  if(!S.user)loginFX();
  if(typeof afterRender==='function')afterRender() }
 const goOpen=(id,tab)=>{logView(id);S.back=S.view;S.view='student';S.sid=id;S.tab=tab||'profile';S.tooth=null;S.undo=[];S.brush=null;render();window.scrollTo(0,0)};
 const ACT={
+ bell(){S.nt.open=!S.nt.open;ntPaint()},
+ ntread(e){const id=+e.dataset.id;rpc('app_notif_read',{p_token:TOK,p_id:id}).then(ntLoad).catch(()=>{});const it=S.nt.items.find(x=>x.id===id);if(it){it.read=true;S.nt.unread=Math.max(0,S.nt.unread-1)}ntPaint()},
+ ntall(){rpc('app_notif_read',{p_token:TOK}).then(ntLoad).catch(()=>{});S.nt.items.forEach(x=>x.read=true);S.nt.unread=0;ntPaint()},
+ ntgo(){S.nt.open=false;ntPaint();const b=document.querySelector('[data-act="nav"][data-v="account"]');if(b)b.click()},
+ nbx(){try{sessionStorage.setItem('ehh_nb','1')}catch(x){}const b=document.querySelector('.ntbanner');if(b)b.remove()},
+ idlestay(){_lastAct=Date.now();idleHide()},
  errreload(){location.reload()},
  errback(){sessionStorage.clear();location.href="index.html"},
  fill:a=>{const d=DEMO.find(x=>x.id===a.dataset.id);$('#lu').value=d.username;$('#pw').value=d.pw;const acc=DB.accounts.find(x=>x.id===d.id);
@@ -678,7 +685,7 @@ document.addEventListener('submit',e=>{
   if(CLOUD_ON){cloudLogin($('#lu').value.trim(),$('#pw').value);return}
   const typed=$('#lu').value.trim(),id=typed.toLowerCase(),pw=$('#pw').value,L=S.login,f=S.fails[id]||{n:0,t:0};
   if(f.n>=5&&Date.now()-f.t<300000){L.err='Too many attempts. Wait 5 minutes and try again.';render();return}
-  const acc=DB.accounts.find(x=>x.username.toLowerCase()===id||x.email.toLowerCase()===id);   /* username is not case-sensitive; the password is */
+  const acc=DB.accounts.find(x=>x.username===typed||x.email===typed);   /* username and password are both case-sensitive */
   if(!acc||acc.active===false||acc.pw!==pwHash(acc.id,pw)){S.fails[id]={n:f.n+1,t:Date.now()};L.err='Username or password is incorrect.';render();$('#lu').value=typed;return}
   delete S.fails[id];L.err='';
   lockWrite(acc);ss.set('ehh_uid',acc.id);ss.set('ehh_role',acc.role);location.href=ROLE_PAGE[acc.role];return}
@@ -734,7 +741,8 @@ function boot(){
   $('#root').innerHTML='<div class="login"><div style="display:grid;gap:12px;max-width:420px"><h2>Could not open this page</h2><div class="pill bad" style="white-space:normal">'+esc(m)+' ('+esc(c)+')</div><div class="small muted">Your login is still active. Check the connection and try again.</div><div><button class="btn primary" data-act="errreload">Try again</button> <button class="btn" data-act="errback">Back to login</button></div></div></div>'})}
  else{if(localRestore())render();else bad()}
 }
-/* No idle logout: a session ends when the browser or tab is closed, after 8 hours, or when the person logs out. */
+/* A session ends when the browser or tab is closed, after 8 hours, after 20 minutes without activity (with a 60-second warning), or when the person logs out. */
+if(!S.user&&PAGE==='home'){try{if(sessionStorage.getItem('ehh_idle')){sessionStorage.removeItem('ehh_idle');S.login.err='You were logged out after 20 minutes of inactivity. Please log in again.'}}catch(e){}}
 /* ---------- login page effects: parallax, rotating tagline, caps-lock hint ---------- */
 let _tagT=null,_fxBound=false;
 const TAGS=['Healthy Students. Brighter Futures.','Health records, one trusted place.','From the clinic to the classroom.','Care that follows every learner.'];
@@ -757,3 +765,36 @@ boot();
 
 /* keep the text-editor selection when a toolbar button is pressed (replaces an inline onmousedown, which the CSP blocks) */
 document.addEventListener("mousedown",e=>{if(e.target.closest&&e.target.closest("[data-nofocus]"))e.preventDefault()});
+
+/* ---------- notifications (bell in the top bar, plus a banner for accounts without a linked Google account) ---------- */
+S.nt={items:[],unread:0,open:false};let _ntT=null;
+async function ntLoad(){if(!CLOUD_ON||!S.user||!TOK)return;try{const r=await rpc('app_notifs',{p_token:TOK});S.nt.items=r.items||[];S.nt.unread=r.unread||0;S.nt.linked=!!r.linked;S.nt.loaded=true;ntPaint();ntBanner()}catch(e){}}
+function ntPaint(){const w=document.getElementById('bellwrap');if(!w)return;
+ const it=S.nt.items,when=t=>{try{return new Date(t).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}catch(e){return ''}};
+ const list=it.length?it.map(n=>`<div class="ntitem${n.read?'':' unread'}"><b>${esc(n.title)}</b><div class="small">${esc(n.body)}</div><div class="small muted">${esc(when(n.at))}</div><div class="trow">${n.kind==='link_google'&&!n.read?'<button type="button" class="btn sm primary" data-act="ntgo">Connect now</button>':''}${n.read?'':`<button type="button" class="btn sm" data-act="ntread" data-id="${n.id}">Mark as read</button>`}</div></div>`).join(''):'<div class="small muted" style="padding:12px">No notifications.</div>';
+ w.innerHTML=`<button type="button" class="btn sm bellbtn" data-act="bell" aria-label="Notifications${S.nt.unread?', '+S.nt.unread+' unread':''}" aria-expanded="${S.nt.open}">&#128276;${S.nt.unread?`<span class="badge">${S.nt.unread}</span>`:''}</button>${S.nt.open?`<div class="ntpanel" role="dialog" aria-label="Notifications"><div class="nthead"><b>Notifications</b>${S.nt.unread?'<button type="button" class="btn sm" data-act="ntall">Mark all read</button>':''}</div>${list}</div>`:''}`}
+function ntAfter(){
+ if(!CLOUD_ON||!S.user)return;
+ ntPaint();
+ if(!_ntT){ntLoad();_ntT=setInterval(ntLoad,60000)}
+ ntBanner()}
+function ntBanner(){
+ if(!CLOUD_ON||!S.user||!S.nt.loaded||S.nt.linked)return;
+ let off=false;try{off=!!sessionStorage.getItem('ehh_nb')}catch(e){}
+ const bar=document.querySelector('.topbar');
+ if(bar&&!off&&!document.querySelector('.ntbanner'))bar.insertAdjacentHTML('afterend','<div class="ntbanner" role="status"><span><b>Connect your DepEd Google account.</b> Linking it protects your login with a one-time code.</span><span class="trow"><button type="button" class="btn sm primary" data-act="ntgo">Connect now</button><button type="button" class="btn sm" data-act="nbx" aria-label="Dismiss">Later</button></span></div>')}
+document.addEventListener('click',e=>{if(S.nt&&S.nt.open&&e.target.isConnected&&!e.target.closest('#bellwrap')){S.nt.open=false;ntPaint()}});
+/* ---------- idle logout: 20 minutes, warning for the last 60 seconds ---------- */
+const IDLE_MS=20*60000,IDLE_WARN=60000;let _lastAct=Date.now(),_warn=false;
+const idleTouch=()=>{if(!_warn)_lastAct=Date.now()};
+['mousemove','mousedown','keydown','touchstart','scroll','wheel'].forEach(ev=>document.addEventListener(ev,idleTouch,{passive:true,capture:true}));
+function idleHide(){_warn=false;const o=document.getElementById('idlewarn');if(o)o.remove()}
+function idleShow(sec){let o=document.getElementById('idlewarn');
+ if(!o){_warn=true;o=document.createElement('div');o.id='idlewarn';o.className='idleov';o.setAttribute('role','alertdialog');o.setAttribute('aria-modal','true');o.setAttribute('aria-label','Inactivity warning');
+  o.innerHTML='<div class="idlebox"><h3>Still there?</h3><p>For your security you will be logged out in <b id="idlesec"></b> seconds because there has been no activity.</p><div class="trow"><button type="button" class="btn primary" data-act="idlestay">Stay logged in</button><button type="button" class="btn" data-act="logout">Log out now</button></div></div>';document.body.appendChild(o);const b=o.querySelector('button');if(b)b.focus()}
+ const s=document.getElementById('idlesec');if(s)s.textContent=sec}
+function idleCheck(){if(!S.user){idleHide();return}
+ const idle=Date.now()-_lastAct;
+ if(idle>=IDLE_MS){idleHide();try{sessionStorage.setItem('ehh_idle','1')}catch(e){}const role=S.user.role;lockFree();if(CLOUD_ON)cloudLogout();ss.del('ehh_uid');ss.del('ehh_role');S.user=null;location.href='index.html?role='+encodeURIComponent(role);return}
+ if(idle>=IDLE_MS-IDLE_WARN)idleShow(Math.max(1,Math.ceil((IDLE_MS-idle)/1000)))}
+setInterval(idleCheck,1000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)idleCheck()});
