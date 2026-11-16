@@ -543,6 +543,8 @@ function render(){
  if(typeof afterRender==='function')afterRender() }
 const goOpen=(id,tab)=>{logView(id);S.back=S.view;S.view='student';S.sid=id;S.tab=tab||'profile';S.tooth=null;S.undo=[];S.brush=null;render();window.scrollTo(0,0)};
 const ACT={
+ errreload(){location.reload()},
+ errback(){sessionStorage.clear();location.href="index.html"},
  fill:a=>{const d=DEMO.find(x=>x.id===a.dataset.id);$('#lu').value=d.username;$('#pw').value=d.pw;const acc=DB.accounts.find(x=>x.id===d.id);
   if(acc&&acc.pw!==pwHash(d.id,d.pw))toast('That account changed its password. Type the new one.');$('#pw').focus()},
  showpw:a=>{const i=a.parentNode.querySelector('input');if(!i)return;const on=i.type==='password';i.type=on?'text':'password';a.textContent=on?'Hide':'Show';a.setAttribute('aria-pressed',on);a.setAttribute('aria-label',(on?'Hide':'Show')+' password')},
@@ -729,7 +731,7 @@ function boot(){
  const bad=()=>{ss.del('ehh_tok');ss.del('ehh_uid');ss.del('ehh_role');location.replace('index.html?role='+PAGE)};
  if(CLOUD_ON){cloudRestore().then(r=>{if(r==='ok'&&S.user)return;if(r==='none'||r==='expired'||(r&&(r.code==='PASSWORD_CHANGE_REQUIRED'||r.code==='TWOFA_SETUP_REQUIRED')))return bad();
   const m=cloudErr(r),c=(r&&r.code)||'error';
-  $('#root').innerHTML='<div class="login"><div style="display:grid;gap:12px;max-width:420px"><h2>Could not open this page</h2><div class="pill bad" style="white-space:normal">'+esc(m)+' ('+esc(c)+')</div><div class="small muted">Your login is still active. Check the connection and try again.</div><div><button class="btn primary" onclick="location.reload()">Try again</button> <button class="btn" onclick="sessionStorage.clear();location.href=&quot;index.html&quot;">Back to login</button></div></div></div>'})}
+  $('#root').innerHTML='<div class="login"><div style="display:grid;gap:12px;max-width:420px"><h2>Could not open this page</h2><div class="pill bad" style="white-space:normal">'+esc(m)+' ('+esc(c)+')</div><div class="small muted">Your login is still active. Check the connection and try again.</div><div><button class="btn primary" data-act="errreload">Try again</button> <button class="btn" data-act="errback">Back to login</button></div></div></div>'})}
  else{if(localRestore())render();else bad()}
 }
 /* No idle logout: a session ends when the browser or tab is closed, after 8 hours, or when the person logs out. */
@@ -752,3 +754,6 @@ function loginFX(){
   addEventListener('pointermove',e=>{const mx=((e.clientX/innerWidth)-.5).toFixed(3),my=((e.clientY/innerHeight)-.5).toFixed(3);['.stage','#appbg'].forEach(q=>{const st=$(q);if(st){st.style.setProperty('--mx',mx);st.style.setProperty('--my',my)}})},{passive:true})}
 }
 boot();
+
+/* keep the text-editor selection when a toolbar button is pressed (replaces an inline onmousedown, which the CSP blocks) */
+document.addEventListener("mousedown",e=>{if(e.target.closest&&e.target.closest("[data-nofocus]"))e.preventDefault()});

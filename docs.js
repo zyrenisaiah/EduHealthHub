@@ -187,7 +187,7 @@ const canEditDocs=()=>S.user&&(S.user.role==='Doctor'||S.user.role==='Nurse');
 function docView(){
  const d=S.doc,st=d&&stu(d.sid);if(!st){S.view='students';return studentsView()}
  const dc=docOf(st,d.sy,d.kind),ed=canEditDocs(),r=S.user.role;
- const fb=(c,l,t)=>`<button type="button" class="btn sm" data-act="dfmt" data-c="${c}" ${t?`data-v="${t}"`:''} onmousedown="event.preventDefault()">${l}</button>`;
+ const fb=(c,l,t)=>`<button type="button" class="btn sm" data-act="dfmt" data-c="${c}" ${t?`data-v="${t}"`:''} data-nofocus="1">${l}</button>`;
  const tools=d.edit?`<div class="trow doctools">${fb('bold','<b>B</b>')}${fb('italic','<i>I</i>')}${fb('underline','<u>U</u>')}${fb('formatBlock','Heading 1','h1')}${fb('formatBlock','Heading 2','h2')}${fb('formatBlock','Text','p')}${fb('insertUnorderedList','• List')}
    <span class="spacer"></span><button class="btn primary" data-act="dsave">Save</button><button class="btn" data-act="dcancel">Cancel</button></div>`
   :`<div class="trow">${ed?`<button class="btn primary" data-act="dedit">Edit content</button><button class="btn" data-act="ddocx">Download Word (.docx)</button><button class="btn" data-act="dupload">Upload Word (.docx)</button><input type="file" id="docup" data-bind="docup" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>`:''}
