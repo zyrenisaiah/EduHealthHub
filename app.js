@@ -676,7 +676,7 @@ document.addEventListener('submit',e=>{
   if(CLOUD_ON){cloudLogin($('#lu').value.trim(),$('#pw').value);return}
   const typed=$('#lu').value.trim(),id=typed.toLowerCase(),pw=$('#pw').value,L=S.login,f=S.fails[id]||{n:0,t:0};
   if(f.n>=5&&Date.now()-f.t<300000){L.err='Too many attempts. Wait 5 minutes and try again.';render();return}
-  const acc=DB.accounts.find(x=>x.username===typed||x.email.toLowerCase()===id);   /* username and password are case-sensitive */
+  const acc=DB.accounts.find(x=>x.username.toLowerCase()===id||x.email.toLowerCase()===id);   /* username is not case-sensitive; the password is */
   if(!acc||acc.active===false||acc.pw!==pwHash(acc.id,pw)){S.fails[id]={n:f.n+1,t:Date.now()};L.err='Username or password is incorrect.';render();$('#lu').value=typed;return}
   delete S.fails[id];L.err='';
   lockWrite(acc);ss.set('ehh_uid',acc.id);ss.set('ehh_role',acc.role);location.href=ROLE_PAGE[acc.role];return}
