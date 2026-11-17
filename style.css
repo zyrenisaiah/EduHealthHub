@@ -492,3 +492,34 @@ img.av[src^="data:image/jpeg"],img.av[src^="data:image/png"],img.av[src^="data:i
 .helpbtn{margin-right:2px}
 .helpbox{max-width:620px;width:100%;max-height:86vh;overflow:auto}
 .helpdl{margin:0;display:grid;gap:10px}.helpdl dt{font-weight:700;color:var(--accent)}.helpdl dd{margin:2px 0 0}
+
+/* immersive home / about */
+html{scroll-behavior:smooth}@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+.scrollcue{display:inline-flex;gap:6px;align-items:center;margin-top:8px;padding:6px 2px;background:none;border:0;color:var(--accent);font:600 13px var(--font-body);cursor:pointer}
+.scrollcue span{display:inline-block;animation:bob 1.6s ease-in-out infinite}@keyframes bob{50%{transform:translateY(4px)}}
+.landing{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:0 20px 56px}
+.sprog{position:fixed;left:0;top:0;right:0;height:3px;z-index:90;background:transparent}.sprog i{display:block;height:100%;width:0;background:linear-gradient(90deg,#3f8a63,#3b8590);transition:width .1s}
+.lsec{padding:56px 0 8px}.ltitle{text-align:center;max-width:640px;margin:0 auto 26px}.ltitle h2,.lhero h2,.lcta h2{font-family:var(--font-display);font-size:clamp(24px,3.4vw,36px);line-height:1.15;margin:4px 0 8px}
+.ltitle p,.lhero p{color:var(--muted);font-size:16px;max-width:60ch;margin:0 auto}
+.lhero{text-align:center;max-width:780px;margin:0 auto}
+.rv{opacity:0;transform:translateY(28px);transition:opacity .7s cubic-bezier(.2,.7,.2,1) var(--d,0ms),transform .7s cubic-bezier(.2,.7,.2,1) var(--d,0ms)}.rv.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}}
+.lstats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding-top:36px}
+.lstat{text-align:center;padding:18px 10px;border-radius:16px;background:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.95);box-shadow:0 10px 30px rgba(40,90,70,.08);backdrop-filter:blur(10px)}
+.lstat b{display:block;font:700 clamp(24px,3vw,32px)/1.1 var(--font-display);color:var(--accent)}.lstat span{font-size:13px;color:var(--muted)}
+.lgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.lgrid.four{grid-template-columns:repeat(4,1fr)}
+.lcard{padding:20px;border-radius:18px;background:rgba(255,255,255,.74);border:1px solid rgba(255,255,255,.95);box-shadow:0 10px 30px rgba(40,90,70,.08);backdrop-filter:blur(10px);transition:transform .25s,box-shadow .25s}
+.lcard:hover{transform:translateY(-4px);box-shadow:0 18px 40px rgba(40,90,70,.16)}.lcard h3{font-family:var(--font-display);font-size:18px;margin:10px 0 4px}.lcard p{margin:0;color:var(--muted)}
+.lic{display:inline-grid;place-items:center;width:46px;height:46px;border-radius:14px;background:linear-gradient(135deg,#dfeadd,#d3ebe9);color:var(--accent)}.lic.big{width:64px;height:64px;flex:none}
+.lrole{text-align:center}.lrole .role-ic{width:54px;height:54px;margin:0 auto}
+.lsteps{list-style:none;margin:0;padding:0;display:grid;gap:12px;max-width:720px;margin-inline:auto;position:relative}
+.lsteps li{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.74);border:1px solid rgba(255,255,255,.95);box-shadow:0 8px 24px rgba(40,90,70,.07)}
+.lnum{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700}.lsteps b{font-family:var(--font-display)}.lsteps p{margin:0;color:var(--muted)}
+.lpriv-in{display:flex;gap:20px;align-items:flex-start;padding:26px;border-radius:22px;background:linear-gradient(135deg,rgba(63,138,99,.14),rgba(59,133,144,.14));border:1px solid rgba(255,255,255,.9)}
+.lpriv h2{font-family:var(--font-display);margin:2px 0 8px}
+.lcta{text-align:center;padding-top:64px}
+@media (max-width:860px){.lstats{grid-template-columns:repeat(2,1fr)}.lgrid,.lgrid.four{grid-template-columns:1fr 1fr}.lpriv-in{flex-direction:column}}
+@media (max-width:560px){.lgrid,.lgrid.four{grid-template-columns:1fr}}
+.shell .landing{padding:0 0 40px;max-width:none}.shell .lcard,.shell .lstat,.shell .lsteps li{background:var(--surface);border-color:var(--line)}
+.shell .sprog{z-index:90}
+.stage .ecg{bottom:auto;top:calc(93vh - 110px)}

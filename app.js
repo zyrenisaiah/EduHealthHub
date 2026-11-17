@@ -541,10 +541,12 @@ function render(){
  appBackdrop();
  ntAfter();
  otpSync();
+ landAfter();
  if(!S.user)loginFX();
  if(typeof afterRender==='function')afterRender() }
 const goOpen=(id,tab)=>{logView(id);S.back=S.view;S.view='student';S.sid=id;S.tab=tab||'profile';S.tooth=null;S.undo=[];S.brush=null;render();window.scrollTo(0,0)};
 const ACT={
+ lpscroll:()=>{const l=document.getElementById('landing');if(l)l.scrollIntoView({behavior:'smooth',block:'start'})},lptop:()=>{window.scrollTo({top:0,behavior:'smooth'});const i=document.getElementById('lu');if(i)setTimeout(()=>i.focus({preventScroll:true}),400)},
  help:()=>helpOpen(),helpclose:()=>helpClose(),
  lpabout:()=>{S.login.panel='about';render();window.scrollTo(0,0)},lphelp:()=>{S.login.panel='help';render();window.scrollTo(0,0)},lphome:()=>{S.login.panel=null;render();window.scrollTo(0,0)},
  otppaste(){otpPaste(true)},
@@ -829,3 +831,13 @@ setInterval(otpTick,1000);
 
 document.addEventListener('keydown',e=>{if(e.key==='Escape')helpClose()});
 document.addEventListener('click',e=>{if(e.target&&e.target.id==='helpov')helpClose()});
+
+/* ---------- immersive home: scroll-in animation and a reading-progress bar ---------- */
+var _lio;
+function landAfter(){const els=document.querySelectorAll('.landing .rv');if(!els.length)return;
+ if(_lio){_lio.disconnect();_lio=null}
+ if(!('IntersectionObserver' in window)||matchMedia('(prefers-reduced-motion: reduce)').matches){els.forEach(e=>e.classList.add('in'));return}
+ _lio=new IntersectionObserver((es,o)=>es.forEach(en=>{if(en.isIntersecting){en.target.classList.add('in');o.unobserve(en.target)}}),{threshold:.14,rootMargin:'0px 0px -6% 0px'});
+ els.forEach(e=>_lio.observe(e))}
+function landProg(){const i=document.querySelector('.sprog i');if(!i)return;const d=document.documentElement,m=d.scrollHeight-innerHeight;i.style.width=(m>0?Math.min(100,100*scrollY/m):0)+'%'}
+addEventListener('scroll',landProg,{passive:true});addEventListener('resize',landProg);

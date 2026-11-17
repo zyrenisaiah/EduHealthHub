@@ -64,10 +64,36 @@ const ABOUT=[
  ['Privacy and safety','Learner records are confidential. Teachers see pass and status only, never medical details. Passwords are stored as hashes, accounts can be protected with an emailed one-time code, sessions end after 20 minutes of inactivity, and every change is recorded in the activity log.']
 ];
 const aboutBody=()=>ABOUT.map(([h,t])=>`<h3 class="hh">${h}</h3>${Array.isArray(t)?`<ul class="aboutul">${t.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:`<p>${esc(t)}</p>`}`).join('');
+const IC={
+ rec:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
+ tooth:'<path d="M7 3c-2 0-3.5 2-3.5 4.5 0 3 1.5 4 1.5 7 0 3 .5 6 2 6s1.5-4 3-4 1.5 4 3 4 2-3 2-6c0-3 1.5-4 1.5-7C16.5 5 15 3 13 3c-1.5 0-2 1-3 1S8.5 3 7 3z"/>',
+ pass:'<circle cx="12" cy="12" r="9"/><path d="M8 12h8M13 8l4 4-4 4"/>',
+ box:'<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
+ chat:'<path d="M21 12a8 8 0 0 1-11.5 7.2L4 21l1.8-5.4A8 8 0 1 1 21 12z"/>',
+ log:'<path d="M3 12h4l3-8 4 16 3-8h4"/>',
+ shield:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>'};
+const icon=k=>`<svg class="ic" viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[k]}</svg>`;
+function landingHtml(inApp){
+ const role=S.user&&S.user.role;
+ const stats=[['4','role-based accounts'],['1','health record per learner'],['20 min','auto logout when idle'],['Nightly','backups, 7 copies kept']];
+ const feats=[['rec','Health records','One profile per learner: exam card, vitals, allergies, visits and uploaded files.'],['tooth','Dental charts','An interactive odontogram with treatment needs and DMFT scoring.'],['pass','Clinic passes','Teachers send a learner to the clinic and see whether they are on the way or in the clinic.'],['box','Supply stock','Medicines and first-aid items with reorder levels and expiry alerts.'],['chat','Messages','Secure chat between the Doctor, Nurse, Dentist and Teachers, with file attachments.'],['log','Activity log','Every change is recorded with who made it and when.']];
+ const steps=[['Teacher','Sends a learner to the clinic with a pass.'],['Nurse','Receives the learner and records the visit.'],['Doctor','Reviews, refers or issues a clearance.'],['Dentist','Records dental findings when needed.'],['Teacher','Verifies the clearance slip when the learner returns.']];
+ const roles=[['Doctor','Full access to records, referrals, clearances and the activity log.'],['Nurse','Exam cards, walk-ins and supplies, and flags cases for the doctor.'],['Dentist','The odontogram and dental records.'],['Teacher','Pass and status for their own advisory only.']];
+ const priv=['Access is limited by role. Teachers never see medical details.','Passwords are stored as hashes, never as plain text.','Accounts can be protected with an emailed one-time code.','Sessions end after 20 minutes without activity.','Every change is written to the activity log.','The database is backed up every night.'];
+ const rv=(i)=>`rv" style="--d:${i*70}ms`;
+ return `<main class="landing" id="landing"><div class="sprog" aria-hidden="true"><i></i></div>
+ <section class="lsec lhero rv" style="--d:0ms"><div class="eyebrow">About EduHealthHub</div><h2>One secure place for every learner's health record.</h2><p>EduHealthHub is a web-based student health record management system for Dasmariñas Integrated High School. It replaces paper cards and scattered files so the clinic, the dentist and the teachers work from the same up-to-date record.</p></section>
+ <section class="lsec lstats" aria-label="At a glance">${stats.map((s,i)=>`<div class="lstat ${rv(i)}"><b>${s[0]}</b><span>${s[1]}</span></div>`).join('')}</section>
+ <section class="lsec"><div class="ltitle rv" style="--d:0ms"><div class="eyebrow">What it does</div><h2>Everything the clinic needs, in one place</h2></div><div class="lgrid">${feats.map((f,i)=>`<article class="lcard ${rv(i)}"><span class="lic">${icon(f[0])}</span><h3>${f[1]}</h3><p>${f[2]}</p></article>`).join('')}</div></section>
+ <section class="lsec"><div class="ltitle rv" style="--d:0ms"><div class="eyebrow">How it works</div><h2>From the classroom to the clinic and back</h2></div><ol class="lsteps">${steps.map((s,i)=>`<li class="${rv(i)}"><span class="lnum">${i+1}</span><div><b>${s[0]}</b><p>${s[1]}</p></div></li>`).join('')}</ol></section>
+ <section class="lsec"><div class="ltitle rv" style="--d:0ms"><div class="eyebrow">Who uses it</div><h2>Built for four roles</h2><p>Each person sees only what their role needs. Learners do not have accounts.</p></div><div class="lgrid four">${roles.map((r,i)=>`<article class="lcard lrole ${rv(i)}"><img class="role-ic" src="${ROLE_ICON[r[0]]}" alt=""><h3>${r[0]}</h3><p>${r[1]}</p></article>`).join('')}</div></section>
+ <section class="lsec lpriv rv" style="--d:0ms"><div class="lpriv-in"><span class="lic big">${icon('shield')}</span><div><div class="eyebrow">Privacy and safety</div><h2>Learner records stay confidential</h2><ul class="aboutul">${priv.map(x=>`<li>${x}</li>`).join('')}</ul></div></div></section>
+ <section class="lsec lcta rv" style="--d:0ms"><h2>${inApp?'Ready to get back to work?':'Ready to get started?'}</h2><div class="trow" style="justify-content:center">${inApp?`<button type="button" class="btn primary" data-act="nav" data-v="home">Go to my Dashboard</button><button type="button" class="btn" data-act="help">How to use my role</button>`:`<button type="button" class="btn primary" data-act="lptop">Log in</button><button type="button" class="btn" data-act="lphelp">Help</button>`}</div></section>
+ </main>`}
 function loginPanel(p){
  if(p==='about')return ` <section class="login-card aboutcard" aria-labelledby="ab-t"><div><div class="eyebrow">About us</div><h2 id="ab-t">EduHealthHub</h2><div class="small muted">Healthy Students. Brighter Futures.</div></div>${aboutBody()}<div class="trow"><button type="button" class="btn primary" data-act="lphome">Log in</button></div></section>`;
  return ` <section class="login-card aboutcard" aria-labelledby="hp-t"><div><div class="eyebrow">Help</div><h2 id="hp-t">Log in first</h2></div><p>The help guide is written for each role, so please log in first. After you log in, press the <b>Help</b> button next to the notification bell to see what your role can do.</p><div class="trow"><button type="button" class="btn primary" data-act="lphome">Log in</button><button type="button" class="btn" data-act="lpabout">About Us</button></div></section>`}
-function aboutView(){return `<div class="head"><div><div class="eyebrow">Home</div><h2>About Us</h2></div></div><section class="panel aboutcard">${aboutBody()}<div class="trow"><button type="button" class="btn primary" data-act="nav" data-v="home">Go to my Dashboard</button><button type="button" class="btn" data-act="help">How to use my role</button></div></section>`}
+function aboutView(){return `<div class="head"><div><div class="eyebrow">Home</div><h2>About Us</h2></div></div>${landingHtml(true)}`}
 const HELP={
  Doctor:{intro:'You have full access to records, referrals, clearances and the activity log. The odontogram is read only for you.',items:[
   ['Dashboard','Find a learner by 12-digit LRN or name, receive learners sent by teachers, see who is resting, and review pending referrals and supply alerts.'],
@@ -131,6 +157,7 @@ function loginView(){
   <p class="tag" aria-live="off"><span id="tagtxt">Healthy Students. Brighter Futures.</span></p>
   <div class="eyebrow" style="margin:6px 0 8px">Choose your role</div>
   <div class="role-strip">${['Doctor','Nurse','Dentist','Teacher'].map((r,i)=>`<a href="${ROLE_PAGE[r]}" style="--d:${i*70}ms" class="${WANT===r?'want':''}" ${WANT===r?'aria-current="page"':''}><div><img class="role-ic" src="${ROLE_ICON[r]}" alt=""><span>${r}</span></div></a>`).join('')}</div>
+  <button type="button" class="scrollcue" data-act="lpscroll">Learn more <span aria-hidden="true">&#8595;</span></button>
   <nav class="lp-links" aria-label="About, help and home"><button type="button" class="lp-link ${L.panel==='about'?'on':''}" data-act="lpabout">About Us</button><button type="button" class="lp-link ${L.panel==='help'?'on':''}" data-act="lphelp">Help</button><button type="button" class="lp-link ${!L.panel?'on':''}" data-act="lphome">Home</button></nav>
  </div>
  <div style="display:grid;gap:14px;min-width:0">
@@ -180,7 +207,7 @@ ${L.panel?loginPanel(L.panel):L.signup?` <form class="login-card" id="signupform
   ${CLOUD_ON&&GOOGLE_CLIENT_ID?`<div class="small muted" style="text-align:center">or</div><div style="display:grid;justify-items:center"><div id="g-start" style="min-height:44px"></div></div><div class="small muted" style="text-align:center">For accounts linked to Google. A code is emailed next.</div>`:''}
  <div class="trow" style="justify-content:center"><span class="small muted">New here?</span> <button type="button" class="btn sm" data-act="signupopen">Create an account</button></div>
  </form>`}
-</div></div></div>`;
+</div></div>${(L.pending||L.totp||L.must||L.enroll)?'':landingHtml(false)}</div>`;
 }
 
 /* ---------- shell ---------- */
