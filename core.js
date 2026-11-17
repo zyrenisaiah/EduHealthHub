@@ -84,7 +84,6 @@ function loginView(){
 <div class="login"><div class="intro">
   <h1 class="sr">EduHealthHub</h1>
   <div class="seal-wrap"><img class="seal" src="${LOGO_SEAL}" width="220" height="220" alt="Dasmariñas Integrated High School seal, with the EduHealthHub mark"></div>
-  <div class="logo-card"><img class="logo-full" src="${LOGO_FULL}" alt="EduHealthHub. Healthy Students. Brighter Futures."></div>
   <p class="lead">A Web-Based Student Health Record Management System</p>
   <p class="tag" aria-live="off"><span id="tagtxt">Healthy Students. Brighter Futures.</span></p>
   <div class="eyebrow" style="margin:6px 0 8px">Choose your role</div>
@@ -116,17 +115,20 @@ ${L.signup?` <form class="login-card" id="signupform" autocomplete="off">
   ${L.totp.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.totp.err)}</div>`:''}
   <button class="btn primary" type="submit">Verify</button>
   <div class="trow"><button type="button" class="btn sm" data-act="codeback">Back</button></div>
- </form>`:L.pending?` <form class="login-card" id="codeform" autocomplete="off">
-  <div><h2>Confirm it is you</h2><div class="small muted">${L.pending.viaGoogle?'Google confirmed your account, <b>':'Your account is linked to <b>'}${esc(L.pending.hint)}</b>. We email a 6-digit code to that Gmail before you can log in.</div></div>
-  ${L.pending.msg?`<div class="pill good" role="status" style="white-space:normal">${esc(L.pending.msg)}</div>`:''}
+ </form>`:L.pending?` <form class="login-card otp-card" id="codeform" autocomplete="off">
+  <div class="otp-head"><span class="otp-ic" aria-hidden="true">&#9993;</span><div><h2>Confirm it is you</h2><div class="small muted">${L.pending.viaGoogle?'Google confirmed your account. ':''}We email a 6-digit code to <b>${esc(L.pending.hint)}</b> before you can log in.</div></div></div>
   ${L.pending.mailErr?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.pending.mailErr)} You can confirm with Google below instead.</div>`:''}
-  <div class="field"><label for="lc">6-digit code from your email</label><input class="inp" id="lc" inputmode="numeric" autocomplete="one-time-code" maxlength="7" required></div>
+  <div class="otp-meta" aria-live="polite">${L.pending.busy?'<span>Sending the code...</span>':L.pending.sentAt?'<span id="otp-ago"></span><span id="otp-exp"></span>':'<span>Waiting to send the code.</span>'}</div>
+  ${L.pending.sentAt?'<div class="otp-bar" aria-hidden="true"><i id="otp-barfill"></i></div>':''}
+  <div class="otp ${L.err?'bad':''}" id="otpbox"><label class="sr" for="lc">6-digit code from your email</label>${[0,1,2,3,4,5].map(i=>`<span class="otp-cell" data-i="${i}"></span>`).join('')}<input class="otp-input" id="lc" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="7" aria-describedby="otp-help" required></div>
+  <div class="small muted" id="otp-help">Type or paste the code. It fills in by itself when you paste it, and you can also tap Paste below.</div>
   ${L.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.err)}</div>`:''}
-  <button class="btn primary" type="submit">Verify and log in</button>
-  <div class="trow"><button type="button" class="btn sm" data-act="resendcode" ${L.pending.busy?'disabled':''}>Send the code again</button><button type="button" class="btn sm" data-act="codeback">Back</button></div>
+  <button class="btn primary" type="submit" id="otpgo" disabled>Verify and log in</button>
+  <div class="trow"><button type="button" class="btn sm" data-act="otppaste">Paste code</button><button type="button" class="btn sm" id="resendbtn" data-act="resendcode" ${L.pending.busy?'disabled':''}>Send the code again</button><button type="button" class="btn sm" data-act="codeback">Back</button></div>
   ${L.pending.viaGoogle?'':`<div class="small muted">No email? Confirm with the same Google account instead:</div>
   <div style="display:grid;gap:6px;justify-items:start"><div id="g-login" style="min-height:44px"></div></div>`}
  </form>`:` <form class="login-card ${L.err?'err':''}" id="loginform" autocomplete="on">
+  <img class="lc-logo" src="${LOGO_FULL}" alt="EduHealthHub. Healthy Students. Brighter Futures.">
   <div class="lhead">${WANT&&ROLE_ICON[WANT]?`<img class="role-ic lg" src="${ROLE_ICON[WANT]}" alt="">`:'<span class="lock" aria-hidden="true">&#128274;</span>'}<div><h2>${WANT?esc(WANT)+' log in':'Welcome back'}</h2><div class="small muted">${WANT?`Log in with a ${WANT} account to open the ${WANT} page.`:'Use your own username or email. Learners do not have accounts.'}</div></div></div>
   <div class="field"><label for="lu">Username or email</label><input class="inp" id="lu" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" required></div>
   <div class="field"><label for="pw">Password</label><input class="inp" id="pw" name="password" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required><div class="caps" id="caps" hidden>Caps Lock is on</div><div class="small muted" style="margin-top:4px">The username and the password are both case-sensitive: capitals and small letters must match exactly.</div></div>

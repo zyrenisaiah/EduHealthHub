@@ -255,13 +255,13 @@ function loginDone(r,pw){
  lockWrite(r.account);TOK=r.token;ss.set('ehh_tok',TOK);ss.set('ehh_role',r.account.role);location.href=ROLE_PAGE[r.account.role]}
 async function mailCode(){
  const L=S.login,P=L.pending;if(!P||P.busy)return;P.busy=true;P.mailErr='';P.msg='Sending a code to your Gmail...';render();
- try{const j=await fnCall('send-code',{kind:'login',token:P.token});if(S.login.pending!==P)return;P.sent=true;P.msg='We emailed a 6-digit code to '+j.hint+'. It works for 10 minutes.'}
+ try{const j=await fnCall('send-code',{kind:'login',token:P.token});if(S.login.pending!==P)return;P.sent=true;P.sentAt=Date.now();P.msg=''}
  catch(e){if(S.login.pending!==P)return;P.msg='';if(e.code==='SESSION_EXPIRED'){L.pending=null;L.err=cloudErr(e)}else P.mailErr=cloudErr(e)}
- P.busy=false;const typed=$('#lc')?$('#lc').value:'';render();const i=$('#lc');if(i){i.value=typed;i.focus()}}
+ P.busy=false;const typed=$('#lc')?$('#lc').value:'';render();const i=$('#lc');if(i){i.value=typed;otpSync();i.focus()}}
 async function verifyLoginCode(){
  const L=S.login,P=L.pending;if(!P)return;const el=$('#lc');if(!el)return;
  try{const r=await rpc('app_verify_login',{p_token:P.token,p_code:el.value.replace(/\s/g,'')});
-  if(r.error){L.err=cloudErr({code:r.error});if(r.error==='TOO_MANY_TRIES')L.pending=null;render();const i=$('#lc');if(i)i.focus();return}
+  if(r.error){L.err=cloudErr({code:r.error});if(r.error==='TOO_MANY_TRIES')L.pending=null;render();otpWrong();return}
   loginDone(r,P.pw)}
  catch(e){if(e.code==='SESSION_EXPIRED')L.pending=null;L.err=cloudErr(e);render()}}
 async function googleLogin(cred){

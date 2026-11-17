@@ -540,10 +540,12 @@ function render(){
  pwDecorate();
  appBackdrop();
  ntAfter();
+ otpSync();
  if(!S.user)loginFX();
  if(typeof afterRender==='function')afterRender() }
 const goOpen=(id,tab)=>{logView(id);S.back=S.view;S.view='student';S.sid=id;S.tab=tab||'profile';S.tooth=null;S.undo=[];S.brush=null;render();window.scrollTo(0,0)};
 const ACT={
+ otppaste(){otpPaste(true)},
  bell(){S.nt.open=!S.nt.open;ntPaint()},
  ntread(e){const id=+e.dataset.id;rpc('app_notif_read',{p_token:TOK,p_id:id}).then(ntLoad).catch(()=>{});const it=S.nt.items.find(x=>x.id===id);if(it){it.read=true;S.nt.unread=Math.max(0,S.nt.unread-1)}ntPaint()},
  ntall(){rpc('app_notif_read',{p_token:TOK}).then(ntLoad).catch(()=>{});S.nt.items.forEach(x=>x.read=true);S.nt.unread=0;ntPaint()},
@@ -798,3 +800,27 @@ function idleCheck(){if(!S.user){idleHide();return}
  if(idle>=IDLE_MS){idleHide();try{sessionStorage.setItem('ehh_idle','1')}catch(e){}const role=S.user.role;lockFree();if(CLOUD_ON)cloudLogout();ss.del('ehh_uid');ss.del('ehh_role');S.user=null;location.href='index.html?role='+encodeURIComponent(role);return}
  if(idle>=IDLE_MS-IDLE_WARN)idleShow(Math.max(1,Math.ceil((IDLE_MS-idle)/1000)))}
 setInterval(idleCheck,1000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)idleCheck()});
+
+/* ---------- emailed login code: six boxes over one real input (so typing, paste and one-time-code autofill all work) ---------- */
+function otpSync(){const i=document.getElementById('lc');if(!i)return;const v=i.value.replace(/\D/g,'').slice(0,6);if(i.value!==v)i.value=v;
+ document.querySelectorAll('.otp-cell').forEach((c,n)=>{c.textContent=v[n]||'';c.classList.toggle('filled',!!v[n]);c.classList.toggle('on',document.activeElement===i&&n===Math.min(v.length,5))});
+ const go=document.getElementById('otpgo');if(go)go.disabled=v.length<6;return v}
+function otpWrong(){const i=document.getElementById('lc'),b=document.getElementById('otpbox');if(i){i.value='';otpSync();i.focus();otpSync()}if(b){b.classList.add('bad','shake');setTimeout(()=>b.classList.remove('shake'),500)}}
+async function otpPaste(fromButton){if(!navigator.clipboard||!navigator.clipboard.readText)return;
+ try{const t=(await navigator.clipboard.readText()).replace(/\s/g,'');const m=t.match(/(?:^|\D)(\d{6})(?:\D|$)/);const i=document.getElementById('lc');if(!i||!m)return;
+  if(!fromButton&&i.value)return;i.value=m[1];otpSync();otpAuto(i)}catch(e){}}
+function otpAuto(i){if(i.value.replace(/\D/g,'').length===6){const f=document.getElementById('codeform');if(f&&!(S.login.pending&&S.login.pending.busy))setTimeout(()=>{if(document.getElementById('lc')===i&&i.value.length>=6)f.requestSubmit?f.requestSubmit():f.dispatchEvent(new Event('submit',{cancelable:true,bubbles:true}))},180)}}
+document.addEventListener('input',e=>{if(e.target.id==='lc'){otpSync();const t=e.inputType||'';if(t.startsWith('insert'))otpAuto(e.target)}});
+document.addEventListener('focusin',e=>{if(e.target.id==='lc')otpSync()});document.addEventListener('focusout',e=>{if(e.target.id==='lc')setTimeout(otpSync,0)});
+/* when you come back from Gmail with the code copied, fill it in */
+window.addEventListener('focus',()=>{if(document.getElementById('lc'))otpPaste(false)});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&document.getElementById('lc'))otpPaste(false)});
+const OTP_LIFE=10*60000,OTP_COOLDOWN=30000;
+function otpTick(){const P=S.login&&S.login.pending;if(!P||!document.getElementById('codeform'))return;
+ const ago=document.getElementById('otp-ago'),ex=document.getElementById('otp-exp'),bar=document.getElementById('otp-barfill'),rs=document.getElementById('resendbtn');
+ if(P.sentAt){const age=Date.now()-P.sentAt,s=Math.floor(age/1000),left=Math.max(0,OTP_LIFE-age);
+  if(ago)ago.textContent='Code sent '+(s<10?'just now':s<60?s+' seconds ago':Math.floor(s/60)+(Math.floor(s/60)===1?' minute ago':' minutes ago'));
+  if(ex){ex.textContent=left>0?'Expires in '+Math.floor(left/60000)+':'+String(Math.floor(left/1000)%60).padStart(2,'0'):'Expired. Send a new code.';ex.className=left>0?'':'exp'}
+  if(bar)bar.style.width=(100*left/OTP_LIFE)+'%';
+  if(rs&&!P.busy){const w=Math.ceil((OTP_COOLDOWN-age)/1000);rs.disabled=w>0;rs.textContent=w>0?'Send again in '+w+'s':'Send the code again'}}}
+setInterval(otpTick,1000);
