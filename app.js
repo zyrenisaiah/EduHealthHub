@@ -545,6 +545,8 @@ function render(){
  if(typeof afterRender==='function')afterRender() }
 const goOpen=(id,tab)=>{logView(id);S.back=S.view;S.view='student';S.sid=id;S.tab=tab||'profile';S.tooth=null;S.undo=[];S.brush=null;render();window.scrollTo(0,0)};
 const ACT={
+ help:()=>helpOpen(),helpclose:()=>helpClose(),
+ lpabout:()=>{S.login.panel='about';render();window.scrollTo(0,0)},lphelp:()=>{S.login.panel='help';render();window.scrollTo(0,0)},lphome:()=>{S.login.panel=null;render();window.scrollTo(0,0)},
  otppaste(){otpPaste(true)},
  bell(){S.nt.open=!S.nt.open;ntPaint()},
  ntread(e){const id=+e.dataset.id;rpc('app_notif_read',{p_token:TOK,p_id:id}).then(ntLoad).catch(()=>{});const it=S.nt.items.find(x=>x.id===id);if(it){it.read=true;S.nt.unread=Math.max(0,S.nt.unread-1)}ntPaint()},
@@ -824,3 +826,6 @@ function otpTick(){const P=S.login&&S.login.pending;if(!P||!document.getElementB
   if(bar)bar.style.width=(100*left/OTP_LIFE)+'%';
   if(rs&&!P.busy){const w=Math.ceil((OTP_COOLDOWN-age)/1000);rs.disabled=w>0;rs.textContent=w>0?'Send again in '+w+'s':'Send the code again'}}}
 setInterval(otpTick,1000);
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape')helpClose()});
+document.addEventListener('click',e=>{if(e.target&&e.target.id==='helpov')helpClose()});

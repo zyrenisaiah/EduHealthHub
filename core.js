@@ -46,10 +46,10 @@ const P={
  Teacher:{exam:'view',dental:'view',prof:'view',stock:null}
 };
 const NAV={
- Doctor:[['home','Home'],['chat','Messages'],['overview','Overview'],['students','Students'],['stock','Supply stock'],['accounts','Accounts'],['activity','Activity log'],['account','My account']],
- Nurse:[['home','Home'],['chat','Messages'],['students','Students'],['stock','Supply stock'],['account','My account']],
- Dentist:[['home','Home'],['chat','Messages'],['students','Students'],['account','My account']],
- Teacher:[['home','Home'],['chat','Messages'],['dash','My advisory'],['files','Record of files'],['account','My account']]
+ Doctor:[['home','Dashboard'],['chat','Messages'],['overview','Overview'],['students','Students'],['stock','Supply stock'],['accounts','Accounts'],['activity','Activity log'],['account','My account']],
+ Nurse:[['home','Dashboard'],['chat','Messages'],['students','Students'],['stock','Supply stock'],['account','My account']],
+ Dentist:[['home','Dashboard'],['chat','Messages'],['students','Students'],['account','My account']],
+ Teacher:[['home','Dashboard'],['chat','Messages'],['dash','My advisory'],['files','Record of files'],['account','My account']]
 };
 const PERM_NOTE={
  Doctor:'Full access to records, referrals, clearances and the activity log. Odontogram is read only.',
@@ -57,6 +57,49 @@ const PERM_NOTE={
  Dentist:'Full access to the odontogram and dental records. Medical history is read only.',
  Teacher:'Can see pass and status only. Medical details stay hidden.'
 };
+const ABOUT=[
+ ['What EduHealthHub is for','EduHealthHub is a web-based student health record management system for Dasmariñas Integrated High School. It brings each learner\'s health profile, exam card, dental chart, clinic visits and clearances into one secure place, so the clinic no longer depends on paper cards and scattered files.'],
+ ['What it helps you do',['Keep one complete health record for every learner.','Speed up the clinic: class passes from teachers, walk-ins, rest log, referrals and clearance slips.','Keep medicines and first-aid supplies in check, with low-stock and expiry alerts.','Let the Doctor, Nurse, Dentist and Teacher coordinate through messages.']],
+ ['Who uses it','Doctors, Nurses, Dentists and Teachers each have their own account and see only what their role needs. Learners do not have accounts.'],
+ ['Privacy and safety','Learner records are confidential. Teachers see pass and status only, never medical details. Passwords are stored as hashes, accounts can be protected with an emailed one-time code, sessions end after 20 minutes of inactivity, and every change is recorded in the activity log.']
+];
+const aboutBody=()=>ABOUT.map(([h,t])=>`<h3 class="hh">${h}</h3>${Array.isArray(t)?`<ul class="aboutul">${t.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:`<p>${esc(t)}</p>`}`).join('');
+function loginPanel(p){
+ if(p==='about')return ` <section class="login-card aboutcard" aria-labelledby="ab-t"><div><div class="eyebrow">About us</div><h2 id="ab-t">EduHealthHub</h2><div class="small muted">Healthy Students. Brighter Futures.</div></div>${aboutBody()}<div class="trow"><button type="button" class="btn primary" data-act="lphome">Log in</button></div></section>`;
+ return ` <section class="login-card aboutcard" aria-labelledby="hp-t"><div><div class="eyebrow">Help</div><h2 id="hp-t">Log in first</h2></div><p>The help guide is written for each role, so please log in first. After you log in, press the <b>Help</b> button next to the notification bell to see what your role can do.</p><div class="trow"><button type="button" class="btn primary" data-act="lphome">Log in</button><button type="button" class="btn" data-act="lpabout">About Us</button></div></section>`}
+function aboutView(){return `<div class="head"><div><div class="eyebrow">Home</div><h2>About Us</h2></div></div><section class="panel aboutcard">${aboutBody()}<div class="trow"><button type="button" class="btn primary" data-act="nav" data-v="home">Go to my Dashboard</button><button type="button" class="btn" data-act="help">How to use my role</button></div></section>`}
+const HELP={
+ Doctor:{intro:'You have full access to records, referrals, clearances and the activity log. The odontogram is read only for you.',items:[
+  ['Dashboard','Find a learner by 12-digit LRN or name, receive learners sent by teachers, see who is resting, and review pending referrals and supply alerts.'],
+  ['Messages','Chat with the Nurse, Dentist and Teachers, and attach files.'],
+  ['Overview','Clinic-wide totals: exam cards and dental charts done, nutritional status and supplies to restock.'],
+  ['Students','Search and filter by grade, track and section, then open a learner\'s health files: profile, exam card, visits, referrals, clearances and files.'],
+  ['Supply stock','Check medicines and first-aid items, quantities, reorder levels and expiry dates.'],
+  ['Accounts','Approve or decline sign-up requests, reset a forgotten password, deactivate someone who has left and change a teacher\'s advisory.'],
+  ['Activity log','See who changed or opened which record, and when.'],
+  ['My account','Change your photo, username, email and password, and link your DepEd Google account for the emailed code.']]},
+ Nurse:{intro:'You have full access to exam cards, walk-ins and supplies, and can flag cases for the doctor. The odontogram is read only for you.',items:[
+  ['Dashboard','Find a learner by LRN or name, receive learners sent by teachers, record walk-ins and see who is resting.'],
+  ['Messages','Chat with the Doctor, Dentist and Teachers, and attach files.'],
+  ['Students','Open a learner to fill in or update the exam card and visits, and flag cases for the doctor.'],
+  ['Supply stock','Keep the medicine and first-aid stock up to date and watch low and expiring items.'],
+  ['My account','Change your photo, username, email and password, and link your DepEd Google account for the emailed code.']]},
+ Dentist:{intro:'You have full access to the odontogram and dental records. Medical history is read only for you.',items:[
+  ['Dashboard','Find a learner by LRN or name and open their dental record.'],
+  ['Messages','Chat with the Doctor, Nurse and Teachers, and attach files.'],
+  ['Students','Open a learner\'s dental chart (odontogram) to record findings and treatment needs. Medical history can be read but not changed.'],
+  ['My account','Change your photo, username, email and password, and link your DepEd Google account for the emailed code.']]},
+ Teacher:{intro:'You can see pass and status only for learners in your advisory. Medical details stay hidden to protect privacy.',items:[
+  ['Dashboard','Find a learner in your advisory by LRN or name, send them to the clinic with a pass, check whether they are on the way or in the clinic, and verify clearance slips when they return.'],
+  ['Messages','Chat with the clinic team and attach files.'],
+  ['My advisory','See your class list with each learner\'s pass and status.'],
+  ['Record of files','See which documents are on record for each learner in your advisory.'],
+  ['My account','Change your photo, username, email and password, and link your DepEd Google account for the emailed code.']]}
+};
+function helpClose(){const o=document.getElementById('helpov');if(o)o.remove()}
+function helpOpen(){helpClose();if(!S.user)return;const r=S.user.role,g=HELP[r];if(!g)return;const o=document.createElement('div');o.id='helpov';o.className='idleov helpov';o.setAttribute('role','dialog');o.setAttribute('aria-modal','true');o.setAttribute('aria-label',r+' guide');
+ o.innerHTML=`<div class="idlebox helpbox"><div class="trow" style="justify-content:space-between;align-items:center"><h3 style="margin:0">${r} guide</h3><button type="button" class="btn sm" data-act="helpclose" id="helpx">Close</button></div><p class="small muted">${esc(g.intro)}</p><dl class="helpdl">${g.items.map(i=>`<dt>${esc(i[0])}</dt><dd>${esc(i[1])}</dd>`).join('')}</dl><p class="small muted">The bell shows your notifications. You are logged out after 20 minutes of inactivity.</p></div>`;
+ document.body.appendChild(o);const b=document.getElementById('helpx');if(b)b.focus()}
 const stu=id=>DB.students.find(s=>s.id===id);
 const enrOf=(st,sy)=>st.enr.find(e=>e.sy===sy);
 const curSec=st=>secOf(enrOf(st,CUR_SY).section);
@@ -88,10 +131,10 @@ function loginView(){
   <p class="tag" aria-live="off"><span id="tagtxt">Healthy Students. Brighter Futures.</span></p>
   <div class="eyebrow" style="margin:6px 0 8px">Choose your role</div>
   <div class="role-strip">${['Doctor','Nurse','Dentist','Teacher'].map((r,i)=>`<a href="${ROLE_PAGE[r]}" style="--d:${i*70}ms" class="${WANT===r?'want':''}" ${WANT===r?'aria-current="page"':''}><div><img class="role-ic" src="${ROLE_ICON[r]}" alt=""><span>${r}</span></div></a>`).join('')}</div>
-  <div class="chart-strip" aria-hidden="true"><span>SY ${CUR_SY}</span><span>Private &amp; role-based</span><span>Synced online</span></div>
+  <nav class="lp-links" aria-label="About, help and home"><button type="button" class="lp-link ${L.panel==='about'?'on':''}" data-act="lpabout">About Us</button><button type="button" class="lp-link ${L.panel==='help'?'on':''}" data-act="lphelp">Help</button><button type="button" class="lp-link ${!L.panel?'on':''}" data-act="lphome">Home</button></nav>
  </div>
  <div style="display:grid;gap:14px;min-width:0">
-${L.signup?` <form class="login-card" id="signupform" autocomplete="off">
+${L.panel?loginPanel(L.panel):L.signup?` <form class="login-card" id="signupform" autocomplete="off">
   ${L.done?`<div><h2>Request sent</h2><div class="small muted">Thank you. A Doctor has to approve your account before you can log in. You can come back to this page and log in once it is approved.</div></div><div class="trow"><button type="button" class="btn primary" data-act="signupback">Back to log in</button></div>`:`<div><h2>Create an account</h2><div class="small muted">For clinic staff and teachers only. A Doctor reviews every request before the account works. Learners do not have accounts.</div></div>
   <div class="field"><label for="su-name">Full name</label><input class="inp" id="su-name" maxlength="80" autocomplete="name" required></div>
   <div class="field"><label for="su-role">I am a</label><select class="inp" id="su-role">${['Teacher','Nurse','Dentist','Doctor'].map(r=>`<option ${WANT===r?'selected':''}>${r}</option>`).join('')}</select></div>
@@ -128,7 +171,7 @@ ${L.signup?` <form class="login-card" id="signupform" autocomplete="off">
   ${L.pending.viaGoogle?'':`<div class="small muted">No email? Confirm with the same Google account instead:</div>
   <div style="display:grid;gap:6px;justify-items:start"><div id="g-login" style="min-height:44px"></div></div>`}
  </form>`:` <form class="login-card ${L.err?'err':''}" id="loginform" autocomplete="on">
-  <img class="lc-logo" src="${LOGO_FULL}" alt="EduHealthHub. Healthy Students. Brighter Futures.">
+  <button type="button" class="lc-logo-btn" data-act="lphome" title="EduHealthHub home" aria-label="EduHealthHub, home"><img class="lc-logo" src="${LOGO_FULL}" alt="EduHealthHub. Healthy Students. Brighter Futures."></button>
   <div class="lhead">${WANT&&ROLE_ICON[WANT]?`<img class="role-ic lg" src="${ROLE_ICON[WANT]}" alt="">`:'<span class="lock" aria-hidden="true">&#128274;</span>'}<div><h2>${WANT?esc(WANT)+' log in':'Welcome back'}</h2><div class="small muted">${WANT?`Log in with a ${WANT} account to open the ${WANT} page.`:'Use your own username or email. Learners do not have accounts.'}</div></div></div>
   <div class="field"><label for="lu">Username or email</label><input class="inp" id="lu" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" required></div>
   <div class="field"><label for="pw">Password</label><input class="inp" id="pw" name="password" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required><div class="caps" id="caps" hidden>Caps Lock is on</div><div class="small muted" style="margin-top:4px">The username and the password are both case-sensitive: capitals and small letters must match exactly.</div></div>
@@ -143,12 +186,12 @@ ${L.signup?` <form class="login-card" id="signupform" autocomplete="off">
 /* ---------- shell ---------- */
 function shell(){
  const u=S.user, nav=NAV[u.role];
- const body={chat:chatView,doc:docView,activity:activityView,accounts:accountsView,home:()=>S.user.role==='Teacher'?teacherHome():homeView(),overview:overviewView,students:studentsView,stock:stockView,dash:teacherView,student:studentView,account:accountView,files:filesView}[S.view]();
+ const body={about:aboutView,chat:chatView,doc:docView,activity:activityView,accounts:accountsView,home:()=>S.user.role==='Teacher'?teacherHome():homeView(),overview:overviewView,students:studentsView,stock:stockView,dash:teacherView,student:studentView,account:accountView,files:filesView}[S.view]();
  const navKey=(S.view==='student'||S.view==='doc')?S.back:S.view;
- return `<div class="shell"><header class="topbar"><button class="name homebtn" data-act="nav" data-v="${nav[0][0]}" title="Go to Home" aria-label="EduHealthHub, go to Home"><span class="logo-chip"><img src="${LOGO_EMBLEM}" alt="" height="34"></span>EduHealthHub</button><div class="spacer"></div>
+ return `<div class="shell"><header class="topbar"><button class="name homebtn" data-act="nav" data-v="about" title="Home: About EduHealthHub" aria-label="EduHealthHub, Home (About us)"><span class="logo-chip"><img src="${LOGO_EMBLEM}" alt="" height="34"></span>EduHealthHub</button><div class="spacer"></div>
   <img class="role-ic" style="object-fit:cover" src="${u.photo||ROLE_ICON[u.role]}" alt="${u.role}">
   <div class="who"><b>${esc(u.name)}</b><span class="small muted">${u.role}${u.role==='Teacher'?' · '+esc(secLabel(secOf(u.adv))):''}</span></div>
-  ${CLOUD_ON?'<span id="bellwrap" class="bellwrap"></span>':''}${CLOUD_ON?`<span class="small muted" id="syncstat" aria-live="polite">${esc(SYNC_TXT)}</span>`:''}<button class="btn sm" data-act="logout">Log out</button></header>
+  <button class="btn sm helpbtn" data-act="help" aria-haspopup="dialog">Help</button>${CLOUD_ON?'<span id="bellwrap" class="bellwrap"></span>':''}${CLOUD_ON?`<span class="small muted" id="syncstat" aria-live="polite">${esc(SYNC_TXT)}</span>`:''}<button class="btn sm" data-act="logout">Log out</button></header>
   <div class="layout"><nav class="nav" aria-label="Main">${nav.map(n=>`<button data-act="nav" data-v="${n[0]}" ${navKey===n[0]?'aria-current="page"':''}>${n[1]}${n[0]==='chat'&&unreadAll()?`<span class="badge">${unreadAll()}</span>`:''}</button>`).join('')}<div class="perm">${PERM_NOTE[u.role]}</div></nav>
   <main>${body}</main></div></div>`;
 }

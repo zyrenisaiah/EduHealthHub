@@ -144,7 +144,7 @@ function homeView(){
  const rest=flat('visits').filter(x=>!x.x.out),waitLog=flat('passes').filter(x=>x.x.status==='arrived'&&!openVisit(x.s)),inc=flat('passes').filter(x=>x.x.status==='sent');
  const q=flat('refs').filter(x=>x.x.status==='pending');
  const low=DB.stock.filter(i=>stockState(i)[1]!=='good');
- return `<div class="head"><div><div class="eyebrow">${r} hub · ${new Date().toDateString()}</div><h2>Home</h2></div></div>
+ return `<div class="head"><div><div class="eyebrow">${r} hub · ${new Date().toDateString()}</div><h2>Dashboard</h2></div></div>
  <section class="panel"><form id="hform" autocomplete="off"><div class="field"><label for="hq">Find a learner by 12-digit LRN or name</label>
   <div class="who-cell"><input class="inp mono hsearch" id="hq" data-bind="hq" inputmode="text" maxlength="40" placeholder="Type the LRN or the student's name" value="${esc(h.q)}"><button class="btn primary" type="submit">Search</button>${h.sid?'<button type="button" class="btn" data-act="hclear">Clear</button>':''}</div></div></form>
   ${h.msg?`<div class="small" style="margin-top:8px;color:var(--bad)" role="status">${esc(h.msg)}</div>`:''}
@@ -297,7 +297,7 @@ function teacherHome(){
   ${h.panel==='send'?`<form class="panel hform" id="hf-send" data-id="${s.id}" style="background:var(--surface2);margin:8px 0"><div class="head"><h3>Send to clinic</h3><button type="button" class="btn sm" data-act="hpanel" data-k="">Close</button></div><div class="field"><label for="s-note">Reason (optional, non-medical)</label><input class="inp" id="s-note" maxlength="100" placeholder="e.g. says they feel unwell"></div><div style="margin-top:10px"><button class="btn primary" type="submit">Send pass</button></div></form>`:''}
   <h3 class="hh">Clearance verification</h3>${cl.length?`<table class="kvt"><tbody>${cl.map(c=>{const ok=!c.until||c.until>=t;return `<tr><th>${esc(c.type)}</th><td>${pill(ok?'Valid':'Expired',ok?'good':'bad')} <span class="small muted">issued ${esc(c.date)} by ${esc(c.by)}${c.until?', valid until '+esc(c.until):''}</span></td></tr>`}).join('')}</tbody></table>`:'<p class="small muted">No clearance on file.</p>'}
   <p class="small muted" style="margin-bottom:0">Medical details are hidden from teachers to protect privacy.</p></section>`}
- return `<div class="head"><div><div class="eyebrow">Teacher hub · ${new Date().toDateString()}</div><h2>Home</h2></div></div>
+ return `<div class="head"><div><div class="eyebrow">Teacher hub · ${new Date().toDateString()}</div><h2>Dashboard</h2></div></div>
  <section class="panel"><form id="hform" autocomplete="off"><div class="field"><label for="hq">Find a learner in your advisory by 12-digit LRN or name</label>
   <div class="who-cell"><input class="inp mono hsearch" id="hq" data-bind="hq" inputmode="text" maxlength="40" placeholder="Type the LRN or the student's name" value="${esc(h.q)}"><button class="btn primary" type="submit">Search</button>${h.sid?'<button type="button" class="btn" data-act="hclear">Clear</button>':''}</div></div></form>
   ${h.msg?`<div class="small" style="margin-top:8px;color:var(--bad)" role="status">${esc(h.msg)}</div>`:''}
