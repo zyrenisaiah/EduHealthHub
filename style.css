@@ -523,3 +523,22 @@ html{scroll-behavior:smooth}@media (prefers-reduced-motion:reduce){html{scroll-b
 .shell .landing{padding:0 0 40px;max-width:none}.shell .lcard,.shell .lstat,.shell .lsteps li{background:var(--surface);border-color:var(--line)}
 .shell .sprog{z-index:90}
 .stage .ecg{bottom:auto;top:calc(93vh - 110px)}
+/* friendliness pass */
+.toast{display:flex;gap:6px;align-items:center;cursor:pointer;box-shadow:0 8px 24px rgba(0,0,0,.2)}.toast.ok{background:#1f5b3a;color:#fff}.toast.warn{background:#8a3b0b;color:#fff}
+.tszbtn small{font-size:.8em}.tszbtn{font-weight:700}
+.empty{display:grid;justify-items:center;gap:8px;padding:28px 12px;text-align:center}
+.tw thead th{position:sticky;top:0;background:var(--surface);z-index:1}
+tr.click:hover td{background:var(--accent-soft)}tr.click{cursor:pointer}
+.btn:active{transform:translateY(1px)}
+.inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(85,125,89,.18)}
+@media (pointer:coarse),(max-width:860px){
+ .btn,.btn.sm{min-height:44px;padding-inline:14px}.inp,select.inp{min-height:44px;font-size:16px}
+ .nav button{min-height:44px}
+}
+@media (max-width:860px){
+ body{padding-bottom:76px}
+ .nav{position:fixed;left:0;right:0;bottom:0;z-index:15;background:var(--surface);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px));gap:4px;box-shadow:0 -6px 18px rgba(40,70,50,.1)}
+ .nav button{flex:0 0 auto;text-align:center;padding:8px 14px}
+ .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+}
+@media print{.nav,.topbar,.toast{display:none!important}}

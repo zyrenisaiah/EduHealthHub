@@ -139,7 +139,7 @@ function av(st){
  }
  return `<img class="av" src="${st.photo||avCache[st.id]}" alt="">`;
 }
-function toast(m){const t=document.createElement('div');t.className='toast';t.setAttribute('role','status');t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2400)}
+function toast(m){document.querySelectorAll('.toast').forEach(x=>x.remove());const bad=/^(could not|no |that |choose|only |enter|wrong|incorrect|invalid|please)/i.test(String(m));const t=document.createElement('div');t.className='toast'+(bad?' warn':' ok');t.setAttribute('role',bad?'alert':'status');t.textContent=(bad?'! ':'✓ ')+m;t.title='Click to dismiss';t.onclick=()=>t.remove();document.body.appendChild(t);setTimeout(()=>t.remove(),bad?5000:2800)}
 const today=()=>new Date().toISOString().slice(0,10);
 const examDone=(st,g)=>{const r=st.exam[g];return !!(r&&r.date&&r.wt)};
 const dentalDone=st=>!!(st.dental&&st.dental.date);
@@ -218,7 +218,7 @@ function shell(){
  return `<div class="shell"><header class="topbar"><button class="name homebtn" data-act="nav" data-v="about" title="Home: About EduHealthHub" aria-label="EduHealthHub, Home (About us)"><span class="logo-chip"><img src="${LOGO_EMBLEM}" alt="" height="34"></span>EduHealthHub</button><div class="spacer"></div>
   <img class="role-ic" style="object-fit:cover" src="${u.photo||ROLE_ICON[u.role]}" alt="${u.role}">
   <div class="who"><b>${esc(u.name)}</b><span class="small muted">${u.role}${u.role==='Teacher'?' · '+esc(secLabel(secOf(u.adv))):''}</span></div>
-  <button class="btn sm helpbtn" data-act="help" aria-haspopup="dialog">Help</button>${CLOUD_ON?'<span id="bellwrap" class="bellwrap"></span>':''}${CLOUD_ON?`<span class="small muted" id="syncstat" aria-live="polite">${esc(SYNC_TXT)}</span>`:''}<button class="btn sm" data-act="logout">Log out</button></header>
+  <button class="btn sm tszbtn" data-act="tsz" aria-label="Change text size" title="Change text size">A<small>A</small></button><button class="btn sm helpbtn" data-act="help" aria-haspopup="dialog">Help</button>${CLOUD_ON?'<span id="bellwrap" class="bellwrap"></span>':''}${CLOUD_ON?`<span class="small muted" id="syncstat" aria-live="polite">${esc(SYNC_TXT)}</span>`:''}<button class="btn sm" data-act="logout">Log out</button></header>
   <div class="layout"><nav class="nav" aria-label="Main">${nav.map(n=>`<button data-act="nav" data-v="${n[0]}" ${navKey===n[0]?'aria-current="page"':''}>${n[1]}${n[0]==='chat'&&unreadAll()?`<span class="badge">${unreadAll()}</span>`:''}</button>`).join('')}<div class="perm">${PERM_NOTE[u.role]}</div></nav>
   <main>${body}</main></div></div>`;
 }
@@ -276,7 +276,7 @@ function studentsView(){
  const cols=3+(p.exam?1:0)+(p.dental?1:0), filt=!!(f.q||f.grade||f.strand||f.section), open=sec=>filt||S.open.has(sec.id);
  return `<div class="head"><div><div class="eyebrow">${role==='Dentist'?'Dental service':'Student records'}</div><h2>Students</h2></div><div class="trow"><span class="muted">${list.length} of ${DB.students.length} learners</span>${filt?'':`<button class="btn sm" data-act="grpall">${S.open.size?'Collapse all':'Expand all'}</button>`}</div></div>
  <div class="filters">
-  <input class="inp" id="q" data-bind="filter" data-f="q" placeholder="Search name or LRN" value="${esc(f.q)}" aria-label="Search">
+  <input class="inp" id="q" data-bind="filter" data-f="q" placeholder="Search name or LRN (press / to focus)" type="search" autocomplete="off" value="${esc(f.q)}" aria-label="Search">
   <select class="inp" data-bind="filter" data-f="grade" aria-label="Grade"><option value="">All grades</option><option value="11" ${f.grade==='11'?'selected':''}>Grade 11</option><option value="12" ${f.grade==='12'?'selected':''}>Grade 12</option></select>
   <select class="inp" data-bind="filter" data-f="strand" aria-label="Track and strand"><option value="">All tracks / strands</option>${strands.map(s=>`<option value="${s}" ${f.strand===s?'selected':''}>${trackLabel(SECTIONS.find(x=>x.strand===s))}</option>`).join('')}</select>
   <select class="inp" data-bind="filter" data-f="section" aria-label="Section"><option value="">All sections</option>${SECT_UI.map(s=>`<option value="${s.id}" ${f.section===s.id?'selected':''}>${esc(secLabel(s))}</option>`).join('')}</select>
@@ -285,6 +285,8 @@ function studentsView(){
  ${groups.map(([sec,arr])=>`<tr class="grp click" data-act="grp" data-id="${sec.id}"><td colspan="${cols}">${open(sec)?'▾':'▸'} ${esc(secLabel(sec))} · ${trackLabel(sec)} · Adviser ${esc(sec.adviser)} · <b>${arr.length}</b> learners</td></tr>`+(open(sec)?arr.map(s=>{
    const g=sec.grade;
    return `<tr class="click" data-act="open" data-id="${s.id}" data-tab="${role==='Dentist'?'dental':role==='Nurse'?'exam':'profile'}"><td><div class="who-cell">${av(s)}<b>${esc(fullName(s))}</b></div></td><td class="mono">${s.lrn}</td><td>${esc(secLabel(sec))}</td>${p.exam?`<td>${examDone(s,g)?pill('Complete','good'):pill('Pending','warn')}</td>`:''}${p.dental?`<td>${dentalDone(s)?pill('Charted','good'):pill('Pending','warn')}</td>`:''}</tr>`}).join(''):'')).join('')||`<tr><td colspan="${cols}" class="muted">No learners match these filters.</td></tr>`}
+
+ ${groups.length?'':`<tr><td colspan="${cols}"><div class="empty"><b>No learners match.</b><span class="muted">Check the spelling, or try fewer filters.</span>${filt?'<button class="btn sm" data-act="clearf">Clear filters</button>':''}</div></td></tr>`}
  </tbody></table></div></section>`;
 }
 
