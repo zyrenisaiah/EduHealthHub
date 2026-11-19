@@ -40,7 +40,7 @@ const USERS={
  Doctor:{name:'Test Doctor1',blurb:'Overview, all records and supplies'},
  Nurse:{name:'Test Nurse1',blurb:'Exam cards, student records, supplies'},
  Dentist:{name:'Test Dentist1',blurb:'Dental service charts and treatments'},
- Teacher:{name:'',blurb:'Advisory health files and transfers'}
+ Teacher:{name:'',blurb:'Advisory pass and status, record of files and alert summary'}
 };
 const GROUPS={
  skin:{t:'Skin & Scalp',i:['Pediculosis','Tinea Flava','Scabies','Ulcers','Minor Injuries','Ringworm','Skin Allergy','Others (specify)']},

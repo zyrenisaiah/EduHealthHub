@@ -15,7 +15,7 @@ function studentView(){
 function profileTab(st,edit){
  const d=edit?'':'disabled', cur=enrOf(st,CUR_SY);
  const f=(k,l,t='text')=>`<div class="field"><label for="p-${k}">${l}</label><input class="inp" id="p-${k}" type="${t}" value="${esc(st[k])}" data-bind="prof" data-f="${k}" ${d}></div>`;
- return `<section class="panel"><div class="head"><h3>Student record</h3>${S.user.role==='Teacher'?`<button class="btn sm" data-act="exportone" data-id="${st.id}">Download record</button>`:''}</div><div class="kv">
+ return `<section class="panel"><div class="head"><h3>Student record</h3>${S.user.role==='Teacher'?`<button class="btn sm" data-act="exportone" data-id="${st.id}">Download alert card</button>`:''}</div><div class="kv">
   ${f('first','First name')}${f('last','Last name')}
   <div class="field"><label>LRN</label><input class="inp mono" value="${st.lrn}" disabled></div>
   <div class="field"><label for="p-sec">Section (advisory)</label><select class="inp" id="p-sec" data-bind="prof" data-f="section" ${edit?'':'disabled'}>${SECT_UI.map(s=>`<option value="${s.id}" ${cur.section===s.id?'selected':''}>${esc(secLabel(s))} · ${trackLabel(s)}</option>`).join('')}</select></div>
@@ -228,31 +228,32 @@ function teacherView(){
  <div class="tiles"><div class="tile"><span class="eyebrow">Learners</span><b>${mine.length}</b></div>
   <div class="tile"><span class="eyebrow">Exam cards</span><b>${exD}/${mine.length}</b></div>
   <div class="tile"><span class="eyebrow">Dental charts</span><b>${dnD}/${mine.length}</b></div>
-  <div class="tile"><span class="eyebrow">Files on record</span><b>${mine.reduce((a,s)=>a+s.files.filter(f=>f.sy===sy&&f.date).length,0)}</b></div></div>
- <section class="panel" style="padding:0"><div class="tw"><table><thead><tr><th>Learner</th><th>LRN</th><th>Exam card</th><th>Dental</th><th>Files</th></tr></thead><tbody>
- ${mine.map(s=>{const fl=s.files.filter(f=>f.sy===sy);return `<tr class="click" data-act="open" data-id="${s.id}" data-tab="exam"><td><div class="who-cell">${av(s)}<b>${esc(fullName(s))}</b></div></td><td class="mono">${s.lrn}</td><td>${examDone(s,adv.grade)?pill('Complete','good'):pill('Pending','warn')}</td><td>${dentalDone(s)?pill('Charted','good'):pill('Pending','warn')}</td><td>${fl.filter(f=>f.date).length}/${fl.length}</td></tr>`}).join('')||`<tr><td colspan="5" class="muted">No learners were in this advisory for ${sy}.</td></tr>`}
+  <div class="tile"><span class="eyebrow">Files on record</span><b>${mine.reduce((a,s)=>a+filesFor(s,sy).filter(f=>f.date).length,0)}</b></div></div>
+ <section class="panel" style="padding:0"><div class="tw stickytw"><table><thead><tr><th>Learner</th><th>LRN</th><th>Exam card</th><th>Dental</th><th>Files</th></tr></thead><tbody>
+ ${mine.map(s=>{const fl=filesFor(s,sy);return `<tr class="click" data-act="open" data-id="${s.id}" data-tab="exam"><td><div class="who-cell">${av(s)}<b>${esc(fullName(s))}</b></div></td><td class="mono">${s.lrn}</td><td>${examDone(s,adv.grade)?pill('Complete','good'):pill('Pending','warn')}</td><td>${dentalDone(s)?pill('Charted','good'):pill('Pending','warn')}</td><td>${fl.filter(f=>f.date).length}/${fl.length}</td></tr>`}).join('')||`<tr><td colspan="5" class="muted">No learners were in this advisory for ${sy}.</td></tr>`}
  </tbody></table></div></section>
- <section class="panel"><div class="head"><div><h3>Transfer a student record</h3><div class="small muted">Enter the learner's LRN. The whole health record moves with them for ${sy}.</div></div></div>
-  <div class="filters"><div class="field" style="flex:1 1 200px"><label for="tr-lrn">LRN</label><input class="inp mono" id="tr-lrn" inputmode="numeric" maxlength="12" placeholder="12-digit LRN, e.g. 110001000001" value="${esc(L.lrn)}" data-bind="trlrn"></div>
-  <div class="field" style="flex:1 1 220px"><label for="tr-dest">Move to</label><select class="inp" id="tr-dest" data-bind="trdest">${SECT_UI.map(s=>`<option value="${s.id}" ${(L.dest||adv.id)===s.id?'selected':''}>${esc(secLabel(s))}${s.id===adv.id?' (my advisory)':''}</option>`).join('')}</select></div></div>
+ <section class="panel"><div class="head"><div><h3>Send a learner to another section</h3><div class="small muted">Only learners in your own advisory can be moved out. Type the LRN, choose the section that receives the record, and it moves with them for ${sy}. To receive a learner, ask the sending adviser or the Doctor.</div></div></div>
+  <div class="filters"><div class="field" style="flex:1 1 200px"><label for="tr-lrn">LRN</label><input class="inp mono" id="tr-lrn" inputmode="numeric" maxlength="12" placeholder="12-digit LRN of your learner" value="${esc(L.lrn)}" data-bind="trlrn"></div>
+  <div class="field" style="flex:1 1 220px"><label for="tr-dest">Send to</label><select class="inp" id="tr-dest" data-bind="trdest">${SECT_UI.filter(s=>s.id!==adv.id).map(s=>`<option value="${s.id}" ${L.dest===s.id?'selected':''}>${esc(secLabel(s))}</option>`).join('')}</select></div></div>
   <div id="trprev" class="ro" style="margin:12px 0">${trPreview()}</div>
-  <button class="btn primary" data-act="transfer">Transfer record</button></section>
+  <button class="btn primary" data-act="transfer">Send record</button></section>
  ${DB.transfers.length?`<section class="panel"><div class="head"><h3>Transfer log</h3></div><div class="tw"><table><thead><tr><th>When</th><th>Learner</th><th>LRN</th><th>From</th><th>To</th><th>SY</th></tr></thead><tbody>${DB.transfers.slice().reverse().map(t=>`<tr><td class="mono">${esc(t.when)}</td><td>${esc(t.name)}</td><td class="mono">${t.lrn}</td><td>${esc(t.from)}</td><td>${esc(t.to)}</td><td class="mono">${t.sy}</td></tr>`).join('')}</tbody></table></div></section>`:''}`;
 }
 function trPreview(){
- const L=S.tr||{lrn:''}; if(!L.lrn)return 'Type a LRN to find the learner.';
- const st=DB.students.find(s=>s.lrn===L.lrn.trim()); if(!st)return L.lrn.length<12?'Keep typing, LRN has 12 digits.':'No learner has this LRN.';
- const e=enrOf(st,S.sy); return e?`Found ${esc(fullName(st))}, now in ${esc(secLabel(secOf(e.section)))} for ${S.sy}.`:`Found ${esc(fullName(st))}, not enrolled in ${S.sy}.`;
+ const L=S.tr||{lrn:''}; if(!L.lrn)return 'Type the LRN of a learner in your advisory.';
+ const st=advList().find(s=>s.lrn===L.lrn.trim());
+ if(!st)return L.lrn.length<12?'Keep typing, LRN has 12 digits.':'This LRN is not in your advisory for '+S.sy+'.';
+ return `Found ${esc(fullName(st))}, in your advisory for ${S.sy}.`;
 }
 function doTransfer(){
- const L=S.tr||{lrn:'',dest:''}, adv=S.user.adv, dest=L.dest||adv;
- const st=DB.students.find(s=>s.lrn===(L.lrn||'').trim());
- if(!st)return toast('No learner has this LRN.');
- const e=enrOf(st,S.sy); if(!e)return toast('This learner is not enrolled for '+S.sy+'.');
- if(e.section===dest)return toast('The record is already in that section.');
- if(e.section!==adv&&dest!==adv)return toast('You can only send out your own learners or move one into your advisory.');
+ const L=S.tr||{lrn:'',dest:''}, adv=S.user.adv;
+ const dest=L.dest||(SECT_UI.find(s=>s.id!==adv)||{}).id;
+ const st=advList().find(s=>s.lrn===(L.lrn||'').trim());
+ if(!st)return toast('This LRN is not in your advisory.');
+ if(!dest||dest===adv)return toast('Choose another section to send the record to.');
+ const e=enrOf(st,S.sy);if(!e||e.section!==adv)return toast('This learner is not in your advisory.');
  DB.transfers.push({when:new Date().toISOString().slice(0,16).replace('T',' '),name:fullName(st),lrn:st.lrn,from:secLabel(secOf(e.section)),to:secLabel(secOf(dest)),sy:S.sy});
- e.section=dest; save(); S.tr={lrn:'',dest}; toast('Record transferred'); render();
+ e.section=dest; save(); S.tr={lrn:'',dest}; toast('Record sent to '+secLabel(secOf(dest))); render();
 }
 
 /* ---------- my account ---------- */
@@ -269,6 +270,7 @@ function accountView(){
  <div class="grid2">
  <form class="panel" id="acctform" style="display:grid;gap:12px;align-content:start"><h3>Sign-in details</h3>
   <div class="field"><label>Name</label><input class="inp" value="${esc(a.name)}" disabled></div>
+  ${a.role==='Teacher'&&a.adv?`<div class="field"><label>Assigned section (read-only)</label><input class="inp" value="${esc(secLabel(secOf(a.adv)))} · ${esc(trackLabel(secOf(a.adv)))}" disabled></div>`:''}
   <div class="field"><label for="ac-u">Username</label><input class="inp" id="ac-u" value="${esc(a.username)}" autocapitalize="off" required></div>
   <div class="field"><label for="ac-e">Email</label><input class="inp" id="ac-e" type="email" value="${esc(a.email)}" required></div>
   <div id="ac-msg" class="small" role="status"></div><div><button class="btn primary" type="submit">Save details</button></div></form>
@@ -360,12 +362,15 @@ const exportList=()=>advList().filter(s=>!S.sel.size||S.sel.has(s.id));
 const safeName=s=>String(s).replace(/[^A-Za-z0-9._-]+/g,'_').replace(/^_+|_+$/g,'');
 function filesView(){
  const adv=secOf(S.user.adv),list=advList(),ex=exportList(),sy=S.sy;
+ const FF=[['all','All'],['incomplete','Incomplete files'],...FILE_KINDS.map(k=>['m:'+k,'Missing '+k.replace('School Health Examination Card','exam card').replace(' Form','').toLowerCase()])];
+ const ffk=S.ff||'all';
+ const shown=list.filter(s=>{if(ffk==='all')return true;const fl=filesFor(s,sy);if(ffk==='incomplete')return fl.some(x=>!x.date);const k=ffk.slice(2);return !fl.find(x=>x.name===k).date});
  const stPill=s=>s==='On file'?pill(s,'good'):s==='Missing'?pill(s,'warn'):pill('Not filed','mute');
- const rows=list.map(s=>{const fl=filesFor(s,sy),n=fl.filter(x=>x.date).length;
+ const rows=shown.map(s=>{const fl=filesFor(s,sy),n=fl.filter(x=>x.date).length;
   return `<tr><td><input type="checkbox" data-act="sel" data-id="${s.id}" ${S.sel.has(s.id)?'checked':''} aria-label="Select ${esc(fullName(s))}"></td>
   <td><div class="who-cell">${av(s)}<a href="#" class="plain" data-act="open" data-id="${s.id}" data-tab="profile"><b>${esc(fullName(s))}</b></a></div></td><td class="mono">${s.lrn}</td>
   ${fl.map(x=>`<td>${stPill(x.status)}${x.date?`<div class="small muted mono">${x.date}</div>`:''}</td>`).join('')}
-  <td class="mono">${n}/${fl.length}</td><td><button class="btn sm" data-act="exportone" data-id="${s.id}">Download record</button></td></tr>`}).join('');
+  <td class="mono">${n}/${fl.length}</td><td><button class="btn sm" data-act="exportone" data-id="${s.id}">Download alert card</button></td></tr>`}).join('');
  return `<div class="head"><div><div class="eyebrow">${esc(secLabel(adv))} · ${esc(trackLabel(adv))}</div><h2>Record of files</h2></div>
   <div class="field"><label for="sy">School year</label><select class="inp" id="sy" data-bind="sy">${SYS.map(y=>`<option ${sy===y?'selected':''}>${y}</option>`).join('')}</select></div></div>
  <section class="panel"><div class="head"><div><h3>Export</h3><div class="small muted">Pick learners in the table, or add them by LRN. With nothing picked, the whole advisory is exported.</div></div></div>
@@ -373,9 +378,10 @@ function filesView(){
    <div class="field" style="flex:0 0 auto;align-self:flex-end"><button class="btn" data-act="addlrn">Add</button></div></div>
   ${S.lrnMsg?`<div class="small" style="margin-top:8px;color:var(--muted)" role="status">${esc(S.lrnMsg)}</div>`:''}
   <div class="ro" style="margin:12px 0">${S.sel.size?`${ex.length} selected learner(s) will be exported.`:`All ${list.length} learner(s) in this advisory will be exported.`}${S.sel.size?' <button class="btn sm" data-act="selclear" style="margin-left:8px">Clear selection</button>':''}</div>
-  <div class="trow"><button class="btn primary" data-act="exportpdf" ${ex.length?'':'disabled'}>Download record of files (PDF)</button><button class="btn" data-act="exportfull" ${ex.length?'':'disabled'}>Download full health records (PDF)</button></div></section>
- <section class="panel" style="padding:0"><div class="tw"><table class="wrapth"><thead><tr><th><input type="checkbox" data-act="selall" ${list.length&&S.sel.size===list.length?'checked':''} aria-label="Select all"></th><th>Learner</th><th>LRN</th>${FILE_KINDS.map(k=>`<th>${esc(k)}</th>`).join('')}<th>On file</th><th></th></tr></thead><tbody>
- ${rows||`<tr><td colspan="9" class="muted">No learners were in this advisory for ${sy}.</td></tr>`}</tbody></table></div></section>`;
+  <div class="trow"><button class="btn primary" data-act="exportpdf" ${ex.length?'':'disabled'}>Download record of files (PDF)</button><button class="btn" data-act="exportalert" ${ex.length?'':'disabled'}>Download health alert summary (PDF)</button></div></section>
+ <div class="chips" role="group" aria-label="Filter learners by file status">${FF.map(([k,l])=>`<button type="button" class="chip${ffk===k?' on':''}" data-act="ffilt" data-k="${esc(k)}" aria-pressed="${ffk===k}">${esc(l)}</button>`).join('')}<span class="small muted" style="align-self:center">${shown.length} of ${list.length} learners</span></div>
+ <section class="panel" style="padding:0"><div class="tw stickytw"><table class="wrapth"><thead><tr><th><input type="checkbox" data-act="selall" ${list.length&&S.sel.size===list.length?'checked':''} aria-label="Select all"></th><th>Learner</th><th>LRN</th>${FILE_KINDS.map(k=>`<th>${esc(k)}</th>`).join('')}<th>On file</th><th></th></tr></thead><tbody>
+ ${rows||`<tr><td colspan="9" class="muted">${list.length?'No learners match this filter.':'No learners were in this advisory for '+sy+'.'}</td></tr>`}</tbody></table></div></section>`;
 }
 function browserSave(filename,data){
  const type=/\.pdf$/i.test(filename)?'application/pdf':/\.docx$/i.test(filename)?'application/vnd.openxmlformats-officedocument.wordprocessingml.document':'application/octet-stream';
@@ -447,6 +453,34 @@ function exportPDF(){
  pagesOps.forEach((o,i)=>{ops=o;T(M,H-24,'EduHealthHub',8,true,GRAY);T(W-M-60,H-24,`Page ${i+1} of ${pagesOps.length}`,8,false,GRAY)});
  const blob=pdfBuild(pagesOps.map(o=>o.join('\n')),W,H);
  saveFile(`Record-of-Files_${safeName(secLabel(adv))}_${sy}.pdf`,blob);
+}
+/* ---------- emergency contact & health alert summary (PDF, teachers) ---------- */
+function exportAlerts(list){
+ const sy=S.sy,adv=secOf(S.user.adv),W=842,H=595,M=40;
+ const clean=s=>String(s==null?'':s).replace(/[–—]/g,'-').replace(/[‘’]/g,"'").replace(/[“”]/g,'"').replace(/…/g,'...').replace(/[\r\t\n]+/g,' ');
+ const pe=s=>clean(s).replace(/[\\()]/g,'\\$&');
+ const GRAY=[.45,.5,.52],INK=[.06,.16,.18],TEAL=[.043,.498,.51],RED=[.7,.15,.12];
+ const col=[24,96,170,200,150,142],X=[];col.reduce((q,w,i)=>(X[i]=q,q+w),M);
+ const pagesOps=[];let ops,y;
+ const T=(x,yy,s,sz,bold,c)=>ops.push(`BT /${bold?'F2':'F1'} ${sz} Tf ${(c||INK).join(' ')} rg ${x.toFixed(1)} ${(H-yy).toFixed(1)} Td (${pe(s)}) Tj ET`);
+ const R=(x,yy,w,h,c)=>ops.push(`${c.join(' ')} rg ${x.toFixed(1)} ${(H-yy-h).toFixed(1)} ${w} ${h} re f`);
+ const cut=(s,w,sz,b)=>{s=clean(s);while(s.length>1&&pdfText(s,sz,b)>w-8)s=s.slice(0,-1);return s};
+ const alertOf=s=>{const t=[s.conditions,s.allergies].map(x=>String(x||'')).join(' ; ');const f=[];if(/asthma/i.test(t))f.push('Asthma');if(/seizure|epilep/i.test(t))f.push('Seizure');return f};
+ const head=()=>{R(M,y,W-2*M,26,TEAL);['#','LRN','Learner','Allergies','Health alerts','Parent / guardian contact'].forEach((h,i)=>T(X[i]+5,y+17,h,8.5,true,[1,1,1]));y+=26};
+ const newPage=first=>{ops=[];pagesOps.push(ops);y=M;if(first){T(M,48,'Emergency Contact & Health Alert Summary',18,true,INK);T(M,66,`${secLabel(adv)} (${trackLabel(adv)})  |  School year ${sy}  |  Adviser: ${S.user.name}`,9.5,false,GRAY);T(M,80,`Generated ${new Date().toISOString().slice(0,10)}  |  ${list.length} learner${list.length===1?'':'s'}  |  Allergies, asthma/seizure alerts and contact numbers only. No clinical or dental records.`,9,false,GRAY);y=96}head()};
+ newPage(true);
+ list.forEach((s,i)=>{
+  if(y+24>H-50)newPage(false);
+  if(i%2)R(M,y,W-2*M,24,[.95,.97,.97]);
+  const al=alertOf(s);
+  T(X[0]+5,y+15,String(i+1),9,false,GRAY);T(X[1]+5,y+15,s.lrn,9);T(X[2]+5,y+15,cut(fullName(s),col[2],9,true),9,true);
+  T(X[3]+5,y+15,cut(s.allergies&&s.allergies!=='None'?s.allergies:'None',col[3],9),9,false,s.allergies&&s.allergies!=='None'?RED:GRAY);
+  T(X[4]+5,y+15,al.length?al.join(', '):'None',9,!!al.length,al.length?RED:GRAY);
+  T(X[5]+5,y+15,cut((s.guardian?s.guardian+'  ':'')+(s.contact||''),col[5],9),9);
+  y+=24;
+ });
+ pagesOps.forEach((o,i)=>{ops=o;T(M,H-24,'EduHealthHub  |  Confidential: for emergencies only',8,true,GRAY);T(W-M-60,H-24,`Page ${i+1} of ${pagesOps.length}`,8,false,GRAY)});
+ saveFile(`Health-Alert-Summary_${safeName(secLabel(adv))}_${sy}.pdf`,pdfBuild(pagesOps.map(o=>o.join('\n')),W,H));
 }
 /* ---------- full health record (PDF) ---------- */
 const HW=[278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
@@ -617,8 +651,11 @@ const ACT={
   toks.forEach(t=>{const st=l.find(x=>x.lrn===t);if(st){S.sel.add(st.id);n++}else bad.push(t)});
   S.lrnMsg=!toks.length?'Type at least one LRN.':`${n} added.${bad.length?' Not found in your advisory for '+S.sy+': '+bad.join(', ')+'.':''}`;if(!bad.length)S.lrnText='';render()},
  exportpdf:()=>exportPDF(),
- exportfull:()=>exportRecords(exportList()),
- exportone:a=>exportRecords([stu(a.dataset.id)])
+ exportfull:()=>exportAlerts(exportList()),
+ exportalert:()=>exportAlerts(exportList()),
+ ffilt:a=>{S.ff=a.dataset.k;render()},
+ legal:a=>legalOpen(a.dataset.k),
+ exportone:a=>exportAlerts([stu(a.dataset.id)])
 };
 Object.assign(ACT,HOME_ACT,DOC_ACT,CHAT_ACT);
 document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');if(a&&ACT[a.dataset.act])ACT[a.dataset.act](a)});
