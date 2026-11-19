@@ -546,3 +546,27 @@ tr.click:hover td{background:var(--accent-soft)}tr.click{cursor:pointer}
 .gm-row .gicon{width:28px;height:28px;flex:none}.gm-info{display:grid;flex:1 1 160px;min-width:0}.gm-info b{overflow-wrap:anywhere}
 .gm-confirm{display:grid;gap:12px;padding:14px;border:1px solid var(--bad);border-radius:10px;background:var(--bad-soft)}
 .btn.danger-solid{background:var(--bad);border-color:var(--bad);color:#fff}
+/* soft (neumorphic) login card, sage tones */
+.stage .login-card{--nu-bg:#e9efe7;--nu-hi:#fbfdfa;--nu-lo:#c5d1c2;background:var(--nu-bg);backdrop-filter:none;border:0;border-radius:32px;padding:38px 34px 30px;gap:18px;
+ box-shadow:18px 18px 40px var(--nu-lo),-14px -14px 34px var(--nu-hi)}
+.stage .login-card:focus-within{box-shadow:18px 18px 40px var(--nu-lo),-14px -14px 34px var(--nu-hi)}
+.stage .login-card .lc-logo{box-shadow:6px 6px 14px var(--nu-lo),-6px -6px 14px var(--nu-hi);background:var(--nu-bg)}
+.stage .lhead{flex-direction:column;text-align:center;gap:10px}
+.stage .lhead .lock,.stage .lhead .role-ic{width:64px;height:64px;border-radius:50%;background:var(--nu-bg);color:var(--accent);box-shadow:7px 7px 14px var(--nu-lo),-7px -7px 14px var(--nu-hi);display:grid;place-items:center}
+.stage .lhead .role-ic{padding:12px}
+.stage .lhead h2{font-size:28px}
+.stage .login-card .field label{font-size:12px;margin-left:6px}
+.stage .login-card .inp{background:var(--nu-bg);border:0;border-radius:14px;min-height:48px;padding-inline:16px;box-shadow:inset 5px 5px 10px var(--nu-lo),inset -5px -5px 10px var(--nu-hi)}
+.stage .login-card .inp:focus{background:var(--nu-bg);box-shadow:inset 5px 5px 10px var(--nu-lo),inset -5px -5px 10px var(--nu-hi),0 0 0 2px var(--accent)}
+.stage .login-card .btn{border:0;background:var(--nu-bg);box-shadow:6px 6px 12px var(--nu-lo),-6px -6px 12px var(--nu-hi);border-radius:14px;color:var(--accent);font-weight:700}
+.stage .login-card .btn:hover{transform:none;box-shadow:4px 4px 9px var(--nu-lo),-4px -4px 9px var(--nu-hi)}
+.stage .login-card .btn:active{box-shadow:inset 4px 4px 8px var(--nu-lo),inset -4px -4px 8px var(--nu-hi)}
+.stage .login-card .btn.primary{background:var(--nu-bg);color:var(--accent);filter:none;font-size:16px;min-height:50px;letter-spacing:.02em}
+.stage .login-card .btn.primary:hover{transform:none;filter:none;box-shadow:4px 4px 9px var(--nu-lo),-4px -4px 9px var(--nu-hi)}
+.stage .login-card .pwwrap .btn{min-height:36px;min-width:52px;border-radius:12px;font-size:12px;padding-inline:10px}
+.nu-new{justify-content:center;align-items:center;gap:12px}
+.nu-plus{width:42px;height:42px;border-radius:50%;border:0;background:var(--nu-bg,#e9efe7);color:var(--accent);font-size:24px;font-weight:600;line-height:1;cursor:pointer;box-shadow:5px 5px 10px #c5d1c2,-5px -5px 10px #fbfdfa;transition:box-shadow .15s}
+.nu-plus:hover{box-shadow:3px 3px 7px #c5d1c2,-3px -3px 7px #fbfdfa}.nu-plus:active{box-shadow:inset 3px 3px 7px #c5d1c2,inset -3px -3px 7px #fbfdfa}
+.stage{background:linear-gradient(135deg,#e9efe7,#dfe8dc);animation:none}
+.stage .b1,.stage .b2,.stage .b3{background:#e9efe7;box-shadow:inset 16px 16px 36px #fbfdfa,inset -16px -16px 36px #c9d5c6,14px 14px 30px rgba(197,209,194,.7),-10px -10px 26px rgba(251,253,250,.8);opacity:1}
+@media (max-width:860px){.stage .login-card{padding:28px 20px 22px;border-radius:26px;box-shadow:12px 12px 26px var(--nu-lo),-10px -10px 24px var(--nu-hi)}}
