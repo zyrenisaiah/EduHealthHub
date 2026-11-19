@@ -542,3 +542,7 @@ tr.click:hover td{background:var(--accent-soft)}tr.click{cursor:pointer}
  .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
 }
 @media print{.nav,.topbar,.toast{display:none!important}}
+.gm-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:var(--surface);flex-wrap:wrap}
+.gm-row .gicon{width:28px;height:28px;flex:none}.gm-info{display:grid;flex:1 1 160px;min-width:0}.gm-info b{overflow-wrap:anywhere}
+.gm-confirm{display:grid;gap:12px;padding:14px;border:1px solid var(--bad);border-radius:10px;background:var(--bad-soft)}
+.btn.danger-solid{background:var(--bad);border-color:var(--bad);color:#fff}

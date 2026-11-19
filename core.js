@@ -194,7 +194,7 @@ ${L.panel?loginPanel(L.panel):L.signup?` <form class="login-card" id="signupform
   <div class="small muted" id="otp-help">Type or paste the code. It fills in by itself when you paste it, and you can also tap Paste below.</div>
   ${L.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(L.err)}</div>`:''}
   <button class="btn primary" type="submit" id="otpgo" disabled>Verify and log in</button>
-  <div class="trow"><button type="button" class="btn sm" data-act="otppaste">Paste code</button><button type="button" class="btn sm" id="resendbtn" data-act="resendcode" ${L.pending.busy?'disabled':''}>Send the code again</button><button type="button" class="btn sm" data-act="codeback">Back</button></div>
+  <div class="trow"><button type="button" class="btn sm" id="resendbtn" data-act="resendcode" ${L.pending.busy?'disabled':''}>Send the code again</button><button type="button" class="btn sm" data-act="codeback">Back</button></div>
   ${L.pending.viaGoogle?'':`<div class="small muted">No email? Confirm with the same Google account instead:</div>
   <div style="display:grid;gap:6px;justify-items:start"><div id="g-login" style="min-height:44px"></div></div>`}
  </form>`:` <form class="login-card ${L.err?'err':''}" id="loginform" autocomplete="on">

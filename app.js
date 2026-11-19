@@ -290,11 +290,12 @@ function gmailPanel(a){
  if(!CLOUD_ON)return '';
  const g=S.gm||{};
  const msg=(g.err?`<div class="pill bad" role="alert" style="white-space:normal">${esc(g.err)}</div>`:'')+(g.ok?`<div class="pill good" role="status" style="white-space:normal">${esc(g.ok)}</div>`:'');
+ const GL='<svg class="gicon" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.1 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.4c-.5 2.9-2.2 5.3-4.6 6.9l7.4 5.7c4.3-4 6.9-9.9 6.9-17.1z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.4-5.7c-2 1.4-4.9 2.3-8.5 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>';
  let body;
- if(a.gmail_ok&&g.unlink)body=`<form id="gm-unlink" style="display:grid;gap:10px"><div class="small muted">Enter your password to remove the Gmail. Logins will go back to password only.</div><div class="field"><label for="gm-pw">Password</label><input class="inp" id="gm-pw" type="password" autocomplete="current-password" required></div>${msg}<div class="trow"><button class="btn primary" type="submit">Remove Gmail</button><button class="btn" type="button" data-act="gmcancel">Cancel</button></div></form>`;
- else if(a.gmail_ok)body=`<div class="who-cell"><span class="pill good">Confirmed</span><b>${esc(a.gmail)}</b></div><div class="small muted">Every time you log in, you confirm with this Google account.</div>${msg}<div><button class="btn sm" type="button" data-act="gmunlinkask">Remove Gmail</button></div>`;
- else body=`<div style="display:grid;gap:8px"><div class="small muted">Link your Google account to protect this login. Every login will then ask you to confirm with Google.</div><div id="g-link" style="min-height:44px"></div>${msg}</div>`;
- return `<section class="panel" style="margin-bottom:14px;display:grid;gap:10px"><h3 style="margin:0">Gmail confirmation ${a.gmail_ok?'':'<span class="pill warn">Not set up</span>'}</h3>${body}</section>`}
+ if(a.gmail_ok&&g.unlink)body=`<form id="gm-unlink" class="gm-confirm"><div><b>Remove ${esc(a.gmail)}?</b><div class="small muted">Logins will go back to password only. Enter your password to confirm.</div></div><div class="field"><label for="gm-pw">Password</label><input class="inp" id="gm-pw" type="password" autocomplete="current-password" required></div>${msg}<div class="trow"><button class="btn danger-solid" type="submit">Remove Gmail</button><button class="btn" type="button" data-act="gmcancel">Cancel</button></div></form>`;
+ else if(a.gmail_ok)body=`<div class="gm-row">${GL}<div class="gm-info"><b>${esc(a.gmail)}</b><span class="small muted">Google account</span></div><span class="pill good">Connected</span><button class="btn sm" type="button" data-act="gmunlinkask">Remove</button></div><div class="small muted">Each login also asks for a 6-digit code sent to this Gmail.</div>${msg}`;
+ else body=`<div style="display:grid;gap:8px"><div class="small muted">Link your Google account to protect this login. Every login will then ask you to confirm with a code sent to it.</div><div id="g-link" style="min-height:44px"></div>${msg}</div>`;
+ return `<section class="panel gm-panel" style="margin-bottom:14px;display:grid;gap:10px"><h3 style="margin:0">Connected account ${a.gmail_ok?'':'<span class="pill warn">Not connected</span>'}</h3>${body}</section>`}
 function accMsg(id,m,ok){const e=$('#'+id);e.textContent=m;e.style.color=ok?'var(--good)':'var(--bad)'}
 
 /* ---------- photo cropper: move and zoom before saving ---------- */
@@ -554,7 +555,6 @@ const ACT={
  lpscroll:()=>{const l=document.getElementById('landing');if(l)l.scrollIntoView({behavior:'smooth',block:'start'})},lptop:()=>{window.scrollTo({top:0,behavior:'smooth'});const i=document.getElementById('lu');if(i)setTimeout(()=>i.focus({preventScroll:true}),400)},
  help:()=>helpOpen(),helpclose:()=>helpClose(),
  lpabout:()=>{S.login.panel='about';render();window.scrollTo(0,0)},lphelp:()=>{S.login.panel='help';render();window.scrollTo(0,0)},lphome:()=>{S.login.panel=null;render();window.scrollTo(0,0)},
- otppaste(){otpPaste(true)},
  bell(){S.nt.open=!S.nt.open;ntPaint()},
  ntread(e){const id=+e.dataset.id;rpc('app_notif_read',{p_token:TOK,p_id:id}).then(ntLoad).catch(()=>{});const it=S.nt.items.find(x=>x.id===id);if(it){it.read=true;S.nt.unread=Math.max(0,S.nt.unread-1)}ntPaint()},
  ntall(){rpc('app_notif_read',{p_token:TOK}).then(ntLoad).catch(()=>{});S.nt.items.forEach(x=>x.read=true);S.nt.unread=0;ntPaint()},
@@ -820,6 +820,7 @@ async function otpPaste(fromButton){if(!navigator.clipboard||!navigator.clipboar
   if(!fromButton&&i.value)return;i.value=m[1];otpSync();otpAuto(i)}catch(e){}}
 function otpAuto(i){if(i.value.replace(/\D/g,'').length===6){const f=document.getElementById('codeform');if(f&&!(S.login.pending&&S.login.pending.busy))setTimeout(()=>{if(document.getElementById('lc')===i&&i.value.length>=6)f.requestSubmit?f.requestSubmit():f.dispatchEvent(new Event('submit',{cancelable:true,bubbles:true}))},180)}}
 document.addEventListener('input',e=>{if(e.target.id==='lc'){otpSync();const t=e.inputType||'';if(t.startsWith('insert'))otpAuto(e.target)}});
+document.addEventListener('paste',e=>{if(e.target.id==='lc'){const t=((e.clipboardData&&e.clipboardData.getData('text'))||'').replace(/\D/g,'');if(t.length>=6){e.preventDefault();e.target.value=t.slice(0,6);otpSync();otpAuto(e.target)}}});
 document.addEventListener('focusin',e=>{if(e.target.id==='lc')otpSync()});document.addEventListener('focusout',e=>{if(e.target.id==='lc')setTimeout(otpSync,0)});
 /* when you come back from Gmail with the code copied, fill it in */
 window.addEventListener('focus',()=>{if(document.getElementById('lc'))otpPaste(false)});
