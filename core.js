@@ -276,7 +276,7 @@ function studentsView(){
  const cols=3+(p.exam?1:0)+(p.dental?1:0), filt=!!(f.q||f.grade||f.strand||f.section), open=sec=>filt||S.open.has(sec.id);
  return `<div class="head"><div><div class="eyebrow">${role==='Dentist'?'Dental service':'Student records'}</div><h2>Students</h2></div><div class="trow"><span class="muted">${list.length} of ${DB.students.length} learners</span>${filt?'':`<button class="btn sm" data-act="grpall">${S.open.size?'Collapse all':'Expand all'}</button>`}</div></div>
  <div class="filters">
-  <input class="inp" id="q" data-bind="filter" data-f="q" placeholder="Search name or LRN (press / to focus)" type="search" autocomplete="off" value="${esc(f.q)}" aria-label="Search">
+  <input class="inp" id="q" data-bind="filter" data-f="q" placeholder="Search name or LRN" type="search" autocomplete="off" value="${esc(f.q)}" aria-label="Search">
   <select class="inp" data-bind="filter" data-f="grade" aria-label="Grade"><option value="">All grades</option><option value="11" ${f.grade==='11'?'selected':''}>Grade 11</option><option value="12" ${f.grade==='12'?'selected':''}>Grade 12</option></select>
   <select class="inp" data-bind="filter" data-f="strand" aria-label="Track and strand"><option value="">All tracks / strands</option>${strands.map(s=>`<option value="${s}" ${f.strand===s?'selected':''}>${trackLabel(SECTIONS.find(x=>x.strand===s))}</option>`).join('')}</select>
   <select class="inp" data-bind="filter" data-f="section" aria-label="Section"><option value="">All sections</option>${SECT_UI.map(s=>`<option value="${s.id}" ${f.section===s.id?'selected':''}>${esc(secLabel(s))}</option>`).join('')}</select>
