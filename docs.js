@@ -6,25 +6,25 @@ const P_=(...r)=>({t:'p',r:r.map(a=>typeof a==='string'?run(a):a)});
 const H1=x=>({t:'h1',r:[run(x)]}),H2=x=>({t:'h2',r:[run(x)]}),LI=x=>({t:'li',r:[run(x)]});
 const B_=x=>run(x,'b');
 
-/* default dummy content for each file */
+/* default test content for each file */
 function defaultDoc(kind,st,sy){
  const sec=secOf((enrOf(st,sy)||enrOf(st,CUR_SY)).section);
- const head=[P_(run('DUMMY FILE - SAMPLE ONLY. This is not a real medical document.','b')),H1(kind),
-  P_(B_('School: '),'EduHealthHub Senior High School (dummy)'),
+ const head=[P_(run('TEST FILE - SAMPLE ONLY. This is not a real medical document.','b')),H1(kind),
+  P_(B_('School: '),'EduHealthHub Senior High School (test)'),
   P_(B_('Learner: '),fullName(st)+'    ',B_('LRN: '),st.lrn),
   P_(B_('Section: '),secLabel(sec)+' ('+trackLabel(sec)+')    ',B_('School year: '),sy)];
- const sign=[P_(''),P_('Prepared by: ______________________    Date: ______________'),P_(run('DUMMY FILE. Replace this text with the real content.','i'))];
+ const sign=[P_(''),P_('Prepared by: ______________________    Date: ______________'),P_(run('TEST FILE. Replace this text with the real content.','i'))];
  const body={
-  'School Health Examination Card':[H2('Examination summary'),LI('Height: ______ cm      Weight: ______ kg'),LI('Vision: ______      Hearing: ______'),LI('Nutritional status: ______'),LI('Remarks: Lorem ipsum dolor sit amet, dummy remarks only.')],
-  'Dental Record':[H2('Dental examination'),LI('Date examined: ______________'),LI('Findings: Lorem ipsum dolor sit amet, dummy dental findings only.'),LI('Treatment needed: ______________')],
+  'School Health Examination Card':[H2('Examination summary'),LI('Height: ______ cm      Weight: ______ kg'),LI('Vision: ______      Hearing: ______'),LI('Nutritional status: ______'),LI('Remarks: Lorem ipsum dolor sit amet, test remarks only.')],
+  'Dental Record':[H2('Dental examination'),LI('Date examined: ______________'),LI('Findings: Lorem ipsum dolor sit amet, test dental findings only.'),LI('Treatment needed: ______________')],
   'Immunization Card':[H2('Vaccines received'),LI('BCG: ______________'),LI('Measles (MMR): ______________'),LI('Tetanus-diphtheria (Td): ______________'),LI('HPV: ______________')],
-  'Purga Consent Form':[H2('Consent for deworming (purga)'),P_('I, ______________________, parent/guardian of '+fullName(st)+', allow my child to take the deworming medicine (purga) given by the school clinic during the school deworming program. I will tell the nurse about any allergy, current illness or medicine my child is taking. (Dummy consent text.)'),LI('Allergies or conditions to report: ______________________'),LI('Date of deworming: ______________'),P_(''),P_('Signature of parent/guardian: ______________________    Date: ______________')],
-  'Medical Clearance':[H2('Clearance'),P_('This is to certify that '+fullName(st)+' was examined and is cleared for the activity below. (Dummy text.)'),LI('Cleared for: ______________________'),LI('Valid until: ______________'),P_(''),P_('Physician: ______________________   License no.: __________')],
-  'Other Medical Records':[H2('Other medical records'),LI('Laboratory result: Lorem ipsum dolor sit amet (dummy).'),LI('Doctor\'s note: ______________________'),LI('Attachment list: ______________________')]
- }[kind]||[P_('Lorem ipsum dolor sit amet, dummy content only.')];
+  'Purga Consent Form':[H2('Consent for deworming (purga)'),P_('I, ______________________, parent/guardian of '+fullName(st)+', allow my child to take the deworming medicine (purga) given by the school clinic during the school deworming program. I will tell the nurse about any allergy, current illness or medicine my child is taking. (Test consent text.)'),LI('Allergies or conditions to report: ______________________'),LI('Date of deworming: ______________'),P_(''),P_('Signature of parent/guardian: ______________________    Date: ______________')],
+  'Medical Clearance':[H2('Clearance'),P_('This is to certify that '+fullName(st)+' was examined and is cleared for the activity below. (Test text.)'),LI('Cleared for: ______________________'),LI('Valid until: ______________'),P_(''),P_('Physician: ______________________   License no.: __________')],
+  'Other Medical Records':[H2('Other medical records'),LI('Laboratory result: Lorem ipsum dolor sit amet (test).'),LI('Doctor\'s note: ______________________'),LI('Attachment list: ______________________')]
+ }[kind]||[P_('Lorem ipsum dolor sit amet, test content only.')];
  return head.concat(body,sign)}
 
-/* the stored document (if edited) or the dummy template */
+/* the stored document (if edited) or the test template */
 function fileEntry(st,sy,kind){const f=st.files.find(f=>f.sy===sy&&sameKind(f.name,kind));if(f&&f.name!==kind)f.name=kind;return f}
 function docOf(st,sy,kind){const e=fileEntry(st,sy,kind);return e&&e.doc&&e.doc.b?{blocks:e.doc.b,custom:true,by:e.doc.by,at:e.doc.at}:{blocks:defaultDoc(kind,st,sy),custom:false}}
 function storeDoc(st,sy,kind,blocks){
@@ -153,14 +153,14 @@ async function readDocx(file){
  if(textLen(blocks)>DOC_MAX)throw new Error('That file has too much text for a health file (limit '+DOC_MAX.toLocaleString()+' characters).');
  return blocks}
 
-/* ---- PDF of a document (wraps, paginates, DUMMY watermark) ---- */
+/* ---- PDF of a document (wraps, paginates, TEST watermark) ---- */
 function docPDF(file,title,blocks){
  const W=595,H=842,M=56,CW=W-2*M,pages=[];let ops,y;
  const GRAY=[.45,.5,.52],INK=[.06,.16,.18],TEAL=[.043,.498,.51];
  const pe=s=>String(s).replace(/[\u2013\u2014]/g,'-').replace(/[\u2018\u2019]/g,"'").replace(/[\u201C\u201D]/g,'"').replace(/\u2022/g,'-').replace(/[\\()]/g,'\\$&');
  const T=(x,yy,s,sz,b,c)=>ops.push(`BT /${b?'F2':'F1'} ${sz} Tf ${(c||INK).join(' ')} rg ${x.toFixed(1)} ${(H-yy).toFixed(1)} Td (${pe(s)}) Tj ET`);
  const newPage=()=>{ops=[];pages.push(ops);
-  ops.push(`BT /F2 84 Tf 0.93 0.95 0.95 rg 0.7071 0.7071 -0.7071 0.7071 110 250 Tm (DUMMY FILE) Tj ET`);
+  ops.push(`BT /F2 84 Tf 0.93 0.95 0.95 rg 0.7071 0.7071 -0.7071 0.7071 110 250 Tm (TEST FILE) Tj ET`);
   T(M,40,'EDUHEALTHHUB',8.5,true,TEAL);T(W-M-pdfText(title,8.5,false),40,title,8.5,false,GRAY);y=M+34};
  newPage();
  blocks.forEach(k=>{
@@ -178,7 +178,7 @@ function docPDF(file,title,blocks){
    ln.forEach(t=>{T(x,y+sz,t.s,sz,t.b,k.t==='h1'?TEAL:INK);if(t.u&&t.s.trim())ops.push(`0.06 0.16 0.18 RG 0.6 w ${x.toFixed(1)} ${(H-y-sz-2).toFixed(1)} m ${(x+t.w).toFixed(1)} ${(H-y-sz-2).toFixed(1)} l S`);x+=t.w});
    y+=lh});
   y+=k.t==='li'?2:5});
- pages.forEach((o,i)=>{ops=o;T(M,H-30,'DUMMY FILE - sample only | Confidential student health information',8,false,GRAY);const pg=`Page ${i+1} of ${pages.length}`;T(W-M-pdfText(pg,8,false),H-30,pg,8,false,GRAY)});
+ pages.forEach((o,i)=>{ops=o;T(M,H-30,'TEST FILE - sample only | Confidential student health information',8,false,GRAY);const pg=`Page ${i+1} of ${pages.length}`;T(W-M-pdfText(pg,8,false),H-30,pg,8,false,GRAY)});
  return saveFile(file,pdfBuild(pages.map(o=>o.join('\n')),W,H))}
 
 /* ---- viewer / editor page ---- */
@@ -191,10 +191,10 @@ function docView(){
  const tools=d.edit?`<div class="trow doctools">${fb('bold','<b>B</b>')}${fb('italic','<i>I</i>')}${fb('underline','<u>U</u>')}${fb('formatBlock','Heading 1','h1')}${fb('formatBlock','Heading 2','h2')}${fb('formatBlock','Text','p')}${fb('insertUnorderedList','• List')}
    <span class="spacer"></span><button class="btn primary" data-act="dsave">Save</button><button class="btn" data-act="dcancel">Cancel</button></div>`
   :`<div class="trow">${ed?`<button class="btn primary" data-act="dedit">Edit content</button><button class="btn" data-act="ddocx">Download Word (.docx)</button><button class="btn" data-act="dupload">Upload Word (.docx)</button><input type="file" id="docup" data-bind="docup" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>`:''}
-   ${r==='Dentist'?'':`<button class="btn ${ed?'':'primary'}" data-act="dpdf">Download PDF</button>`}${ed&&dc.custom?'<button class="btn" data-act="dreset">Reset to dummy template</button>':''}${r==='Dentist'?'<span class="ro">View only</span>':''}</div>`;
+   ${r==='Dentist'?'':`<button class="btn ${ed?'':'primary'}" data-act="dpdf">Download PDF</button>`}${ed&&dc.custom?'<button class="btn" data-act="dreset">Reset to test template</button>':''}${r==='Dentist'?'<span class="ro">View only</span>':''}</div>`;
  const e=fileEntry(st,d.sy,d.kind),status=e&&e.date?pill('On file','good'):pill('Not filed','mute');
  return `<div><button class="btn sm" data-act="docback">← Back to ${esc(fullName(st))}</button></div>
- <section class="panel" ${ed&&!d.edit?'data-drop="viewer"':''}><div class="head"><div><div class="eyebrow">${esc(d.sy)} · LRN <span class="mono">${st.lrn}</span></div><h2>${esc(d.kind)}</h2><div class="muted">${esc(fullName(st))} ${status} ${pill('Dummy file','warn')} ${dc.custom?`<span class="small muted">Edited by ${esc(dc.by||'')} on ${esc(dc.at||'')}</span>`:'<span class="small muted">Dummy template, not edited yet</span>'}</div></div></div>
+ <section class="panel" ${ed&&!d.edit?'data-drop="viewer"':''}><div class="head"><div><div class="eyebrow">${esc(d.sy)} · LRN <span class="mono">${st.lrn}</span></div><h2>${esc(d.kind)}</h2><div class="muted">${esc(fullName(st))} ${status} ${pill('Test file','warn')} ${dc.custom?`<span class="small muted">Edited by ${esc(dc.by||'')} on ${esc(dc.at||'')}</span>`:'<span class="small muted">Test template, not edited yet</span>'}</div></div></div>
  ${S.docMsg?`<div class="pill ${S.docMsg[0]}" role="status" style="white-space:normal;margin-bottom:8px">${esc(S.docMsg[1])}</div>`:''}
  ${tools}
  ${ed&&!d.edit?'<div class="dropzone" aria-hidden="true">Drag a Word (.docx) file here to replace this file</div>':''}
@@ -207,7 +207,7 @@ const DOC_ACT={
  dsave:()=>{if(!canEditDocs())return;const b=htmlToBlocks($('#docedit'));
   if(textLen(b)>DOC_MAX){S.docMsg=['bad','Too much text (limit '+DOC_MAX.toLocaleString()+' characters).'];render();return}
   storeDoc(stu(S.doc.sid),S.doc.sy,S.doc.kind,b);S.doc.edit=false;S.docMsg=['good','Saved.'];render()},
- dreset:()=>{if(!canEditDocs())return;storeDoc(stu(S.doc.sid),S.doc.sy,S.doc.kind,null);S.docMsg=['good','Back to the dummy template.'];render()},
+ dreset:()=>{if(!canEditDocs())return;storeDoc(stu(S.doc.sid),S.doc.sy,S.doc.kind,null);S.docMsg=['good','Back to the test template.'];render()},
  dfmt:a=>{document.execCommand(a.dataset.c,false,a.dataset.v?'<'+a.dataset.v+'>':null)},
  ddocx:()=>{const d=S.doc,st=stu(d.sid);saveFile(`${safeName(d.kind)}_${st.lrn}_${d.sy}.docx`,buildDocx(docOf(st,d.sy,d.kind).blocks))},
  dpdf:()=>{const d=S.doc,st=stu(d.sid);docPDF(`${safeName(d.kind)}_${st.lrn}_${d.sy}.pdf`,`${d.kind} | ${fullName(st)} | ${d.sy}`,docOf(st,d.sy,d.kind).blocks)},
