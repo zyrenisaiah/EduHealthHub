@@ -640,8 +640,8 @@ button.tile:hover{box-shadow:var(--nu-raise-s)}button.tile:active{box-shadow:var
 .s3coin>*{position:absolute;inset:0;border-radius:50%}
 .s3slice{background:conic-gradient(from 20deg,#2f6b41,#9ccfa4,#2f6b41,#173d26,#6aa97a,#2f6b41,#a9d6b0,#2f6b41);}
 .s3face{backface-visibility:hidden;background-size:cover;background-position:center;box-shadow:inset 0 0 0 5px rgba(255,255,255,.9),inset 0 0 0 7px rgba(46,107,62,.5)}
-.s3front{transform:translateZ(10.5px)}.s3back{transform:rotateY(180deg) translateZ(10.5px)}
-.s3gloss{position:absolute;inset:0;border-radius:50%;background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.55) 46%,transparent 62%) 50% 0/260% 100% no-repeat;mix-blend-mode:soft-light;pointer-events:none}
+.s3back{transform:rotateY(180deg) translateZ(10.5px)}
+.s3gloss{position:absolute;inset:0;border-radius:50%;background:linear-gradient(105deg,transparent 32%,rgba(255,255,255,.28) 47%,transparent 62%) 50% 0/260% 100% no-repeat;pointer-events:none}
 .s3ring{left:0;top:0;border-radius:50%;border:2px solid rgba(85,125,89,.55);box-shadow:0 0 0 1px rgba(255,255,255,.6),inset 0 0 18px rgba(85,125,89,.12);transform-style:preserve-3d}
 .s3ring.b{border-color:rgba(214,152,52,.6)}
 .s3spin{position:absolute;inset:0;transform-style:preserve-3d}
@@ -651,3 +651,11 @@ button.tile:hover{box-shadow:var(--nu-raise-s)}button.tile:active{box-shadow:var
 .s3gem{left:-15px;top:-15px;width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 32% 30%,#fff 0 10%,#ffd98a 28%,#e09a22 68%,#8a520a)}
 @media(prefers-reduced-motion:reduce){.s3coin,.s3leaf,.s3gem,.s3ring{will-change:auto}}
 @media(max-width:560px){.s3scene{height:calc(380px*var(--u))}}
+
+.s3front{transform-style:preserve-3d;inset:0}
+.s3layer{position:absolute;inset:0;border-radius:50%;background-size:cover;background-position:center;backface-visibility:hidden}
+.s3layer.base{box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+.s3layer.ring{filter:drop-shadow(0 3px 3px rgba(10,40,20,.35))}
+.s3layer.laurel{filter:drop-shadow(3px 6px 4px rgba(10,40,20,.38))}
+.s3layer.book{filter:drop-shadow(5px 10px 7px rgba(10,40,20,.45))}
+.s3gloss{backface-visibility:hidden}

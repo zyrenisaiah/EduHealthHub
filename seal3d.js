@@ -14,7 +14,9 @@
   /* coin */
   var coin=el('s3coin',rig);
   for(var i=0;i<18;i++){el('s3slice',coin,'transform:translateZ('+(i-8.5)*1.15+'px)')}
-  var f=el('s3face s3front',coin);f.style.backgroundImage='url('+src+')';el('s3gloss',f);
+  var f=el('s3front',coin);
+  [['base',10.5],['ring',15],['laurel',22],['book',34]].forEach(function(l){var d=el('s3layer '+l[0],f,'transform:translateZ('+l[1]+'px);background-image:url(assets/seal-'+l[0]+'.webp)')});
+  var gl=el('s3gloss',f,'transform:translateZ(35px)');
   var b=el('s3face s3back',coin);b.style.backgroundImage='url('+src+')';
   /* rings with beads */
   var rings=[];
@@ -28,7 +30,7 @@
   for(var j=0;j<18;j++){
    var leaf=j%3!==2;var e=el(leaf?'s3leaf':'s3gem',rig);if(leaf){e.innerHTML=LEAF;e.style.color=['#3f8f57','#5fae72','#2e6b3e','#86c48f'][j%4]}
    items.push({e:e,leaf:leaf,a:j/18*Math.PI*2+Math.sin(j*3.1)*.3,r:150+((j*53)%90),z:((j*37)%160)-80,s:leaf?(26+(j*7)%22):(10+(j*5)%10),sp:.18+((j*13)%10)/60,ph:j*1.7})}
-  return {root:root,rig:rig,coin:coin,shadow:shadow,rings:rings,items:items,gloss:f.firstChild,mx:0,my:0,tx:0,ty:0,p:0,sp:0,t0:performance.now()}}
+  return {root:root,rig:rig,coin:coin,shadow:shadow,rings:rings,items:items,gloss:gl,mx:0,my:0,tx:0,ty:0,p:0,sp:0,t0:performance.now()}}
  function progress(){var h=Math.max(300,innerHeight*.9);return Math.min(1,Math.max(0,scrollY/h))}
  function frame(now){
   var S=state;if(!S||!S.root.isConnected){stop();return}
