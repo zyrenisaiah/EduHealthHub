@@ -16,6 +16,7 @@ function plDay(s,long){const d=plParse(s);return PL_DOW[d.getDay()]+', '+PL_MON[
 function plRange(e){return e.d2&&e.d2!==e.d1?plDay(e.d1)+' to '+plDay(e.d2):plDay(e.d1)}
 function plTime(t){if(!t)return '';const p=t.split(':'),h=+p[0],m=p[1]||'00';return (h%12||12)+':'+m+(h<12?' AM':' PM')}
 function plTimes(e){return e.t1?plTime(e.t1)+(e.t2?' to '+plTime(e.t2):''):''}
+function plSecName(id){const x=SECT_UI.find(y=>y.id===id);return x?secLabel(x):id}
 function plPill(k){const x=PL_KINDS[k]||PL_KINDS.other;return `<span class="plk ${x[1]}">${x[0]}</span>`}
 function plPostedAt(t){try{return new Date(t).toLocaleString([], {month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'})}catch(e){return ''}}
 
@@ -87,7 +88,7 @@ function plCalendar(){
 function plEvCard(e){
  const staff=plStaff(),tm=plTimes(e);
  return `<div class="plev ${(PL_KINDS[e.kind]||PL_KINDS.other)[1]}"><div class="plevtop">${plPill(e.kind)}<b>${esc(e.title)}</b></div>
-  <div class="small">${esc(plRange(e))}${tm?' · '+esc(tm):''}${e.aud?' · For: '+esc(e.aud):''}</div>
+  <div class="small">${esc(plRange(e))}${tm?' · '+esc(tm):''}${e.aud?' · For: '+esc(e.aud):''}${e.sec?' · Section: '+esc(plSecName(e.sec)):''}</div>
   ${e.details?`<p class="plnote">${esc(e.details)}</p>`:''}
   <div class="small muted">Added by ${esc(e.by)}</div>
   ${staff?`<div class="trow"><button type="button" class="btn sm" data-act="evedit" data-id="${e.id}">Edit</button><button type="button" class="btn sm danger" data-act="evdel" data-id="${e.id}" aria-label="Delete: ${esc(e.title)}">Delete</button></div>`:''}</div>`}
@@ -118,7 +119,8 @@ function plForm(){
    <div class="field"><label for="ev-t1">Start time (optional)</label><input class="inp" id="ev-t1" type="time" value="${v('t1')}"></div>
    <div class="field"><label for="ev-t2">End time (optional)</label><input class="inp" id="ev-t2" type="time" value="${v('t2')}"></div>
   </div>
-  <div class="field"><label for="ev-aud">Who it is for (team or section)</label><input class="inp" id="ev-aud" maxlength="120" value="${v('aud')}" placeholder="Example: Grade 11 Academic-2, or Volleyball team"></div>
+  <div class="field"><label for="ev-sec">Notify teachers</label><select class="inp" id="ev-sec"><option value="">All teachers</option>${SECT_UI.map(x=>`<option value="${esc(x.id)}"${e.sec===x.id?' selected':''}>Only the adviser of ${esc(secLabel(x))} (${esc(trackLabel(x))})</option>`).join('')}</select><span class="small muted">The entry stays visible to everyone on the calendar. Only the notification is limited.</span></div>
+  <div class="field"><label for="ev-aud">Who it is for (team or group, optional)</label><input class="inp" id="ev-aud" maxlength="120" value="${v('aud')}" placeholder="Example: Grade 11 Academic-2, or Volleyball team"></div>
   <div class="field"><label for="ev-det">Details</label><textarea class="inp" id="ev-det" rows="3" maxlength="1000" placeholder="What learners should bring or do.">${v('details')}</textarea></div>
   <div id="ev-msg" class="small" role="status"></div>
   <div class="trow"><button class="btn primary" type="submit">${f.id?'Save changes':'Add to schedule'}</button><button type="button" class="btn" data-act="evcancel">Cancel</button></div>
@@ -161,7 +163,7 @@ function planSubmit(e){
   const bad=!val('ev-title').trim()?'Write a title.':!d1?'Choose a date.':d2&&d2<d1?'The end date must be the same day or later.':d2&&(plParse(d2)-plParse(d1))/864e5>60?'A single entry can cover at most 60 days.':t1&&t2&&t2<=t1?'The end time must be after the start time.':'';
   if(bad){if(msg)msg.textContent=bad;return true}
   btn.disabled=true;btn.textContent='Saving...';
-  const data={id:val('ev-id')||null,kind:val('ev-kind'),title:val('ev-title').trim(),d1:d1,d2:d2||d1,t1:t1,t2:t2,aud:val('ev-aud').trim(),details:val('ev-det').trim()};
+  const data={id:val('ev-id')||null,kind:val('ev-kind'),title:val('ev-title').trim(),d1:d1,d2:d2||d1,t1:t1,t2:t2,aud:val('ev-aud').trim(),sec:val('ev-sec'),details:val('ev-det').trim()};
   rpc('app_ev_save',{p_token:TOK,p_data:data}).then(()=>{toast(data.id?'Schedule entry saved':'Added to the schedule. Teachers were notified.');S.pl.form=null;S.pl.sel=d1;S.pl.m=d1.slice(0,7);plLoad(true)}).catch(er=>{btn.disabled=false;btn.textContent=data.id?'Save changes':'Add to schedule';if(msg)msg.textContent='Could not save. '+cloudErr(er)});
   return true}
  return false}
