@@ -626,3 +626,28 @@ button.tile:hover{box-shadow:var(--nu-raise-s)}button.tile:active{box-shadow:var
 .appfoot{display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between;align-items:center;padding:14px 20px;margin-top:18px;font-size:12px;color:var(--muted);border-top:1px solid var(--line)}
 .appfoot button{border:0;background:none;color:var(--muted);font:inherit;text-decoration:underline;cursor:pointer;padding:2px}.appfoot button:hover{color:var(--accent)}
 @media (max-width:860px){.appfoot{padding-bottom:84px;justify-content:center;text-align:center}}
+/* ===== 3D seal (start page) ===== */
+.s3wrap{margin:0 0 10px;padding-left:0;display:block}
+.s3wrap::before{display:none!important}
+.s3scene{--u:1;position:relative;width:min(520px,92vw);height:calc(430px*var(--u));margin:0 auto;perspective:1100px;perspective-origin:50% 45%}
+@media(min-width:900px){.s3scene{margin:0}}
+.s3scene .seal{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
+.s3plate{position:absolute;left:50%;top:50%;width:calc(380px*var(--u));height:calc(380px*var(--u));margin:calc(-190px*var(--u)) 0 0 calc(-190px*var(--u));border-radius:50%;background:#e9efe7;box-shadow:inset 14px 14px 30px #c5d1c2,inset -14px -14px 30px #fbfdfa,10px 12px 28px rgba(197,209,194,.55)}
+.s3shadow{position:absolute;left:50%;bottom:calc(34px*var(--u));width:calc(230px*var(--u));height:calc(26px*var(--u));border-radius:50%;background:radial-gradient(closest-side,rgba(30,60,40,.5),transparent);filter:blur(5px)}
+.s3rig{position:absolute;left:50%;top:50%;width:0;height:0;transform-style:preserve-3d;scale:var(--u)}
+.s3rig>*{position:absolute;transform-style:preserve-3d}
+.s3coin{left:-130px;top:-130px;width:260px;height:260px;transform-style:preserve-3d;will-change:transform}
+.s3coin>*{position:absolute;inset:0;border-radius:50%}
+.s3slice{background:conic-gradient(from 20deg,#2f6b41,#9ccfa4,#2f6b41,#173d26,#6aa97a,#2f6b41,#a9d6b0,#2f6b41);}
+.s3face{backface-visibility:hidden;background-size:cover;background-position:center;box-shadow:inset 0 0 0 5px rgba(255,255,255,.9),inset 0 0 0 7px rgba(46,107,62,.5)}
+.s3front{transform:translateZ(10.5px)}.s3back{transform:rotateY(180deg) translateZ(10.5px)}
+.s3gloss{position:absolute;inset:0;border-radius:50%;background:linear-gradient(105deg,transparent 30%,rgba(255,255,255,.55) 46%,transparent 62%) 50% 0/260% 100% no-repeat;mix-blend-mode:soft-light;pointer-events:none}
+.s3ring{left:0;top:0;border-radius:50%;border:2px solid rgba(85,125,89,.55);box-shadow:0 0 0 1px rgba(255,255,255,.6),inset 0 0 18px rgba(85,125,89,.12);transform-style:preserve-3d}
+.s3ring.b{border-color:rgba(214,152,52,.6)}
+.s3spin{position:absolute;inset:0;transform-style:preserve-3d}
+.s3bead{position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px;border-radius:50%;background:radial-gradient(circle at 32% 30%,#fff 0 12%,#f6c768 30%,#d98d1c 70%,#8a520a);box-shadow:0 4px 8px rgba(80,50,10,.35)}
+.s3bead.g{background:radial-gradient(circle at 32% 30%,#fff 0 12%,#9ad6a6 30%,#3f8f57 70%,#1d4d2c)}
+.s3leaf,.s3gem{left:-24px;top:-12px;width:48px;height:24px;will-change:transform;filter:drop-shadow(0 6px 5px rgba(30,60,40,.25))}
+.s3gem{left:-15px;top:-15px;width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 32% 30%,#fff 0 10%,#ffd98a 28%,#e09a22 68%,#8a520a)}
+@media(prefers-reduced-motion:reduce){.s3coin,.s3leaf,.s3gem,.s3ring{will-change:auto}}
+@media(max-width:560px){.s3scene{height:calc(380px*var(--u))}}

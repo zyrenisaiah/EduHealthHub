@@ -576,7 +576,7 @@ function render(){
  appBackdrop();
  ntAfter();
  otpSync();
- landAfter();
+ landAfter(); if(window.seal3dInit)seal3dInit();
  if(!S.user)loginFX();
  if(typeof afterRender==='function')afterRender() }
 const goOpen=(id,tab)=>{logView(id);S.back=S.view;S.view='student';S.sid=id;S.tab=tab||'profile';S.tooth=null;S.undo=[];S.brush=null;render();window.scrollTo(0,0)};
