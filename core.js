@@ -222,9 +222,9 @@ ${L.panel?loginPanel(L.panel):L.signup?` <form class="login-card" id="signupform
 /* ---------- shell ---------- */
 function shell(){
  const u=S.user, nav=NAV[u.role];
- const body={about:aboutView,chat:chatView,doc:docView,activity:activityView,accounts:accountsView,home:()=>S.user.role==='Teacher'?teacherHome():homeView(),overview:overviewView,students:studentsView,stock:stockView,dash:teacherView,student:studentView,account:accountView,files:filesView}[S.view]();
+ const body={about:aboutView,chat:chatView,doc:docView,activity:activityView,accounts:accountsView,home:()=>S.user.role==='Teacher'?teacherHome():homeView(),overview:overviewView,students:studentsView,stock:stockView,dash:teacherView,student:studentView,account:accountView,files:filesView,ann:annView,sched:schedView}[S.view]();
  const navKey=(S.view==='student'||S.view==='doc')?S.back:S.view;
- return `<div class="shell"><header class="topbar"><button class="name homebtn" data-act="nav" data-v="about" title="Home: About EduHealthHub" aria-label="EduHealthHub, Home (About us)"><span class="logo-chip"><img src="${LOGO_EMBLEM}" alt="" height="34"></span>EduHealthHub</button><div class="spacer"></div>
+ return `<div class="shell"><header class="topbar"><button class="name homebtn" data-act="nav" data-v="about" title="Home: About EduHealthHub" aria-label="EduHealthHub, Home (About us)"><span class="logo-chip"><img src="${LOGO_EMBLEM}" alt="" height="34"></span>EduHealthHub</button>${plTopLinks()}<div class="spacer"></div>
   <img class="role-ic" style="object-fit:cover" src="${u.photo||ROLE_ICON[u.role]}" alt="${u.role}">
   <div class="who"><b>${esc(u.name)}</b><span class="small muted">${u.role}${u.role==='Teacher'?' · '+esc(secLabel(secOf(u.adv))):''}</span></div>
   <button class="btn sm tszbtn" data-act="tsz" aria-label="Change text size" title="Change text size">A<small>A</small></button><button class="btn sm helpbtn" data-act="help" aria-haspopup="dialog">Help</button>${CLOUD_ON?'<span id="bellwrap" class="bellwrap"></span>':''}${CLOUD_ON?`<span class="small muted" id="syncstat" aria-live="polite">${esc(SYNC_TXT)}</span>`:''}<button class="btn sm" data-act="logout">Log out</button></header>

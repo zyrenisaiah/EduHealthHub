@@ -658,6 +658,7 @@ const ACT={
  exportone:a=>exportAlerts([stu(a.dataset.id)])
 };
 Object.assign(ACT,HOME_ACT,DOC_ACT,CHAT_ACT);
+Object.assign(ACT,PLAN_ACT);
 document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');if(a&&ACT[a.dataset.act])ACT[a.dataset.act](a)});
 /* ---------- click a profile picture to see it enlarged ---------- */
 const isPhoto=src=>/^data:image\/(jpeg|jpg|png|webp)/.test(src||'');
@@ -728,6 +729,7 @@ document.addEventListener('change',e=>{if(e.target.id==='su-role'){const f=$('#s
 document.addEventListener('submit',e=>{
  e.preventDefault();
  if(S.user&&homeSubmit(e))return;
+ if(S.user&&planSubmit(e))return;
  if(e.target.id==='loginform'){
   const held=lockOther();if(held){S.login.err=lockMsg(held);render();return}
   if(CLOUD_ON){cloudLogin($('#lu').value.trim(),$('#pw').value);return}
@@ -817,9 +819,9 @@ document.addEventListener("mousedown",e=>{if(e.target.closest&&e.target.closest(
 /* ---------- notifications (bell in the top bar, plus a banner for accounts without a linked Google account) ---------- */
 S.nt={items:[],unread:0,open:false};let _ntT=null;
 async function ntLoad(){if(!CLOUD_ON||!S.user||!TOK)return;try{const r=await rpc('app_notifs',{p_token:TOK});S.nt.items=r.items||[];S.nt.unread=r.unread||0;S.nt.linked=!!r.linked;S.nt.loaded=true;ntPaint();ntBanner()}catch(e){}}
-function ntPaint(){const w=document.getElementById('bellwrap');if(!w)return;
+function ntPaint(){plBadge();const w=document.getElementById('bellwrap');if(!w)return;
  const it=S.nt.items,when=t=>{try{return new Date(t).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}catch(e){return ''}};
- const list=it.length?it.map(n=>`<div class="ntitem${n.read?'':' unread'}"><b>${esc(n.title)}</b><div class="small">${esc(n.body)}</div><div class="small muted">${esc(when(n.at))}</div><div class="trow">${n.kind==='link_google'&&!n.read?'<button type="button" class="btn sm primary" data-act="ntgo">Connect now</button>':''}${n.read?'':`<button type="button" class="btn sm" data-act="ntread" data-id="${n.id}">Mark as read</button>`}</div></div>`).join(''):'<div class="small muted" style="padding:12px">No notifications.</div>';
+ const list=it.length?it.map(n=>`<div class="ntitem${n.read?'':' unread'}"><b>${esc(n.title)}</b><div class="small">${esc(n.body)}</div><div class="small muted">${esc(when(n.at))}</div><div class="trow">${n.kind==='link_google'&&!n.read?'<button type="button" class="btn sm primary" data-act="ntgo">Connect now</button>':''}${(n.kind==='announce'||n.kind==='schedule')?`<button type="button" class="btn sm primary" data-act="ntview" data-id="${n.id}" data-v="${n.kind==='announce'?'ann':'sched'}">View</button>`:''}${n.read?'':`<button type="button" class="btn sm" data-act="ntread" data-id="${n.id}">Mark as read</button>`}</div></div>`).join(''):'<div class="small muted" style="padding:12px">No notifications.</div>';
  w.innerHTML=`<button type="button" class="btn sm bellbtn" data-act="bell" aria-label="Notifications${S.nt.unread?', '+S.nt.unread+' unread':''}" aria-expanded="${S.nt.open}">&#128276;${S.nt.unread?`<span class="badge">${S.nt.unread}</span>`:''}</button>${S.nt.open?`<div class="ntpanel" role="dialog" aria-label="Notifications"><div class="nthead"><b>Notifications</b>${S.nt.unread?'<button type="button" class="btn sm" data-act="ntall">Mark all read</button>':''}</div>${list}</div>`:''}`}
 function ntAfter(){
  if(!CLOUD_ON||!S.user)return;
