@@ -23,10 +23,11 @@ async function plLoad(force){
  if(!CLOUD_ON||!S.user||!TOK||S.pl.loading)return;
  if(!force&&S.pl.loaded&&Date.now()-S.pl.t<20000)return;
  S.pl.loading=true;
- try{const r=await Promise.all([rpc('app_ann_list',{p_token:TOK}),rpc('app_ev_list',{p_token:TOK})]);S.pl.ann=r[0]||[];S.pl.ev=r[1]||[];S.pl.loaded=true;S.pl.err='';S.pl.t=Date.now()}
+ try{const r=await Promise.all([rpc('app_ann_list',{p_token:TOK}),rpc('app_ev_list',{p_token:TOK})]);const sig=JSON.stringify(r),ch=sig!==S.pl.sig||!S.pl.loaded;S.pl.sig=sig;S.pl.ann=r[0]||[];S.pl.ev=r[1]||[];S.pl.loaded=true;S.pl.err='';S.pl.t=Date.now();S.pl.changed=ch}
  catch(e){S.pl.err=cloudErr(e)}
  S.pl.loading=false;
- if(S.view==='ann'||S.view==='sched'){const y=window.scrollY;render();window.scrollTo(0,y)}}
+ const ae=document.activeElement,typing=ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
+ if(['ann','sched','home'].includes(S.view)&&(S.pl.changed||force)&&!(typing&&!force)){const y=window.scrollY;render();window.scrollTo(0,y)}}
 function plEnsure(){if(!S.pl.loaded||Date.now()-S.pl.t>20000)setTimeout(()=>plLoad(),0)}
 
 /* mark announcement notifications as read once the page is opened */

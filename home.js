@@ -39,11 +39,11 @@ function homeStats(){
  const tile=(e,b,sub,cls,act)=>`<${act?'button data-act="'+act+'"':'div'} class="tile ${cls||''}" ${act?'style="text-align:left;font:inherit;cursor:pointer"':''}><span class="eyebrow">${e}</span><b>${b}</b><span class="small muted">${sub}</span></${act?'button':'div'}>`;
  const tiles=[];
  if(role!=='Dentist'){
-  tiles.push(tile('Patients treated today',vs.filter(x=>x.x.date===t).length,'walk-ins and clinic visits'));
-  tiles.push(tile('Active clinic rest cases',vs.filter(x=>x.x.rest&&!x.x.out).length,'resting in clinic beds','','gorest'));
-  tiles.push(tile('Doctor referral queue',flat('refs').filter(x=>x.x.status==='pending').length,'waiting for physician review',flat('refs').some(x=>x.x.status==='pending')?'alert':'','gorefs'))}
- tiles.push(tile('Pending dental chartings',DB.students.filter(s=>!dentalDone(s)).length,needs+' with treatment needs'));
- if(role!=='Dentist')tiles.push(tile('Low supply alert',low,'low, out or expiring',low?'alert':'','nav-stock'));
+  tiles.push(tile('Treated today',vs.filter(x=>x.x.date===t).length,'walk-ins and clinic visits'));
+  tiles.push(tile('Resting in clinic',vs.filter(x=>x.x.rest&&!x.x.out).length,'resting in clinic beds','','gorest'));
+  tiles.push(tile('Doctor referral queue',flat('refs').filter(x=>x.x.status==='pending').length,'waiting for the doctor',flat('refs').some(x=>x.x.status==='pending')?'alert':'','gorefs'))}
+ tiles.push(tile('Dental charts pending',DB.students.filter(s=>!dentalDone(s)).length,needs+' with treatment needs'));
+ if(role!=='Dentist')tiles.push(tile('Low supplies',low,'low, out or expiring',low?'alert':'','nav-stock'));
  return `<div class="tiles">${tiles.join('')}</div>`}
 
 function quickActions(){
@@ -145,12 +145,14 @@ function homeView(){
  const q=flat('refs').filter(x=>x.x.status==='pending');
  const low=DB.stock.filter(i=>stockState(i)[1]!=='good');
  return `<div class="head"><div><div class="eyebrow">${r} hub · ${new Date().toDateString()}</div><h2>Dashboard</h2></div></div>
+ <div class="dashflow">
  <section class="panel"><form id="hform" autocomplete="off"><div class="field"><label for="hq">Find a learner by 12-digit LRN or name</label>
   <div class="who-cell"><input class="inp mono hsearch" id="hq" data-bind="hq" inputmode="text" maxlength="40" placeholder="Type the LRN or the student's name" value="${esc(h.q)}"><button class="btn primary" type="submit">Search</button>${h.sid?'<button type="button" class="btn" data-act="hclear">Clear</button>':''}</div></div></form>
   ${h.msg?`<div class="small" style="margin-top:8px;color:var(--bad)" role="status">${esc(h.msg)}</div>`:''}
   ${m.length?`<div class="matches">${m.map(x=>`<button class="btn sm" data-act="hpick" data-id="${x.id}">${esc(fullName(x))} · <span class="mono">${x.lrn}</span></button>`).join('')}</div>`:''}
   <div class="trow" style="margin-top:12px">${quickActions()}</div></section>
  ${homeStats()}
+ ${todayCard()}
  ${s?resultCard(s):''}
  ${signupPanel()}
  ${inc.length?`<section class="panel" id="incq" style="border-color:var(--warn)"><div class="head"><h3>Incoming from teachers</h3><span class="small muted">${inc.length} on the way</span></div><div class="tw"><table class="wrapth"><tbody>${inc.map(({s:x,x:ps})=>`<tr><td><b>${esc(fullName(x))}</b><div class="small muted mono">${x.lrn}</div></td><td>${esc(secLabel(curSec(x)))}<div class="small muted">Sent ${esc(ps.time)} by ${esc(ps.by)}${ps.note?' · '+esc(ps.note):''}</div></td><td style="white-space:nowrap">${canSlip()?`<button class="btn sm primary" data-act="hrecv" data-id="${x.id}" data-v="${ps.id}">Receive</button>`:''}</td></tr>`).join('')}</tbody></table></div></section>`:''}
@@ -165,7 +167,7 @@ function homeView(){
   ${low.length?`<ul class="plainlist">${low.slice(0,8).map(i=>`<li><b>${esc(i.name)}</b> ${pill(stockState(i)[0],stockState(i)[1])} <span class="small muted">${i.qty} ${esc(i.unit)} left (minimum ${i.min})</span></li>`).join('')}</ul>`:'<p class="small muted">All supplies are above their minimum.</p>'}</section>
  <section class="panel"><div class="head"><h3>Shift handover notes</h3><span class="small muted">shared by nurses and doctors</span></div>
   <form id="hf-note" class="who-cell"><input class="inp" id="n-text" maxlength="300" placeholder="Note for the next shift" required><button class="btn primary" type="submit">Add</button></form>
-  ${DB.notes.length?`<ul class="plainlist" style="margin-top:10px">${DB.notes.slice().reverse().slice(0,10).map(n=>`<li><div>${esc(n.text)}</div><div class="small muted">${esc(n.by)} · ${esc(n.date)} ${esc(n.time)}${(n.by===S.user.name||r==='Doctor')?` <button class="btn sm" data-act="hdelnote" data-v="${n.id}">Delete</button>`:''}</div></li>`).join('')}</ul>`:'<p class="small muted" style="margin-top:10px">No notes yet.</p>'}</section></div>`:''}`}
+  ${DB.notes.length?`<ul class="plainlist" style="margin-top:10px">${DB.notes.slice().reverse().slice(0,10).map(n=>`<li><div>${esc(n.text)}</div><div class="small muted">${esc(n.by)} · ${esc(n.date)} ${esc(n.time)}${(n.by===S.user.name||r==='Doctor')?` <button class="btn sm" data-act="hdelnote" data-v="${n.id}">Delete</button>`:''}</div></li>`).join('')}</ul>`:'<p class="small muted" style="margin-top:10px">No notes yet.</p>'}</section></div>`:''}</div>`}
 
 /* ---- search ---- */
 const _viewed=new Map();
@@ -298,12 +300,14 @@ function teacherHome(){
   <h3 class="hh">Clearance verification</h3>${cl.length?`<table class="kvt"><tbody>${cl.map(c=>{const ok=!c.until||c.until>=t;return `<tr><th>${esc(c.type)}</th><td>${pill(ok?'Valid':'Expired',ok?'good':'bad')} <span class="small muted">issued ${esc(c.date)} by ${esc(c.by)}${c.until?', valid until '+esc(c.until):''}</span></td></tr>`}).join('')}</tbody></table>`:'<p class="small muted">No clearance on file.</p>'}
   <p class="small muted" style="margin-bottom:0">Medical details are hidden from teachers to protect privacy.</p></section>`}
  return `<div class="head"><div><div class="eyebrow">Teacher hub · ${new Date().toDateString()}</div><h2>Dashboard</h2></div></div>
+ <div class="dashflow">
  <section class="panel"><form id="hform" autocomplete="off"><div class="field"><label for="hq">Find a learner in your advisory by 12-digit LRN or name</label>
   <div class="who-cell"><input class="inp mono hsearch" id="hq" data-bind="hq" inputmode="text" maxlength="40" placeholder="Type the LRN or the student's name" value="${esc(h.q)}"><button class="btn primary" type="submit">Search</button>${h.sid?'<button type="button" class="btn" data-act="hclear">Clear</button>':''}</div></div></form>
   ${h.msg?`<div class="small" style="margin-top:8px;color:var(--bad)" role="status">${esc(h.msg)}</div>`:''}
   ${m.length?`<div class="matches">${m.map(x=>`<button class="btn sm" data-act="hpick" data-id="${x.id}">${esc(fullName(x))} · <span class="mono">${x.lrn}</span></button>`).join('')}</div>`:''}
   <div class="trow" style="margin-top:12px"><button class="btn primary" data-act="hsend">Send student to clinic</button></div></section>
  <div class="tiles">${tile('In clinic now',rows.filter(r=>r.st.k==='in').length,esc(secLabel(sec)),rows.some(r=>r.st.k==='in')?'alert':'')}${tile('On the way',rows.filter(r=>r.st.k==='way').length,'passes sent')}${tile('Sent home today',home.length,'excused / early departure')}${tile('Back in class today',back.length,'time-outs recorded')}</div>
+ ${todayCard()}
  ${card}
  <section class="panel"><div class="head"><div><h3>Health files</h3><div class="small muted">Download the Emergency Contact & Health Alert Summary for your advisory (allergies, asthma or seizure alerts and parent contact only). Medical and dental details stay with clinic staff.</div></div></div><div class="trow"><button class="btn primary" data-act="exportfull" ${list.length?'':'disabled'}>Download health alert summary (PDF)</button><button class="btn" data-act="exportpdf" ${list.length?'':'disabled'}>Download record of files (PDF)</button></div></section>
  <div class="grid2">
@@ -311,7 +315,7 @@ function teacherHome(){
    ${inClinic.length?`<div class="tw"><table class="wrapth"><tbody>${inClinic.map(r=>`<tr><td><b>${esc(fullName(r.s))}</b><div class="small muted mono">${r.s.lrn}</div></td><td>${pill(r.st.t,r.st.c)}</td></tr>`).join('')}</tbody></table></div>`:'<p class="small muted">Nobody from your advisory is in the clinic.</p>'}</section>
   <section class="panel"><div class="head"><h3>Today's excused / early departures</h3><span class="small muted">${home.length}</span></div>${tbl(home,'No early departures today.')}</section>
  </div>
- <section class="panel"><div class="head"><h3>Returned to class today</h3><span class="small muted">time-outs to verify</span></div>${tbl(back,'No time-outs recorded today.')}</section>`}
+ <section class="panel"><div class="head"><h3>Returned to class today</h3><span class="small muted">time-outs to verify</span></div>${tbl(back,'No time-outs recorded today.')}</section></div>`}
 
 /* ---- Activity log (Doctor): who changed what and when ---- */
 S.audit={rows:null,err:'',busy:false,kind:'changes'};
@@ -381,3 +385,14 @@ function activityView(){
 /* "Other" ailment: ask the nurse to type it */
 document.addEventListener('change',e=>{if(e.target.id!=='w-ail')return;const f=$('#w-other-f'),i=$('#w-other'),on=e.target.value==='Other';if(!f||!i)return;f.style.display=on?'':'none';i.required=on;i.setCustomValidity('');if(on)i.focus()});
 document.addEventListener('input',e=>{if(e.target.id==='w-other')e.target.setCustomValidity('')});
+
+/* ---- "Today at the clinic": next schedule entries and the latest announcement (all roles) ---- */
+function todayCard(){
+ if(!CLOUD_ON)return '';
+ plEnsure();
+ const t=plToday(),ev=(S.pl.ev||[]).filter(e=>(e.d2||e.d1)>=t).sort((a,b)=>(a.d1<t?t:a.d1).localeCompare(b.d1<t?t:b.d1)||(a.t1||'').localeCompare(b.t1||'')).slice(0,4);
+ const an=(S.pl.ann||[])[0];
+ const evs=!S.pl.loaded?'<p class="small muted">Loading...</p>':ev.length?`<ul class="tdlist">${ev.map(e=>{const now=e.d1<=t;return `<li>${plPill(e.kind)}<div><b>${esc(e.title)}</b><div class="small muted">${now?'Today':esc(plDay(e.d1))}${e.d2&&e.d2!==e.d1?' to '+esc(plDay(e.d2)):''}${plTimes(e)?' · '+esc(plTimes(e)):''}${e.aud?' · '+esc(e.aud):''}</div></div></li>`}).join('')}</ul>`:'<p class="small muted">Nothing scheduled yet.</p>';
+ const ans=!S.pl.loaded?'':an?`<div class="tdann"><b>${esc(an.title)}</b><p class="small">${esc(an.body.length>160?an.body.slice(0,160)+'...':an.body)}</p><div class="small muted">${esc(an.by)} · ${esc(plPostedAt(an.at))}</div></div>`:'<p class="small muted">No announcements yet.</p>';
+ return `<div class="grid2"><section class="panel"><div class="head"><h3>Schedule: today and coming up</h3><button type="button" class="btn sm" data-act="nav" data-v="sched">Open calendar</button></div>${evs}</section>
+ <section class="panel"><div class="head"><h3>Latest announcement</h3><button type="button" class="btn sm" data-act="nav" data-v="ann">All announcements</button></div>${ans}</section></div>`}
