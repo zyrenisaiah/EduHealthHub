@@ -722,3 +722,14 @@ textarea.inp{resize:vertical;font:inherit;min-height:80px}
 .bellbtn.ring{animation:bellring 1.2s ease-in-out 2;transform-origin:50% 10%;box-shadow:var(--nu-raise-s),0 0 0 3px rgba(230,150,40,.55)}
 .bellbtn.ring .badge{background:var(--bad,#b3261e);color:#fff}
 @media(prefers-reduced-motion:reduce){.bellbtn.ring{animation:none}}
+
+/* "Copy code" page (opened from the login-code email) */
+.copybody{display:grid;place-items:center;min-height:100vh;padding:16px;background:var(--nu-bg,#e9efe7)}
+.copycard{width:min(420px,100%);background:var(--nu-bg,#e9efe7);border-radius:24px;box-shadow:var(--nu-raise,0 10px 30px rgba(0,0,0,.12));padding:28px 24px;display:grid;gap:14px;text-align:center}
+.copybrand{font-weight:800;color:var(--accent,#2d4a3a);letter-spacing:.02em}
+.copycard a{color:var(--accent,#2d4a3a);font-weight:700}
+.copycard h1{margin:0;font-size:20px}
+.copycode{font-family:Consolas,'Courier New',monospace;font-size:44px;font-weight:700;letter-spacing:8px;color:var(--accent,#2d4a3a);background:var(--nu-bg,#e9efe7);box-shadow:var(--nu-sink,inset 0 2px 8px rgba(0,0,0,.15));border-radius:16px;padding:18px 8px;-webkit-user-select:all;user-select:all}
+.copybtn{font-size:18px;padding:14px 18px;width:100%}
+.copybtn.copied{background:var(--good,#2b7a4b);color:#fff}
+.copyok{color:var(--good,#2b7a4b);font-weight:700}
