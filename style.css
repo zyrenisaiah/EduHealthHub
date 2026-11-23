@@ -716,3 +716,9 @@ textarea.inp{resize:vertical;font:inherit;min-height:80px}
 .tdlist li{display:flex;gap:10px;align-items:flex-start}
 .tdlist .plk{margin-top:2px;min-width:92px;text-align:center;flex:none}
 .tdann p{margin:4px 0;overflow-wrap:anywhere;white-space:pre-wrap}
+
+/* bell rings when a new notification arrives */
+@keyframes bellring{0%,100%{transform:rotate(0)}10%{transform:rotate(16deg)}20%{transform:rotate(-14deg)}30%{transform:rotate(12deg)}40%{transform:rotate(-10deg)}50%{transform:rotate(7deg)}60%{transform:rotate(-5deg)}70%{transform:rotate(3deg)}80%{transform:rotate(-2deg)}}
+.bellbtn.ring{animation:bellring 1.2s ease-in-out 2;transform-origin:50% 10%;box-shadow:var(--nu-raise-s),0 0 0 3px rgba(230,150,40,.55)}
+.bellbtn.ring .badge{background:var(--bad,#b3261e);color:#fff}
+@media(prefers-reduced-motion:reduce){.bellbtn.ring{animation:none}}

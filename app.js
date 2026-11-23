@@ -818,15 +818,30 @@ document.addEventListener("mousedown",e=>{if(e.target.closest&&e.target.closest(
 
 /* ---------- notifications (bell in the top bar, plus a banner for accounts without a linked Google account) ---------- */
 S.nt={items:[],unread:0,open:false};let _ntT=null;
-async function ntLoad(){if(!CLOUD_ON||!S.user||!TOK)return;try{const r=await rpc('app_notifs',{p_token:TOK});S.nt.items=r.items||[];S.nt.unread=r.unread||0;S.nt.linked=!!r.linked;S.nt.loaded=true;ntPaint();ntBanner()}catch(e){}}
+async function ntLoad(){if(!CLOUD_ON||!S.user||!TOK)return;try{const r=await rpc('app_notifs',{p_token:TOK});S.nt.items=r.items||[];S.nt.unread=r.unread||0;S.nt.linked=!!r.linked;S.nt.loaded=true;const fresh=ntFresh();ntPaint();ntBanner();if(fresh)ntRing()}catch(e){}}
+/* ---- bell: rings (sound + shake) when something new arrives ---- */
+let _ntAudio=null;
+function ntUnlockAudio(){try{if(!_ntAudio){const C=window.AudioContext||window.webkitAudioContext;if(!C)return;_ntAudio=new C()}if(_ntAudio.state==='suspended')_ntAudio.resume()}catch(e){}}
+['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,ntUnlockAudio,{passive:true}));
+function ntChime(){
+ try{ntUnlockAudio();const a=_ntAudio;if(!a||a.state!=='running')return;const t0=a.currentTime;
+  [[880,0],[1175,.16],[880,.42],[1175,.58]].forEach(([f,d])=>{const o=a.createOscillator(),g=a.createGain();o.type='sine';o.frequency.value=f;o.connect(g);g.connect(a.destination);
+   g.gain.setValueAtTime(0.0001,t0+d);g.gain.exponentialRampToValueAtTime(0.18,t0+d+.02);g.gain.exponentialRampToValueAtTime(0.0001,t0+d+.22);o.start(t0+d);o.stop(t0+d+.25)})}catch(e){}}
+function ntFresh(){
+ const seen=S.nt.seen||(S.nt.seen=new Set());let fresh=false;
+ (S.nt.items||[]).forEach(n=>{if(!n.read&&n.kind!=='link_google'&&!seen.has(n.id)){fresh=true}seen.add(n.id)});
+ return fresh}
+function ntRing(){
+ S.nt.ringing=true;ntChime();ntPaint();
+ clearTimeout(S.nt.ringT);S.nt.ringT=setTimeout(()=>{S.nt.ringing=false;ntPaint()},2600)}
 function ntPaint(){plBadge();const w=document.getElementById('bellwrap');if(!w)return;
  const it=S.nt.items,when=t=>{try{return new Date(t).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}catch(e){return ''}};
  const list=it.length?it.map(n=>`<div class="ntitem${n.read?'':' unread'}"><b>${esc(n.title)}</b><div class="small">${esc(n.body)}</div><div class="small muted">${esc(when(n.at))}</div><div class="trow">${n.kind==='link_google'&&!n.read?'<button type="button" class="btn sm primary" data-act="ntgo">Connect now</button>':''}${(n.kind==='announce'||n.kind==='schedule')?`<button type="button" class="btn sm primary" data-act="ntview" data-id="${n.id}" data-v="${n.kind==='announce'?'ann':'sched'}">View</button>`:''}${n.read?'':`<button type="button" class="btn sm" data-act="ntread" data-id="${n.id}">Mark as read</button>`}</div></div>`).join(''):'<div class="small muted" style="padding:12px">No notifications.</div>';
- w.innerHTML=`<button type="button" class="btn sm bellbtn" data-act="bell" aria-label="Notifications${S.nt.unread?', '+S.nt.unread+' unread':''}" aria-expanded="${S.nt.open}">&#128276;${S.nt.unread?`<span class="badge">${S.nt.unread}</span>`:''}</button>${S.nt.open?`<div class="ntpanel" role="dialog" aria-label="Notifications"><div class="nthead"><b>Notifications</b>${S.nt.unread?'<button type="button" class="btn sm" data-act="ntall">Mark all read</button>':''}</div>${list}</div>`:''}`}
+ w.innerHTML=`<button type="button" class="btn sm bellbtn${S.nt.ringing?' ring':''}" data-act="bell" aria-label="Notifications${S.nt.unread?', '+S.nt.unread+' unread':''}" aria-expanded="${S.nt.open}">&#128276;${S.nt.unread?`<span class="badge">${S.nt.unread}</span>`:''}</button>${S.nt.open?`<div class="ntpanel" role="dialog" aria-label="Notifications"><div class="nthead"><b>Notifications</b>${S.nt.unread?'<button type="button" class="btn sm" data-act="ntall">Mark all read</button>':''}</div>${list}</div>`:''}`}
 function ntAfter(){
  if(!CLOUD_ON||!S.user)return;
  ntPaint();
- if(!_ntT){ntLoad();_ntT=setInterval(ntLoad,60000)}
+ if(!_ntT){ntLoad();_ntT=setInterval(ntLoad,30000)}
  ntBanner()}
 function ntBanner(){
  if(!CLOUD_ON||!S.user||!S.nt.loaded||S.nt.linked)return;
@@ -847,7 +862,7 @@ function idleCheck(){if(!S.user){idleHide();return}
  const idle=Date.now()-_lastAct;
  if(idle>=IDLE_MS){idleHide();try{sessionStorage.setItem('ehh_idle','1')}catch(e){}const role=S.user.role;lockFree();if(CLOUD_ON)cloudLogout();ss.del('ehh_uid');ss.del('ehh_role');S.user=null;location.href='index.html?role='+encodeURIComponent(role);return}
  if(idle>=IDLE_MS-IDLE_WARN)idleShow(Math.max(1,Math.ceil((IDLE_MS-idle)/1000)))}
-setInterval(idleCheck,1000);document.addEventListener('visibilitychange',()=>{if(!document.hidden)idleCheck()});
+setInterval(idleCheck,1000);document.addEventListener('visibilitychange',()=>{if(!document.hidden){idleCheck();if(typeof ntLoad==='function')ntLoad()}});
 
 /* ---------- emailed login code: six boxes over one real input (so typing, paste and one-time-code autofill all work) ---------- */
 function otpSync(){const i=document.getElementById('lc');if(!i)return;const v=i.value.replace(/\D/g,'').slice(0,6);if(i.value!==v)i.value=v;
