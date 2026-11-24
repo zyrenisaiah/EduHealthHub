@@ -809,7 +809,7 @@ function loginFX(){
  const pw=$('#pw'),caps=$('#caps');
  if(pw&&caps){const chk=e=>{caps.hidden=!(e.getModifierState&&e.getModifierState('CapsLock'))};pw.addEventListener('keyup',chk);pw.addEventListener('keydown',chk);pw.addEventListener('blur',()=>caps.hidden=true)}
  if(!_fxBound){_fxBound=true;
-  addEventListener('pointermove',e=>{const mx=((e.clientX/innerWidth)-.5).toFixed(3),my=((e.clientY/innerHeight)-.5).toFixed(3);['.stage','#appbg'].forEach(q=>{const st=$(q);if(st){st.style.setProperty('--mx',mx);st.style.setProperty('--my',my)}})},{passive:true})}
+  if(matchMedia('(hover: hover) and (pointer: fine)').matches)addEventListener('pointermove',e=>{const mx=((e.clientX/innerWidth)-.5).toFixed(3),my=((e.clientY/innerHeight)-.5).toFixed(3);['.stage','#appbg'].forEach(q=>{const st=$(q);if(st){st.style.setProperty('--mx',mx);st.style.setProperty('--my',my)}})},{passive:true})}
 }
 boot();
 

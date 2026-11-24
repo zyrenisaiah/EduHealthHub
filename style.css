@@ -733,3 +733,15 @@ textarea.inp{resize:vertical;font:inherit;min-height:80px}
 .copybtn{font-size:18px;padding:14px 18px;width:100%}
 .copybtn.copied{background:var(--good,#2b7a4b);color:#fff}
 .copyok{color:var(--good,#2b7a4b);font-weight:700}
+
+/* ===== Faster start page on phones and weaker devices ===== */
+.s3scene.s3off{height:auto;perspective:none;margin:0 auto}
+.s3scene.s3off .seal{position:relative;left:auto;top:auto;transform:none;display:block;margin:6px auto;width:min(260px,64vw);height:auto;animation:none;transition:none;box-shadow:0 0 0 3px rgba(46,139,87,.3),8px 10px 22px rgba(40,100,80,.25)}
+@media(min-width:900px){.s3scene.s3off{margin:0}.s3scene.s3off .seal{margin:6px 0}}
+@media(max-width:899px),(hover:none){
+ .stage,.stage .bg,.stage .bg *{animation:none!important}
+ .blob,.fx,.ecg{display:none!important}
+ .seal-wrap::before{display:none!important}
+ .stage .role-strip a,.login .intro{animation:none!important}
+ .lstat,.lcard{backdrop-filter:none}
+}

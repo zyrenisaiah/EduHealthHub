@@ -6,7 +6,7 @@
  function el(c,p,s){var e=document.createElement('div');e.className=c;if(s)e.style.cssText=s;if(p)p.appendChild(e);return e}
  var LEAF='<svg viewBox="0 0 48 24" width="100%" height="100%"><path d="M2 12C12 0 34 0 46 12 34 24 12 24 2 12Z" fill="currentColor"/><path d="M4 12H44" stroke="rgba(255,255,255,.55)" stroke-width="1.4" fill="none"/></svg>';
  function build(root){
-  var img=root.querySelector('img'),src=img?img.getAttribute('src'):'assets/school-seal.webp',alt=img?img.getAttribute('alt'):'';
+  var img=root.querySelector('img'),src=img?(img.getAttribute('data-full')||img.getAttribute('src')):'assets/school-seal.webp',alt=img?img.getAttribute('alt'):'';
   root.textContent='';root.setAttribute('role','img');root.setAttribute('aria-label',alt||'Dasmariñas Integrated High School seal');
   var plate=el('s3plate',root);
   var rig=el('s3rig',root);
@@ -53,10 +53,17 @@
  function start(){if(!raf&&!RM())raf=requestAnimationFrame(frame)}
  function onMove(e){if(!state)return;var w=innerWidth,h=innerHeight;state.tx=(e.clientX/w-.5)*2;state.ty=(e.clientY/h-.5)*2}
  function fit(){if(!state)return;var w=state.root.clientWidth||360;state.root.style.setProperty('--u',Math.min(1,w/520).toFixed(3))}
+ function heavyOK(){
+  var mm=function(q){return window.matchMedia&&matchMedia(q).matches};
+  if(!mm('(hover: hover) and (pointer: fine)')||innerWidth<900)return false;
+  if((navigator.hardwareConcurrency||8)<=4||(navigator.deviceMemory||8)<=4)return false;
+  return true}
  window.seal3dInit=function(){
   stop();state=null;
   var root=document.getElementById('s3scene');if(!root||root.dataset.ready)return;
   if(!(window.CSS&&CSS.supports&&CSS.supports('transform-style','preserve-3d')))return;
+  /* phones, tablets and weaker computers get the plain seal: far lighter and no lag */
+  if(!heavyOK()){root.classList.add('s3off');return}
   root.dataset.ready='1';state=build(root);fit();
   if(RM()){paint(state,1.2);return}
   if('IntersectionObserver' in window){new IntersectionObserver(function(es){es[0].isIntersecting?start():stop()},{threshold:0}).observe(root)}else start();
