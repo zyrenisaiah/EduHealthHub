@@ -13,7 +13,7 @@
   var shadow=el('s3shadow',plate);
   /* coin */
   var coin=el('s3coin',rig);
-  for(var i=0;i<18;i++){el('s3slice',coin,'transform:translateZ('+(i-8.5)*1.15+'px)')}
+  for(var i=0;i<9;i++){el('s3slice',coin,'transform:translateZ('+(i-4)*2.3+'px)')}
   var f=el('s3front',coin);
   [['base',10.5],['ring',15],['laurel',22],['book',34]].forEach(function(l){var d=el('s3layer '+l[0],f,'transform:translateZ('+l[1]+'px);background-image:url(assets/seal-'+l[0]+'.webp)')});
   var gl=el('s3gloss',f,'transform:translateZ(35px)');
@@ -27,13 +27,14 @@
    rings.push({ring:ring,spin:spin,tilt:d.t,r:d.r,k:k})});
   /* floating leaves and beads */
   var items=[];
-  for(var j=0;j<18;j++){
+  for(var j=0;j<9;j++){
    var leaf=j%3!==2;var e=el(leaf?'s3leaf':'s3gem',rig);if(leaf){e.innerHTML=LEAF;e.style.color=['#3f8f57','#5fae72','#2e6b3e','#86c48f'][j%4]}
-   items.push({e:e,leaf:leaf,a:j/18*Math.PI*2+Math.sin(j*3.1)*.3,r:150+((j*53)%90),z:((j*37)%160)-80,s:leaf?(26+(j*7)%22):(10+(j*5)%10),sp:.18+((j*13)%10)/60,ph:j*1.7})}
+   items.push({e:e,leaf:leaf,a:j/9*Math.PI*2+Math.sin(j*3.1)*.3,r:150+((j*53)%90),z:((j*37)%160)-80,s:leaf?(26+(j*7)%22):(10+(j*5)%10),sp:.18+((j*13)%10)/60,ph:j*1.7})}
   return {root:root,rig:rig,coin:coin,shadow:shadow,rings:rings,items:items,gloss:gl,mx:0,my:0,tx:0,ty:0,p:0,sp:0,t0:performance.now()}}
  function progress(){var h=Math.max(300,innerHeight*.9);return Math.min(1,Math.max(0,scrollY/h))}
  function frame(now){
   var S=state;if(!S||!S.root.isConnected){stop();return}
+  if(now-(S.last||0)<24){raf=requestAnimationFrame(frame);return}S.last=now;
   var t=(now-S.t0)/1000,p=progress();
   S.sp+=(p-S.sp)*.08;S.mx+=(S.tx-S.mx)*.07;S.my+=(S.ty-S.my)*.07;
   paint(S,t);raf=requestAnimationFrame(frame)}
@@ -56,7 +57,7 @@
  function heavyOK(){
   var mm=function(q){return window.matchMedia&&matchMedia(q).matches};
   if(!mm('(hover: hover) and (pointer: fine)')||innerWidth<900)return false;
-  if((navigator.hardwareConcurrency||8)<=4||(navigator.deviceMemory||8)<=4)return false;
+  if((navigator.hardwareConcurrency||8)<=2||(navigator.deviceMemory||8)<=2)return false;
   return true}
  window.seal3dInit=function(){
   stop();state=null;

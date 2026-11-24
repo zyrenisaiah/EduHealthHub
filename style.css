@@ -647,7 +647,7 @@ button.tile:hover{box-shadow:var(--nu-raise-s)}button.tile:active{box-shadow:var
 .s3spin{position:absolute;inset:0;transform-style:preserve-3d}
 .s3bead{position:absolute;left:50%;top:50%;width:18px;height:18px;margin:-9px;border-radius:50%;background:radial-gradient(circle at 32% 30%,#fff 0 12%,#f6c768 30%,#d98d1c 70%,#8a520a);box-shadow:0 4px 8px rgba(80,50,10,.35)}
 .s3bead.g{background:radial-gradient(circle at 32% 30%,#fff 0 12%,#9ad6a6 30%,#3f8f57 70%,#1d4d2c)}
-.s3leaf,.s3gem{left:-24px;top:-12px;width:48px;height:24px;will-change:transform;filter:drop-shadow(0 6px 5px rgba(30,60,40,.25))}
+.s3leaf,.s3gem{left:-24px;top:-12px;width:48px;height:24px;will-change:transform}
 .s3gem{left:-15px;top:-15px;width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 32% 30%,#fff 0 10%,#ffd98a 28%,#e09a22 68%,#8a520a)}
 @media(prefers-reduced-motion:reduce){.s3coin,.s3leaf,.s3gem,.s3ring{will-change:auto}}
 @media(max-width:560px){.s3scene{height:calc(380px*var(--u))}}
@@ -655,9 +655,7 @@ button.tile:hover{box-shadow:var(--nu-raise-s)}button.tile:active{box-shadow:var
 .s3front{transform-style:preserve-3d;inset:0}
 .s3layer{position:absolute;inset:0;border-radius:50%;background-size:cover;background-position:center;backface-visibility:hidden}
 .s3layer.base{box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
-.s3layer.ring{filter:drop-shadow(0 3px 3px rgba(10,40,20,.35))}
-.s3layer.laurel{filter:drop-shadow(3px 6px 4px rgba(10,40,20,.38))}
-.s3layer.book{filter:drop-shadow(5px 10px 7px rgba(10,40,20,.45))}
+
 .s3gloss{backface-visibility:hidden}
 
 /* ---------- Announcements and Schedule ---------- */
